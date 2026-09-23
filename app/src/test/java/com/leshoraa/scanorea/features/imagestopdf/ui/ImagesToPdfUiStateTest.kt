@@ -31,4 +31,16 @@ class ImagesToPdfUiStateTest {
         assertTrue(state.hasPages)
         assertEquals(2, state.pageCount)
     }
+
+    @Test
+    fun defaultFilter_defaultsToBlackAndWhite() {
+        val state = ImagesToPdfUiState()
+        assertEquals(com.leshoraa.scanorea.core.filter.ImageFilterType.BLACK_AND_WHITE, state.defaultFilter)
+    }
+
+    @Test
+    fun defaultFilter_canBeCustomized() {
+        val state = ImagesToPdfUiState(defaultFilter = com.leshoraa.scanorea.core.filter.ImageFilterType.ORIGINAL)
+        assertEquals(com.leshoraa.scanorea.core.filter.ImageFilterType.ORIGINAL, state.defaultFilter)
+    }
 }

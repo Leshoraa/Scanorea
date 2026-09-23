@@ -62,6 +62,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.outlined.ViewAgenda
+import androidx.compose.material.icons.outlined.ViewCarousel
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.platform.LocalDensity
 import androidx.core.content.FileProvider
 import com.leshoraa.scanorea.core.util.FileSizeFormatter
 import com.leshoraa.scanorea.features.pdfviewer.data.PdfRendererDataSource
@@ -73,8 +85,18 @@ import java.io.File
 import java.io.FileInputStream
 
 /**
+ * Display modes for PDF viewing:
+ * PAGED allows horizontal swiping between full-page views (similar to Google Drive/Adobe Acrobat).
+ * CONTINUOUS allows continuous vertical scrolling with fast-scroller thumb.
+ */
+enum class PdfViewMode {
+    PAGED,
+    CONTINUOUS
+}
+
+/**
  * Built-in native PDF Viewer screen rendering PDF pages adhering to true paper aspect ratios,
- * tight continuous spacing, and an unobtrusive scrollbar page counter.
+ * supporting intuitive horizontal swipe pagination, pinch-to-zoom/pan, and continuous vertical scrolling.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,7 +142,20 @@ fun PdfViewerScreen(
         }
     }
 
-    // Pinch-to-zoom state
+    // View mode: PAGED (horizontal swipe between pages) or CONTINUOUS (vertical scroll)
+    var viewMode by remember { mutableStateOf(PdfViewMode.PAGED) }
+    val pagerState = rememberPagerState(initialPage = 0) { totalPages }
+
+    // Sync active page position when switching between PAGED and CONTINUOUS modes
+    LaunchedEffect(viewMode) {
+        if (viewMode == PdfViewMode.CONTINUOUS && totalPages > 0) {
+            listState.scrollToItem(pagerState.currentPage)
+        } else if (viewMode == PdfViewMode.PAGED && totalPages > 0) {
+            pagerState.scrollToPage(listState.firstVisibleItemIndex.coerceIn(0, totalPages - 1))
+        }
+    }
+
+    // Pinch-to-zoom state for continuous mode
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
     val transformableState = rememberTransformableState { zoomChange, offsetChange, _ ->
@@ -157,6 +192,27 @@ fun PdfViewerScreen(
                     }
                 },
                 actions = {
+                    if (totalPages > 1) {
+                        IconButton(
+                            onClick = {
+                                viewMode = if (viewMode == PdfViewMode.PAGED) PdfViewMode.CONTINUOUS else PdfViewMode.PAGED
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (viewMode == PdfViewMode.PAGED) {
+                                    Icons.Outlined.ViewAgenda
+                                } else {
+                                    Icons.Outlined.ViewCarousel
+                                },
+                                contentDescription = if (viewMode == PdfViewMode.PAGED) {
+                                    "Switch to Continuous Scroll"
+                                } else {
+                                    "Switch to Page Swipe"
+                                }
+                            )
+                        }
+                    }
+
                     IconButton(
                         onClick = {
                             saveFileLauncher.launch(file.name)
@@ -208,6 +264,188 @@ fun PdfViewerScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
+                }
+            } else if (viewMode == PdfViewMode.PAGED) {
+                // Page-by-page horizontal swipe view with pinch-to-zoom and double-tap zoom
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    beyondViewportPageCount = 1
+                ) { pageIndex ->
+                    val pageNumber = pageIndex + 1
+                    val bitmap = pageBitmaps[pageIndex]
+                    val pageRatio = pdfRendererSource?.getPageAspectRatio(pageIndex) ?: (1f / 1.4142f)
+
+                    LaunchedEffect(pageIndex) {
+                        if (bitmap == null && pdfRendererSource != null) {
+                            try {
+                                val rendered = pdfRendererSource!!.renderPage(pageIndex, targetWidth = 1080)
+                                pageBitmaps[pageIndex] = rendered
+                            } catch (_: Exception) {}
+                        }
+                    }
+
+                    BoxWithConstraints(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        var pageZoom by remember { mutableFloatStateOf(1f) }
+                        var pagePan by remember { mutableStateOf(Offset.Zero) }
+
+                        val availableW = (maxWidth - 32.dp).coerceAtLeast(100.dp)
+                        val availableH = (maxHeight - 32.dp).coerceAtLeast(100.dp)
+
+                        val (fittedW, fittedH) = if (pageRatio > 0f) {
+                            val containerAspect = availableW / availableH
+                            if (pageRatio > containerAspect) {
+                                availableW to (availableW / pageRatio)
+                            } else {
+                                (availableH * pageRatio) to availableH
+                            }
+                        } else {
+                            availableW to availableH
+                        }
+
+                        val density = LocalDensity.current
+                        val fittedWPx = with(density) { fittedW.toPx() }
+                        val fittedHPx = with(density) { fittedH.toPx() }
+
+                        Box(
+                            modifier = Modifier
+                                .size(fittedW, fittedH)
+                                .graphicsLayer {
+                                    scaleX = pageZoom
+                                    scaleY = pageZoom
+                                    translationX = pagePan.x
+                                    translationY = pagePan.y
+                                }
+                                .pointerInput(pageIndex) {
+                                    detectTapGestures(
+                                        onDoubleTap = { tapOffset ->
+                                            if (pageZoom > 1.05f) {
+                                                pageZoom = 1f
+                                                pagePan = Offset.Zero
+                                            } else {
+                                                pageZoom = 2.5f
+                                                val centerX = size.width / 2f
+                                                val centerY = size.height / 2f
+                                                val maxPanX = ((fittedWPx * 1.5f) / 2f).coerceAtLeast(0f)
+                                                val maxPanY = ((fittedHPx * 1.5f) / 2f).coerceAtLeast(0f)
+                                                pagePan = Offset(
+                                                    x = ((centerX - tapOffset.x) * 1.5f).coerceIn(-maxPanX, maxPanX),
+                                                    y = ((centerY - tapOffset.y) * 1.5f).coerceIn(-maxPanY, maxPanY)
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+                                .pointerInput(pageIndex) {
+                                    awaitEachGesture {
+                                        awaitFirstDown(requireUnconsumed = false)
+                                        var isPinchZoom = false
+                                        var prevSpan = 0f
+                                        var prevCentroid = Offset.Zero
+
+                                        while (true) {
+                                            val event = awaitPointerEvent()
+                                            val pressed = event.changes.filter { it.pressed }
+                                            if (pressed.isEmpty()) break
+
+                                            if (pressed.size >= 2) {
+                                                isPinchZoom = true
+                                                val p0 = pressed[0].position
+                                                val p1 = pressed[1].position
+                                                val currentSpan = kotlin.math.hypot(p0.x - p1.x, p0.y - p1.y)
+                                                val currentCentroid = Offset((p0.x + p1.x) / 2f, (p0.y + p1.y) / 2f)
+
+                                                if (prevSpan > 0f && currentSpan > 0f) {
+                                                    val zoomChange = currentSpan / prevSpan
+                                                    val panChange = currentCentroid - prevCentroid
+
+                                                    val newScale = (pageZoom * zoomChange).coerceIn(1f, 4f)
+                                                    pageZoom = newScale
+                                                    if (newScale > 1f) {
+                                                        val maxPanX = ((fittedWPx * (newScale - 1f)) / 2f).coerceAtLeast(0f)
+                                                        val maxPanY = ((fittedHPx * (newScale - 1f)) / 2f).coerceAtLeast(0f)
+                                                        pagePan = Offset(
+                                                            x = (pagePan.x + panChange.x).coerceIn(-maxPanX, maxPanX),
+                                                            y = (pagePan.y + panChange.y).coerceIn(-maxPanY, maxPanY)
+                                                        )
+                                                    } else {
+                                                        pagePan = Offset.Zero
+                                                    }
+                                                }
+                                                prevSpan = currentSpan
+                                                prevCentroid = currentCentroid
+                                                event.changes.forEach { it.consume() }
+                                            } else if (pressed.size == 1 && !isPinchZoom) {
+                                                if (pageZoom > 1.05f) {
+                                                    val change = pressed[0]
+                                                    val drag = change.positionChange()
+                                                    val maxPanX = ((fittedWPx * (pageZoom - 1f)) / 2f).coerceAtLeast(0f)
+                                                    val maxPanY = ((fittedHPx * (pageZoom - 1f)) / 2f).coerceAtLeast(0f)
+                                                    pagePan = Offset(
+                                                        x = (pagePan.x + drag.x).coerceIn(-maxPanX, maxPanX),
+                                                        y = (pagePan.y + drag.y).coerceIn(-maxPanY, maxPanY)
+                                                    )
+                                                    change.consume()
+                                                }
+                                                // When pageZoom <= 1.05f, single-finger drag is NOT consumed,
+                                                // allowing parent HorizontalPager to swipe smoothly between pages.
+                                            }
+                                        }
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Card(
+                                modifier = Modifier.fillMaxSize(),
+                                shape = RoundedCornerShape(4.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = Color.White
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            ) {
+                                if (bitmap != null) {
+                                    Image(
+                                        bitmap = bitmap.asImageBitmap(),
+                                        contentDescription = "Page $pageNumber",
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(RoundedCornerShape(4.dp)),
+                                        contentScale = ContentScale.Fit
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Floating page indicator badge in PAGED mode
+                if (totalPages > 1) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.88f),
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        shape = RoundedCornerShape(16.dp),
+                        shadowElevation = 3.dp,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 18.dp)
+                    ) {
+                        Text(
+                            text = "${pagerState.currentPage + 1} / $totalPages",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                        )
+                    }
                 }
             } else {
                 LazyColumn(

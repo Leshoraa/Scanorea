@@ -35,7 +35,6 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.ScreenRotation
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -88,6 +87,7 @@ import com.leshoraa.scanorea.features.imagestopdf.ui.components.ConversionSucces
 import com.leshoraa.scanorea.features.pdfviewer.ui.PdfViewerScreen
 import com.leshoraa.scanorea.features.presets.domain.TemplateDateEvaluator
 import com.leshoraa.scanorea.features.presets.domain.model.ConversionPreset
+import com.leshoraa.scanorea.features.presets.ui.PresetManagementScreen
 import com.leshoraa.scanorea.features.recentpdfs.ui.ResultsScreen
 import com.leshoraa.scanorea.features.settings.ui.SettingsScreen
 import com.leshoraa.scanorea.features.tools.ui.ToolsScreen
@@ -111,24 +111,7 @@ fun MainScreen(
     var isRenameDialogOpen by remember { mutableStateOf(false) }
     var isPagesGridVisible by remember { mutableStateOf(false) }
     var showEditorMenu by remember { mutableStateOf(false) }
-
-    // Full-screen native PDF viewer
-    val activePdf = uiState.activePdfViewerFile
-    if (activePdf != null) {
-        BackHandler { viewModel.closePdfViewer() }
-        PdfViewerScreen(
-            file = activePdf,
-            onBackClick = { viewModel.closePdfViewer() }
-        )
-        return
-    }
-
-    // Back button handling
-    if (uiState.hasPages) {
-        BackHandler { viewModel.clearAllPages() }
-    } else if (currentTab != MainNavTab.HOME) {
-        BackHandler { currentTab = MainNavTab.HOME }
-    }
+    var isPresetManagerVisible by remember { mutableStateOf(false) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia()
@@ -164,6 +147,24 @@ fun MainScreen(
         }
     }
 
+    val openPdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val tempCachePdf = File(context.cacheDir, "opened_pdf.pdf")
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    tempCachePdf.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                viewModel.openPdfInViewer(tempCachePdf)
+            } catch (e: Exception) {
+                Toast.makeText(context, "Cannot open PDF: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     fun openCamera() {
         try {
             val cachePdfs = File(context.cacheDir, "pdfs").apply { mkdirs() }
@@ -193,12 +194,42 @@ fun MainScreen(
         pageCount = { uiState.pages.size }
     )
 
+    // Full-screen native PDF viewer
+    val activePdf = uiState.activePdfViewerFile
+    if (activePdf != null) {
+        BackHandler { viewModel.closePdfViewer() }
+        PdfViewerScreen(
+            file = activePdf,
+            onBackClick = { viewModel.closePdfViewer() }
+        )
+        return
+    }
+
+    // Full-screen dedicated preset templates manager
+    if (isPresetManagerVisible) {
+        BackHandler { isPresetManagerVisible = false }
+        PresetManagementScreen(
+            presets = uiState.presets,
+            onBack = { isPresetManagerVisible = false },
+            onSavePreset = { viewModel.savePreset(it) },
+            onDeletePreset = { viewModel.deletePreset(it) }
+        )
+        return
+    }
+
+    // Back button handling
+    if (uiState.hasPages) {
+        BackHandler { viewModel.clearAllPages() }
+    } else if (currentTab != MainNavTab.HOME) {
+        BackHandler { currentTab = MainNavTab.HOME }
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (uiState.hasPages) {
-                val estimatedBytes = uiState.options.compressionProfile.estimateSizeBytes(uiState.pageCount)
+                val estimatedBytes = uiState.options.compressionProfile.estimateSizeBytes(uiState.pages)
                 val currentPage = uiState.pages.getOrNull(pagerState.currentPage)
 
                 TopAppBar(
@@ -359,22 +390,6 @@ fun MainScreen(
                         }
                     },
                     actions = {
-                        IconButton(
-                            onClick = {
-                                Toast.makeText(
-                                    context,
-                                    "Scanorea: All features unlocked & ad-free!",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.WorkspacePremium,
-                                contentDescription = "Pro Status",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
                         IconButton(onClick = { currentTab = MainNavTab.SETTINGS }) {
                             Icon(
                                 imageVector = Icons.Outlined.Settings,
@@ -447,13 +462,8 @@ fun MainScreen(
 
                     MainNavTab.TOOLS -> {
                         ToolsScreen(
-                            onGalleryClick = {
-                                photoPickerLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
-                            },
-                            onCameraClick = { openCamera() },
-                            onPresetsClick = { viewModel.showOptionsBottomSheet(true) }
+                            onPresetsClick = { isPresetManagerVisible = true },
+                            onOpenPdfClick = { openPdfLauncher.launch(arrayOf("application/pdf")) }
                         )
                     }
 
@@ -469,12 +479,22 @@ fun MainScreen(
                     MainNavTab.SETTINGS -> {
                         SettingsScreen(
                             destinationFolderDisplayName = uiState.destinationFolderDisplayName,
-                            onChangeDestinationFolder = { folderPickerLauncher.launch(null) }
+                            onChangeDestinationFolder = { folderPickerLauncher.launch(null) },
+                            defaultPageSize = uiState.options.pageSize,
+                            onDefaultPageSizeChange = { viewModel.updateDefaultPageSize(it) },
+                            defaultOrientation = uiState.options.orientation,
+                            onDefaultOrientationChange = { viewModel.updateDefaultOrientation(it) },
+                            defaultCompression = uiState.options.compressionProfile,
+                            onDefaultCompressionChange = { viewModel.updateDefaultCompression(it) },
+                            defaultFilter = uiState.defaultFilter,
+                            onDefaultFilterChange = { viewModel.updateDefaultFilter(it) },
+                            presetsCount = uiState.presets.size,
+                            onNavigateToPresets = { isPresetManagerVisible = true }
                         )
                     }
                 }
             } else {
-                val estimatedBytes = uiState.options.compressionProfile.estimateSizeBytes(uiState.pageCount)
+                val estimatedBytes = uiState.options.compressionProfile.estimateSizeBytes(uiState.pages)
                 EditorWorkspace(
                     pages = uiState.pages,
                     pagerState = pagerState,
@@ -748,6 +768,7 @@ fun MainScreen(
         ConversionOptionsBottomSheet(
             options = uiState.options,
             pageCount = uiState.pageCount,
+            pages = uiState.pages,
             presets = uiState.presets,
             destinationFolderDisplayName = uiState.destinationFolderDisplayName,
             sheetState = bottomSheetState,

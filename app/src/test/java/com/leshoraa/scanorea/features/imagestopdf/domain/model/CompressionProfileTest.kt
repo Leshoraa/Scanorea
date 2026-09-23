@@ -42,4 +42,36 @@ class CompressionProfileTest {
             assertTrue(profile.description.isNotBlank())
         }
     }
+
+    @Test
+    fun estimateSizeBytes_withPages_reflectsCropAndFilters() {
+        val dummyUri = android.net.TestUri("content://media/test/1")
+        val basePage = ImagePage(
+            id = "p1",
+            uri = dummyUri,
+            width = 3000,
+            height = 4000,
+            filter = com.leshoraa.scanorea.core.filter.ImageFilterType.ORIGINAL
+        )
+
+        // Empty pages list returns 0
+        assertEquals(0L, CompressionProfile.AUTO_BALANCED.estimateSizeBytes(emptyList()))
+
+        // Uncropped color vs cropped color
+        val uncroppedEstimate = CompressionProfile.AUTO_BALANCED.estimateSizeBytes(listOf(basePage))
+        val croppedPage = basePage.copy(cropBounds = ImageCropBounds(0.25f, 0.25f, 0.75f, 0.75f)) // 25% area
+        val croppedEstimate = CompressionProfile.AUTO_BALANCED.estimateSizeBytes(listOf(croppedPage))
+        assertTrue("Cropped image should result in smaller estimated bytes", croppedEstimate < uncroppedEstimate)
+
+        // B&W filter vs Color filter
+        val bwPage = basePage.copy(filter = com.leshoraa.scanorea.core.filter.ImageFilterType.BLACK_AND_WHITE)
+        val bwEstimate = CompressionProfile.AUTO_BALANCED.estimateSizeBytes(listOf(bwPage))
+        assertTrue("B&W document should compress much smaller than color", bwEstimate < uncroppedEstimate)
+
+        // Profile scaling
+        val smallEstimate = CompressionProfile.SMALL_FILE.estimateSizeBytes(listOf(basePage))
+        val highQualityEstimate = CompressionProfile.HIGH_QUALITY.estimateSizeBytes(listOf(basePage))
+        assertTrue(smallEstimate < uncroppedEstimate)
+        assertTrue(uncroppedEstimate < highQualityEstimate)
+    }
 }

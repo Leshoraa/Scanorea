@@ -25,7 +25,9 @@ import com.leshoraa.scanorea.features.imagestopdf.domain.repository.PdfConversio
 import com.leshoraa.scanorea.features.presets.data.PresetRepository
 import com.leshoraa.scanorea.features.presets.domain.TemplateDateEvaluator
 import com.leshoraa.scanorea.features.presets.domain.model.ConversionPreset
+import com.leshoraa.scanorea.features.recentpdfs.data.PdfThumbnailLoader
 import com.leshoraa.scanorea.features.recentpdfs.data.RecentPdfsRepository
+import com.leshoraa.scanorea.features.settings.data.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,7 +44,8 @@ import java.util.UUID
 class ImagesToPdfViewModel(
     private val pdfConversionRepository: PdfConversionRepository,
     private val recentPdfsRepository: RecentPdfsRepository? = null,
-    private val presetRepository: PresetRepository? = null
+    private val presetRepository: PresetRepository? = null,
+    private val settingsRepository: SettingsRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ImagesToPdfUiState())
@@ -51,6 +54,31 @@ class ImagesToPdfViewModel(
     init {
         loadRecentPdfs()
         loadPresets()
+        loadSettings()
+    }
+
+    fun loadSettings() {
+        if (settingsRepository == null) return
+        val pageSize = settingsRepository.getDefaultPageSize()
+        val orientation = settingsRepository.getDefaultOrientation()
+        val compression = settingsRepository.getDefaultCompression()
+        val defaultFilter = settingsRepository.getDefaultFilter()
+        val destUri = settingsRepository.getDestinationFolderUri()
+        val destName = settingsRepository.getDestinationFolderDisplayName()
+
+        _uiState.update { current ->
+            current.copy(
+                destinationFolderUri = destUri?.let { Uri.parse(it) },
+                destinationFolderDisplayName = destName,
+                defaultFilter = defaultFilter,
+                activeFilter = defaultFilter,
+                options = current.options.copy(
+                    pageSize = pageSize,
+                    orientation = orientation,
+                    compressionProfile = compression
+                )
+            )
+        }
     }
 
     fun loadRecentPdfs() {
@@ -83,6 +111,11 @@ class ImagesToPdfViewModel(
         }
     }
 
+    fun savePreset(preset: ConversionPreset) {
+        presetRepository?.savePreset(preset)
+        loadPresets()
+    }
+
     fun saveNewPreset(name: String, template: String) {
         val options = _uiState.value.options
         val newPreset = ConversionPreset(
@@ -102,7 +135,28 @@ class ImagesToPdfViewModel(
         loadPresets()
     }
 
+    fun updateDefaultPageSize(size: PdfPageSize) {
+        settingsRepository?.saveDefaultPageSize(size)
+        _uiState.update { it.copy(options = it.options.copy(pageSize = size)) }
+    }
+
+    fun updateDefaultOrientation(orientation: PdfPageOrientation) {
+        settingsRepository?.saveDefaultOrientation(orientation)
+        _uiState.update { it.copy(options = it.options.copy(orientation = orientation)) }
+    }
+
+    fun updateDefaultCompression(compression: CompressionProfile) {
+        settingsRepository?.saveDefaultCompression(compression)
+        _uiState.update { it.copy(options = it.options.copy(compressionProfile = compression)) }
+    }
+
+    fun updateDefaultFilter(filter: ImageFilterType) {
+        settingsRepository?.saveDefaultFilter(filter)
+        _uiState.update { it.copy(defaultFilter = filter, activeFilter = filter) }
+    }
+
     fun setCustomDestinationFolder(uri: Uri?, displayName: String) {
+        settingsRepository?.saveDestinationFolder(uri?.toString(), displayName)
         _uiState.update {
             it.copy(
                 destinationFolderUri = uri,
@@ -121,6 +175,7 @@ class ImagesToPdfViewModel(
 
     fun deleteRecentPdf(file: File) {
         if (recentPdfsRepository == null) return
+        PdfThumbnailLoader.evict(file)
         viewModelScope.launch {
             recentPdfsRepository.deletePdf(file)
             loadRecentPdfs()
@@ -193,6 +248,7 @@ class ImagesToPdfViewModel(
     fun addImages(uris: List<Uri>, contentResolver: ContentResolver) {
         if (uris.isEmpty()) return
 
+        val defaultFilter = _uiState.value.defaultFilter
         val newPages = uris.map { uri ->
             val metadata = queryUriMetadata(uri, contentResolver)
             ImagePage(
@@ -202,7 +258,7 @@ class ImagesToPdfViewModel(
                 sizeInBytes = metadata.sizeInBytes,
                 width = metadata.width,
                 height = metadata.height,
-                filter = ImageFilterType.BLACK_AND_WHITE,
+                filter = defaultFilter,
                 contrast = 1.0f,
                 brightness = 0.0f
             )
@@ -473,7 +529,8 @@ class ImagesToPdfViewModel(
                     val repository = PdfConversionRepositoryImpl(appContext, generator)
                     val recentPdfsRepo = RecentPdfsRepository(appContext)
                     val presetRepo = PresetRepository(appContext)
-                    return ImagesToPdfViewModel(repository, recentPdfsRepo, presetRepo) as T
+                    val settingsRepo = SettingsRepository(appContext)
+                    return ImagesToPdfViewModel(repository, recentPdfsRepo, presetRepo, settingsRepo) as T
                 }
             }
     }

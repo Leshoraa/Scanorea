@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.core.util.FileSizeFormatter
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.CompressionProfile
+import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImagePage
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfConversionOptions
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageOrientation
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageSize
@@ -73,6 +74,7 @@ fun ConversionOptionsBottomSheet(
     onDismissRequest: () -> Unit,
     onFileNameChange: (String) -> Unit,
     onPageSizeChange: (PdfPageSize) -> Unit,
+    pages: List<ImagePage> = emptyList(),
     onOrientationChange: (PdfPageOrientation) -> Unit,
     onCompressionProfileChange: (CompressionProfile) -> Unit,
     onPresetSelected: (ConversionPreset) -> Unit,
@@ -319,7 +321,11 @@ fun ConversionOptionsBottomSheet(
                     fontWeight = FontWeight.SemiBold
                 )
 
-                val estimatedSize = options.compressionProfile.estimateSizeBytes(pageCount)
+                val estimatedSize = if (pages.isNotEmpty()) {
+                    options.compressionProfile.estimateSizeBytes(pages)
+                } else {
+                    options.compressionProfile.estimateSizeBytes(pageCount)
+                }
                 Text(
                     text = "Est. ~${FileSizeFormatter.format(estimatedSize)}",
                     style = MaterialTheme.typography.labelMedium,

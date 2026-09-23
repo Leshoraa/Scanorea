@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.CropFree
 import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.automirrored.outlined.RotateRight
@@ -48,7 +49,7 @@ import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImagePage
 /**
  * Material 3 document crop and orientation panel.
  * Provides aspect ratio presets, 90° clockwise rotation, crop reset,
- * and page navigation / reordering triggers.
+ * explicit Done confirmation, and page navigation / reordering triggers.
  */
 @Composable
 fun EditorCropPanel(
@@ -59,6 +60,7 @@ fun EditorCropPanel(
     onCropBoundsChange: (ImageCropBounds) -> Unit,
     onRotatePage: () -> Unit,
     onResetCrop: () -> Unit,
+    onApplyCrop: () -> Unit = {},
     onPreviousPage: () -> Unit,
     onNextPage: () -> Unit,
     onMovePage: (sourceIndex: Int, targetIndex: Int) -> Unit,
@@ -195,6 +197,30 @@ fun EditorCropPanel(
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = if (!page.cropBounds.isDefault) Color.White else Color.White.copy(alpha = 0.38f)
+                )
+            }
+
+            // Apply Crop Done Button
+            Button(
+                onClick = onApplyCrop,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                modifier = Modifier.height(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Check,
+                    contentDescription = "Done",
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Done",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
                 )
             }
 

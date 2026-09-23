@@ -22,6 +22,7 @@ data class ImagesToPdfUiState(
     val errorMessage: String? = null,
     val isOptionsBottomSheetVisible: Boolean = false,
     val isGridView: Boolean = false,
+    val defaultFilter: ImageFilterType = ImageFilterType.BLACK_AND_WHITE,
     val activeFilter: ImageFilterType = ImageFilterType.BLACK_AND_WHITE,
     val activePdfViewerFile: File? = null,
     val recentPdfs: List<RecentPdf> = emptyList(),

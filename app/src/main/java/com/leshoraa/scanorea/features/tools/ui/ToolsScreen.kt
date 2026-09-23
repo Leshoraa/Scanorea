@@ -16,10 +16,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
 import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.Compress
-import androidx.compose.material.icons.outlined.PhotoCamera
-import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,20 +36,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /**
- * Modern Tools dashboard screen showcasing all PDF & Scanning capabilities.
+ * Tools navigation destination offering access to preset template configuration
+ * and external PDF viewing.
+ *
+ * @param onPresetsClick Callback invoked to navigate to the preset templates manager.
+ * @param onOpenPdfClick Callback invoked to launch the system document picker for PDF files.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ToolsScreen(
-    onGalleryClick: () -> Unit,
-    onCameraClick: () -> Unit,
     onPresetsClick: () -> Unit,
+    onOpenPdfClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(bottom = 80.dp)
+            .padding(bottom = 16.dp)
             .verticalScroll(rememberScrollState())
     ) {
         TopAppBar(
@@ -73,31 +75,17 @@ fun ToolsScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             ToolCard(
-                title = "Gallery to PDF",
-                description = "Select multiple photos, reorder pages with lift-and-scroll, and export clean PDFs.",
-                icon = Icons.Outlined.PhotoLibrary,
-                onClick = onGalleryClick
-            )
-
-            ToolCard(
-                title = "Camera Scanner",
-                description = "Snap real-world documents or notes directly into high-contrast B&W pages.",
-                icon = Icons.Outlined.PhotoCamera,
-                onClick = onCameraClick
-            )
-
-            ToolCard(
-                title = "Preset Templates",
-                description = "Configure custom filename patterns like {DD:MM:YYYY}, paper size, and orientation.",
+                title = "Preset Templates Manager",
+                description = "Configure naming formulas with dynamic date tokens like {DD:MM:YYYY}, paper size, and orientation.",
                 icon = Icons.Outlined.BookmarkBorder,
                 onClick = onPresetsClick
             )
 
             ToolCard(
-                title = "Auto Image Optimizer",
-                description = "Automatic perceived brightness and sharpness calibration based on ITU-R BT.601 luminance analysis.",
-                icon = Icons.Outlined.Compress,
-                onClick = onGalleryClick
+                title = "Open Any PDF Document",
+                description = "Pick and view any PDF from your device in Scanorea's full-screen native reader with print and sharing.",
+                icon = Icons.Outlined.FileOpen,
+                onClick = onOpenPdfClick
             )
         }
     }
@@ -155,6 +143,15 @@ private fun ToolCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(16.dp)
+            )
         }
     }
 }

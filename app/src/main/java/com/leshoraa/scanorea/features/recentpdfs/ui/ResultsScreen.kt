@@ -3,6 +3,7 @@ package com.leshoraa.scanorea.features.recentpdfs.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -79,9 +80,7 @@ fun ResultsScreen(
     }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(bottom = 80.dp) // space for bottom navigation
+        modifier = modifier.fillMaxSize()
     ) {
         // Results Top Bar
         TopAppBar(
@@ -214,9 +213,8 @@ fun ResultsScreen(
             }
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(filteredPdfs, key = { it.file.absolutePath }) { recent ->

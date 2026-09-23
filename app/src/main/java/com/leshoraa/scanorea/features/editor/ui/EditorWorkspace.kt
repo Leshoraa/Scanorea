@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -36,7 +37,6 @@ import com.leshoraa.scanorea.features.editor.ui.components.EditorCanvasPager
 import com.leshoraa.scanorea.features.editor.ui.components.EditorCategoryTabBar
 import com.leshoraa.scanorea.features.editor.ui.components.EditorCropPanel
 import com.leshoraa.scanorea.features.editor.ui.components.EditorFiltersPanel
-import com.leshoraa.scanorea.features.editor.ui.components.EditorSuggestionsPanel
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImageCropBounds
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImagePage
 import kotlinx.coroutines.launch
@@ -71,12 +71,33 @@ fun EditorWorkspace(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    var activeCategory by remember { mutableStateOf(EditorCategory.SUGGESTIONS) }
+    var activeCategory by remember { mutableStateOf(EditorCategory.FILTERS) }
 
     var isReordering by remember { mutableStateOf(false) }
     var movingPage by remember { mutableStateOf<ImagePage?>(null) }
     var movingTargetIndex by remember { mutableIntStateOf(-1) }
     val liftAnim = remember { Animatable(0f) }
+
+    var originalCropBoundsOnEnter by remember { mutableStateOf(ImageCropBounds.DEFAULT) }
+
+    LaunchedEffect(activeCategory) {
+        if (activeCategory == EditorCategory.CROP) {
+            val curr = pages.getOrNull(pagerState.currentPage)
+            originalCropBoundsOnEnter = curr?.cropBounds ?: ImageCropBounds.DEFAULT
+        }
+    }
+
+    val handleApplyCrop: () -> Unit = {
+        activeCategory = EditorCategory.FILTERS
+    }
+
+    val handleCancelCrop: () -> Unit = {
+        val curr = pages.getOrNull(pagerState.currentPage)
+        if (curr != null) {
+            onCropChange(curr.id, originalCropBoundsOnEnter)
+        }
+        activeCategory = EditorCategory.FILTERS
+    }
 
     fun startMoveAnimation(sourceIndex: Int, targetIndex: Int) {
         if (isReordering || sourceIndex == targetIndex || sourceIndex !in pages.indices || targetIndex !in pages.indices) return
@@ -153,11 +174,11 @@ fun EditorWorkspace(
                     label = "EditorCategoryContent"
                 ) { category ->
                     when (category) {
-                        EditorCategory.SUGGESTIONS -> {
-                            EditorSuggestionsPanel(
-                                page = currentPage,
+                        EditorCategory.FILTERS -> {
+                            EditorFiltersPanel(
+                                selectedFilter = currentPage.filter,
                                 onFilterSelected = { onFilterSelected(currentPage.id, it) },
-                                onAutoAdjust = { onAutoAdjustPage(currentPage.id, context.contentResolver) }
+                                onApplyToAll = { onApplyFilterToAll(currentPage.filter) }
                             )
                         }
                         EditorCategory.ADJUST -> {
@@ -179,6 +200,7 @@ fun EditorWorkspace(
                                 onCropBoundsChange = { newBounds -> onCropChange(currentPage.id, newBounds) },
                                 onRotatePage = { onRotatePage(currentPage.id) },
                                 onResetCrop = { onResetCrop(currentPage.id) },
+                                onApplyCrop = handleApplyCrop,
                                 onPreviousPage = {
                                     coroutineScope.launch {
                                         if (pagerState.currentPage > 0) {
@@ -196,13 +218,6 @@ fun EditorWorkspace(
                                 onMovePage = { src, tgt -> startMoveAnimation(src, tgt) }
                             )
                         }
-                        EditorCategory.FILTERS -> {
-                            EditorFiltersPanel(
-                                selectedFilter = currentPage.filter,
-                                onFilterSelected = { onFilterSelected(currentPage.id, it) },
-                                onApplyToAll = { onApplyFilterToAll(currentPage.filter) }
-                            )
-                        }
                     }
                 }
             }
@@ -218,7 +233,10 @@ fun EditorWorkspace(
         EditorBottomActionBar(
             estimatedSizeBytes = estimatedSizeBytes,
             onCancel = onCancel,
-            onConvertToPdf = onOpenOptionsSheet
+            onConvertToPdf = onOpenOptionsSheet,
+            isCropMode = activeCategory == EditorCategory.CROP,
+            onCancelCrop = handleCancelCrop,
+            onApplyCrop = handleApplyCrop
         )
     }
 }

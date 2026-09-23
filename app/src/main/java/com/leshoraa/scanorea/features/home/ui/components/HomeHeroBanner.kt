@@ -27,7 +27,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /**
- * Hero banner component promoting document conversion with direct call to action.
+ * Primary call-to-action hero banner on the home screen initiating document capture and conversion workflows.
+ *
+ * @param onScanConvertClick Callback invoked when initiating a new document scanning flow.
  */
 @Composable
 fun HomeHeroBanner(
@@ -66,7 +68,7 @@ fun HomeHeroBanner(
             Spacer(modifier = Modifier.height(14.dp))
 
             Text(
-                text = "Convert PDF to Clean PDF",
+                text = "Scan & Convert to PDF",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -74,7 +76,7 @@ fun HomeHeroBanner(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Scan documents, notes, or receipts. High-quality B&W filters with custom sharpness adjustments.",
+                text = "Scan documents or import photos to create crisp, high-quality PDF files.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
