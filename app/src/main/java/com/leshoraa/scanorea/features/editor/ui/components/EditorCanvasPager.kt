@@ -1,6 +1,8 @@
 package com.leshoraa.scanorea.features.editor.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -38,6 +40,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,7 +66,9 @@ import coil.request.ImageRequest
 import coil.size.Precision
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImageCropBounds
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImagePage
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.hypot
 
@@ -106,11 +112,36 @@ fun EditorCanvasPager(
             val isBeingMoved = isReordering && page.id == movingPage?.id
             val isCurrentFocusedPage = pageIndex == pagerState.currentPage
 
+            val coroutineScope = rememberCoroutineScope()
+            val currentOnCropChange by rememberUpdatedState(onCropChange)
+
             var zoomScale by remember(page.id, isCropMode) { mutableFloatStateOf(1f) }
             var panOffset by remember(page.id, isCropMode) { mutableStateOf(Offset.Zero) }
+            var zoomAnimJob by remember { mutableStateOf<Job?>(null) }
+
+            fun animateZoom(targetScale: Float, targetPan: Offset) {
+                zoomAnimJob?.cancel()
+                zoomAnimJob = coroutineScope.launch {
+                    val startScale = zoomScale
+                    val startPan = panOffset
+                    animate(
+                        initialValue = 0f,
+                        targetValue = 1f,
+                        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing)
+                    ) { progress, _ ->
+                        zoomScale = startScale + (targetScale - startScale) * progress
+                        panOffset = Offset(
+                            startPan.x + (targetPan.x - startPan.x) * progress,
+                            startPan.y + (targetPan.y - startPan.y) * progress
+                        )
+                        activeZoomScale = zoomScale
+                    }
+                }
+            }
 
             LaunchedEffect(isCurrentFocusedPage) {
                 if (!isCurrentFocusedPage) {
+                    zoomAnimJob?.cancel()
                     zoomScale = 1f
                     panOffset = Offset.Zero
                 }
@@ -176,12 +207,12 @@ fun EditorCanvasPager(
                     val fittedHPx = with(density) { fittedH.toPx() }
 
                     val haptic = LocalHapticFeedback.current
-                    var localCropBounds by remember(page.id, page.cropBounds) { mutableStateOf(page.cropBounds) }
+                    val localCropBoundsState = remember(page.id) { mutableStateOf(page.cropBounds) }
                     var activeCropHandle by remember { mutableStateOf(DragHandle.NONE) }
 
                     LaunchedEffect(page.cropBounds) {
-                        if (activeCropHandle == DragHandle.NONE && localCropBounds != page.cropBounds) {
-                            localCropBounds = page.cropBounds
+                        if (activeCropHandle == DragHandle.NONE && localCropBoundsState.value != page.cropBounds) {
+                            localCropBoundsState.value = page.cropBounds
                         }
                     }
 
@@ -208,6 +239,7 @@ fun EditorCanvasPager(
 
                                 awaitEachGesture {
                                     val down = awaitFirstDown(requireUnconsumed = false)
+                                    zoomAnimJob?.cancel()
                                     val startPos = down.position
                                     val startTime = System.currentTimeMillis()
 
@@ -219,7 +251,7 @@ fun EditorCanvasPager(
                                     var handle = DragHandle.NONE
 
                                     if (isCropMode) {
-                                        val bounds = localCropBounds
+                                        val bounds = localCropBoundsState.value
                                         val screenLeft = centerX + (bounds.left - 0.5f) * fittedWPx * zoomScale + panOffset.x
                                         val screenRight = centerX + (bounds.right - 0.5f) * fittedWPx * zoomScale + panOffset.x
                                         val screenTop = centerY + (bounds.top - 0.5f) * fittedHPx * zoomScale + panOffset.y
@@ -271,27 +303,23 @@ fun EditorCanvasPager(
                                     while (true) {
                                         val event = awaitPointerEvent()
                                         val pressed = event.changes.filter { it.pressed }
-
                                         if (pressed.isEmpty()) {
                                             val duration = System.currentTimeMillis() - startTime
-                                            if (totalDragDistance < 15f && duration < 300L) {
+                                            if (handle == DragHandle.NONE && totalDragDistance < 15f && duration < 300L) {
                                                 val now = System.currentTimeMillis()
                                                 if (now - lastTapTime < 350L && hypot(startPos.x - lastTapPos.x, startPos.y - lastTapPos.y) < 60.dp.toPx()) {
                                                     if (zoomScale > 1.05f) {
-                                                        zoomScale = 1f
-                                                        activeZoomScale = 1f
-                                                        panOffset = Offset.Zero
+                                                        animateZoom(1f, Offset.Zero)
                                                     } else {
                                                         val targetScale = 2.5f
-                                                        zoomScale = targetScale
-                                                        activeZoomScale = targetScale
                                                         val maxPanX = ((fittedWPx * (targetScale - 1f)) / 2f).coerceAtLeast(0f)
                                                         val maxPanY = ((fittedHPx * (targetScale - 1f)) / 2f).coerceAtLeast(0f)
                                                         val cRel = startPos - Offset(centerX, centerY)
-                                                        panOffset = Offset(
+                                                        val targetPan = Offset(
                                                             x = (-cRel.x * 1.5f).coerceIn(-maxPanX, maxPanX),
                                                             y = (-cRel.y * 1.5f).coerceIn(-maxPanY, maxPanY)
                                                         )
+                                                        animateZoom(targetScale, targetPan)
                                                     }
                                                     lastTapTime = 0L
                                                 } else {
@@ -304,8 +332,8 @@ fun EditorCanvasPager(
                                             }
 
                                             if (activeCropHandle != DragHandle.NONE) {
-                                                if (localCropBounds != page.cropBounds) {
-                                                    onCropChange(page.id, localCropBounds)
+                                                if (localCropBoundsState.value != page.cropBounds) {
+                                                    currentOnCropChange(page.id, localCropBoundsState.value)
                                                 }
                                             }
                                             activeCropHandle = DragHandle.NONE
@@ -360,7 +388,7 @@ fun EditorCanvasPager(
                                                 val deltaY = dragAmount.y / (fittedHPx * zoomScale)
                                                 val minSize = 0.08f
 
-                                                val prev = localCropBounds
+                                                val prev = localCropBoundsState.value
                                                 var newL = prev.left
                                                 var newT = prev.top
                                                 var newR = prev.right
@@ -398,7 +426,7 @@ fun EditorCanvasPager(
                                                     DragHandle.NONE -> {}
                                                 }
                                                 if (newL < newR && newT < newB) {
-                                                    localCropBounds = ImageCropBounds.ofClamped(newL, newT, newR, newB, minSize)
+                                                    localCropBoundsState.value = ImageCropBounds.ofClamped(newL, newT, newR, newB, minSize)
                                                 }
                                             } else if (zoomScale > 1.05f) {
                                                 change.consume()
@@ -465,7 +493,7 @@ fun EditorCanvasPager(
                             // Interactive Crop Overlay Canvas when in Crop mode for current page
                             if (isCropMode && isCurrentFocusedPage) {
                                 EditorCropOverlayCanvas(
-                                    cropBounds = localCropBounds,
+                                    cropBounds = localCropBoundsState.value,
                                     activeHandle = activeCropHandle,
                                     touchMargin = touchMargin,
                                     modifier = Modifier.fillMaxSize()
@@ -511,9 +539,7 @@ fun EditorCanvasPager(
                     ) {
                         Surface(
                             onClick = {
-                                zoomScale = 1f
-                                activeZoomScale = 1f
-                                panOffset = Offset.Zero
+                                animateZoom(1f, Offset.Zero)
                             },
                             shape = RoundedCornerShape(16.dp),
                             color = Color(0xDD202020),
