@@ -1,7 +1,7 @@
 # Scanorea
 
 ## Overview
-Scanorea is a modern Android application for converting batches of photos into high-quality PDF documents quickly, safely, and efficiently. Built with Jetpack Compose and Material You (Material 3 Dynamic Color), Scanorea provides an in-app native PDF viewer, professional document scanning filters (such as high-contrast B&W thresholding), intelligent auto-compression profiles with predictive size estimations, and flexible Storage Access Framework (SAF) folder export—all while preserving user privacy and preventing Out-Of-Memory errors on high-resolution camera photos.
+Scanorea is a modern Android application for converting batches of photos into high-quality PDF documents quickly, safely, and efficiently. Built with Jetpack Compose and Material You (Material 3 Dynamic Color), Scanorea provides an in-app native PDF viewer, professional document scanning filters (such as high-contrast B&W thresholding), intelligent auto-compression profiles with predictive size estimations, and flexible Storage Access Framework (SAF) folder export, all while preserving user privacy and preventing Out-Of-Memory errors on high-resolution camera photos.
 
 ## Features
 - **Flexible Photo Import**: Import multiple photos seamlessly via Android Photo Picker or directly capture pages with the camera without requiring runtime storage permissions.

@@ -49,7 +49,7 @@ Scanorea requires a robust, privacy-respecting, and user-friendly mobile applica
 8. **Clean Architecture, Single Responsibility & Feature Decomposition**:
    - Deconstructed monolithic UI God files into modular, decoupled feature packages (`app/ui/MainScreen`, `features/home/`, `features/editor/`, `features/recentpdfs/components/`).
    - Split the full-screen photo editing workspace (`EditorWorkspace`) into single-responsibility components: `EditorCanvasPager`, `EditorSuggestionsPanel`, `EditorAdjustPanel`, `EditorCropPanel`, `EditorFiltersPanel`, `EditorCategoryTabBar`, and `EditorBottomActionBar`.
-   - Purged dead components, non-English commentary, and decorative formatting across the codebase to adhere to high industrial maintainability standards.
+   - Purged dead components, non-English commentary, and decorative formatting across the codebase to adhere to rigorous software engineering standards.
 
 ## Alternatives Considered
 - **Third-party PDF Rendering Engines (e.g., PdfiumAndroid, AndroidPdfViewer)**:

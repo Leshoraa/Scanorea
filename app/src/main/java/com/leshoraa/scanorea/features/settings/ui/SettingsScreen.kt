@@ -22,7 +22,9 @@ import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.ColorLens
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Policy
 import androidx.compose.material.icons.outlined.ScreenRotation
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
@@ -53,6 +55,8 @@ import com.leshoraa.scanorea.core.filter.ImageFilterType
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.CompressionProfile
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageOrientation
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageSize
+import com.leshoraa.scanorea.features.settings.ui.components.LegalDocumentDialog
+import com.leshoraa.scanorea.features.settings.ui.components.LegalDocumentType
 
 /**
  * Application settings screen providing persistence configuration for document export defaults,
@@ -90,6 +94,7 @@ fun SettingsScreen(
     var isOrientationDialogOpen by remember { mutableStateOf(false) }
     var isCompressionDialogOpen by remember { mutableStateOf(false) }
     var isFilterDialogOpen by remember { mutableStateOf(false) }
+    var activeLegalDocument by remember { mutableStateOf<LegalDocumentType?>(null) }
 
     Column(
         modifier = modifier
@@ -184,7 +189,31 @@ fun SettingsScreen(
                 }
             }
 
-            // Group 3: About
+            // Group 3: Legal & Privacy
+            Column {
+                StockSectionHeader(title = "LEGAL & PRIVACY")
+                Spacer(modifier = Modifier.height(6.dp))
+                StockPreferenceGroup {
+                    StockPreferenceItem(
+                        title = "Privacy policy",
+                        summary = "Local-first data governance, zero tracking",
+                        leadingIcon = Icons.Outlined.Policy,
+                        onClick = { activeLegalDocument = LegalDocumentType.PRIVACY_POLICY }
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 72.dp, end = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                    )
+                    StockPreferenceItem(
+                        title = "Terms of service",
+                        summary = "Usage rights, licensing, and limitations",
+                        leadingIcon = Icons.Outlined.Gavel,
+                        onClick = { activeLegalDocument = LegalDocumentType.TERMS_OF_SERVICE }
+                    )
+                }
+            }
+
+            // Group 4: About
             Column {
                 StockSectionHeader(title = "ABOUT")
                 Spacer(modifier = Modifier.height(6.dp))
@@ -242,6 +271,14 @@ fun SettingsScreen(
             selectedOption = defaultFilter,
             onOptionSelected = onDefaultFilterChange,
             onDismissRequest = { isFilterDialogOpen = false }
+        )
+    }
+
+    // Dialog for Privacy Policy / Terms of Service
+    activeLegalDocument?.let { documentType ->
+        LegalDocumentDialog(
+            type = documentType,
+            onDismissRequest = { activeLegalDocument = null }
         )
     }
 }
