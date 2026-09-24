@@ -61,12 +61,25 @@ object PdfThumbnailLoader {
             page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             memoryCache.put(cacheKey, bitmap)
             bitmap
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.e("PdfThumbnailLoader", "Failed to render thumbnail for ${file.name}", e)
             null
         } finally {
-            try { page?.close() } catch (_: Exception) {}
-            try { renderer?.close() } catch (_: Exception) {}
-            try { pfd?.close() } catch (_: Exception) {}
+            try {
+                page?.close()
+            } catch (e: Exception) {
+                android.util.Log.w("PdfThumbnailLoader", "Error closing PdfRenderer.Page", e)
+            }
+            try {
+                renderer?.close()
+            } catch (e: Exception) {
+                android.util.Log.w("PdfThumbnailLoader", "Error closing PdfRenderer", e)
+            }
+            try {
+                pfd?.close()
+            } catch (e: Exception) {
+                android.util.Log.w("PdfThumbnailLoader", "Error closing ParcelFileDescriptor", e)
+            }
         }
     }
 

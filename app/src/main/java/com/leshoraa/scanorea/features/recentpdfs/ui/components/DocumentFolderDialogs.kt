@@ -266,7 +266,7 @@ fun OrganizeDocumentBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = 1.dp,
+        tonalElevation = 0.dp,
         modifier = modifier
     ) {
         Column(

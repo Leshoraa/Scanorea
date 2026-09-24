@@ -171,6 +171,23 @@ class ImagesToPdfViewModel(
         _uiState.update { it.copy(activePdfViewerFile = file) }
     }
 
+    fun openPdfFromExternalUri(uri: Uri, contentResolver: ContentResolver, cacheDir: File) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val cachedPdfFile = File(cacheDir, "opened_document.pdf")
+                contentResolver.openInputStream(uri)?.use { inputStream ->
+                    cachedPdfFile.outputStream().use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+                _uiState.update { it.copy(activePdfViewerFile = cachedPdfFile) }
+            } catch (e: Exception) {
+                android.util.Log.e("ImagesToPdfViewModel", "Failed to copy and open external PDF from $uri", e)
+                _uiState.update { it.copy(errorMessage = "Cannot open PDF: ${e.localizedMessage}") }
+            }
+        }
+    }
+
     fun closePdfViewer() {
         _uiState.update { it.copy(activePdfViewerFile = null) }
     }

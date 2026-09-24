@@ -7,14 +7,14 @@ import androidx.core.content.FileProvider
 import java.io.File
 
 /**
- * Utility functions for sharing generated PDF documents via system intent chooser.
+ * Dispatches system intent chooser to share generated PDF documents.
  */
-object PdfShareUtil {
+object PdfDocumentSharer {
 
     /**
      * Shares the given PDF [file] via Android's ACTION_SEND intent chooser.
      */
-    fun sharePdf(context: Context, file: File) {
+    fun share(context: Context, file: File) {
         try {
             val uri = FileProvider.getUriForFile(
                 context,
@@ -28,6 +28,7 @@ object PdfShareUtil {
             }
             context.startActivity(Intent.createChooser(shareIntent, "Share PDF"))
         } catch (e: Exception) {
+            android.util.Log.e("PdfDocumentSharer", "Failed to dispatch share intent for ${file.name}", e)
             Toast.makeText(context, "Cannot share PDF: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
         }
     }

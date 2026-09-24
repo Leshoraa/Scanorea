@@ -25,7 +25,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ElevatedFilterChip
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChipDefaults
@@ -85,7 +85,7 @@ fun EditorCropPanel(
         ) {
             CropAspectRatio.entries.forEach { ratioPreset ->
                 val isSelected = selectedRatio == ratioPreset
-                ElevatedFilterChip(
+                FilterChip(
                     selected = isSelected,
                     onClick = {
                         onRatioSelected(ratioPreset)
@@ -113,12 +113,13 @@ fun EditorCropPanel(
                         )
                     },
                     shape = RoundedCornerShape(10.dp),
-                    colors = FilterChipDefaults.elevatedFilterChipColors(
+                    colors = FilterChipDefaults.filterChipColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         labelColor = MaterialTheme.colorScheme.onSurface,
                         selectedContainerColor = MaterialTheme.colorScheme.primary,
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                     ),
+                    elevation = FilterChipDefaults.filterChipElevation(0.dp),
                     border = null
                 )
             }

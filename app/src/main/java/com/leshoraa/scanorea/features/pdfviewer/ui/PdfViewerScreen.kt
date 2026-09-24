@@ -281,7 +281,9 @@ fun PdfViewerScreen(
                             try {
                                 val rendered = pdfRendererSource!!.renderPage(pageIndex, targetWidth = 1080)
                                 pageBitmaps[pageIndex] = rendered
-                            } catch (_: Exception) {}
+                            } catch (e: Exception) {
+                                android.util.Log.e("PdfViewerScreen", "Failed to render page $pageIndex", e)
+                            }
                         }
                     }
 
@@ -473,7 +475,9 @@ fun PdfViewerScreen(
                                 try {
                                     val rendered = pdfRendererSource!!.renderPage(index, targetWidth = 1080)
                                     pageBitmaps[index] = rendered
-                                } catch (_: Exception) {}
+                                } catch (e: Exception) {
+                                    android.util.Log.e("PdfViewerScreen", "Failed to render vertical page $index", e)
+                                }
                             }
                         }
 

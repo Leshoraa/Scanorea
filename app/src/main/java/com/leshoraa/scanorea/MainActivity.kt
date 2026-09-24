@@ -53,17 +53,20 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        themeObserver?.let {
+        themeObserver?.let { observer ->
             try {
-                contentResolver.unregisterContentObserver(it)
-            } catch (_: Exception) {}
+                contentResolver.unregisterContentObserver(observer)
+            } catch (e: Exception) {
+                android.util.Log.w("MainActivity", "Failed to unregister theme observer", e)
+            }
         }
     }
 
     private fun getSystemThemePalette(): String? {
         return try {
             Settings.Secure.getString(contentResolver, "theme_customization_overlay_packages")
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.d("MainActivity", "Theme overlay setting unavailable", e)
             null
         }
     }
@@ -71,7 +74,7 @@ class MainActivity : ComponentActivity() {
     private fun registerThemeObserver() {
         try {
             val uri = Settings.Secure.getUriFor("theme_customization_overlay_packages") ?: return
-            themeObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
                 override fun onChange(selfChange: Boolean) {
                     val currentPalette = getSystemThemePalette()
                     if (currentPalette != null && currentPalette != lastThemePalette) {
@@ -80,7 +83,10 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
-            contentResolver.registerContentObserver(uri, false, themeObserver!!)
-        } catch (_: Exception) {}
+            themeObserver = observer
+            contentResolver.registerContentObserver(uri, false, observer)
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "Failed to register theme observer", e)
+        }
     }
 }

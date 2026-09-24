@@ -101,12 +101,12 @@ class RecentPdfsRepository(
             if (foldersArr != null) {
                 val updatedArr = JSONArray()
                 for (i in 0 until foldersArr.length()) {
-                    val f = foldersArr.optString(i)
-                    if (f.equals(oldTrimmed, ignoreCase = true)) {
+                    val folderName = foldersArr.optString(i)
+                    if (folderName.equals(oldTrimmed, ignoreCase = true)) {
                         updatedArr.put(newTrimmed)
                         docModified = true
                     } else {
-                        updatedArr.put(f)
+                        updatedArr.put(folderName)
                     }
                 }
                 if (docModified) {
@@ -145,9 +145,9 @@ class RecentPdfsRepository(
                 if (foldersArr != null) {
                     val updatedArr = JSONArray()
                     for (i in 0 until foldersArr.length()) {
-                        val f = foldersArr.optString(i)
-                        if (!f.equals(category.trim(), ignoreCase = true)) {
-                            updatedArr.put(f)
+                        val folderName = foldersArr.optString(i)
+                        if (!folderName.equals(category.trim(), ignoreCase = true)) {
+                            updatedArr.put(folderName)
                         } else {
                             docModified = true
                         }
@@ -197,9 +197,9 @@ class RecentPdfsRepository(
             val foldersArr = docObj?.optJSONArray("folders")
             if (foldersArr != null) {
                 for (i in 0 until foldersArr.length()) {
-                    val f = foldersArr.optString(i).trim()
-                    if (f.isNotEmpty() && !foldersList.contains(f)) {
-                        foldersList.add(f)
+                    val folderName = foldersArr.optString(i).trim()
+                    if (folderName.isNotEmpty() && !foldersList.contains(folderName)) {
+                        foldersList.add(folderName)
                     }
                 }
             } else {
@@ -214,8 +214,8 @@ class RecentPdfsRepository(
             val tagsArr = docObj?.optJSONArray("tags")
             if (tagsArr != null) {
                 for (i in 0 until tagsArr.length()) {
-                    val t = tagsArr.optString(i).trim()
-                    if (t.isNotEmpty()) tagsList.add(t)
+                    val tagItem = tagsArr.optString(i).trim()
+                    if (tagItem.isNotEmpty()) tagsList.add(tagItem)
                 }
             }
 

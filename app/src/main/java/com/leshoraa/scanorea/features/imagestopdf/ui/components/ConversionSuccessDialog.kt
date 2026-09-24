@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.leshoraa.scanorea.core.util.FileSizeFormatter
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfConversionResult
 
 /**
@@ -99,12 +100,7 @@ fun ConversionSuccessDialog(
                     textAlign = TextAlign.Center
                 )
 
-                val sizeInKb = result.fileSizeBytes / 1024
-                val sizeFormatted = if (sizeInKb > 1024) {
-                    "%.1f MB".format(sizeInKb / 1024f)
-                } else {
-                    "$sizeInKb KB"
-                }
+                val sizeFormatted = FileSizeFormatter.format(result.fileSizeBytes)
 
                 Spacer(modifier = Modifier.height(4.dp))
 

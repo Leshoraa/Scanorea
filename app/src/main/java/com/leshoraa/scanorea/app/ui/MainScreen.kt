@@ -76,7 +76,7 @@ import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import com.leshoraa.scanorea.app.navigation.MainNavTab
 import com.leshoraa.scanorea.core.util.FileSizeFormatter
-import com.leshoraa.scanorea.core.util.PdfShareUtil
+import com.leshoraa.scanorea.core.util.PdfDocumentSharer
 import com.leshoraa.scanorea.features.editor.ui.EditorWorkspace
 import com.leshoraa.scanorea.features.editor.ui.components.DiscardChangesDialog
 import com.leshoraa.scanorea.features.editor.ui.components.EditorPagesGridDialog
@@ -115,8 +115,7 @@ fun MainScreen(
     var showEditorMenu by remember { mutableStateOf(false) }
     var isPresetManagerVisible by remember { mutableStateOf(false) }
     var showDiscardDialog by remember { mutableStateOf(false) }
-    var showAddPagesSheet by remember { mutableStateOf(false) }
-    var showCaptureSourceSheet by remember { mutableStateOf(false) }
+    var captureSourceSheetTitle by remember { mutableStateOf<String?>(null) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia()
@@ -126,12 +125,13 @@ fun MainScreen(
         }
     }
 
-    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+    var activeCameraCaptureUri by remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success && tempCameraUri != null) {
-            viewModel.addImages(listOf(tempCameraUri!!), context.contentResolver)
+        val uri = activeCameraCaptureUri
+        if (success && uri != null) {
+            viewModel.addImages(listOf(uri), context.contentResolver)
         }
     }
 
@@ -144,7 +144,9 @@ fun MainScreen(
                     uri,
                     Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 )
-            } catch (_: Exception) {}
+            } catch (e: SecurityException) {
+                android.util.Log.w("MainScreen", "Failed to obtain persistable permission for $uri", e)
+            }
             val doc = DocumentFile.fromTreeUri(context, uri)
             val displayName = doc?.name ?: "Custom Folder"
             viewModel.setCustomDestinationFolder(uri, displayName)
@@ -156,32 +158,23 @@ fun MainScreen(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
-            try {
-                val tempCachePdf = File(context.cacheDir, "opened_pdf.pdf")
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    tempCachePdf.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                viewModel.openPdfInViewer(tempCachePdf)
-            } catch (e: Exception) {
-                Toast.makeText(context, "Cannot open PDF: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
-            }
+            viewModel.openPdfFromExternalUri(uri, context.contentResolver, context.cacheDir)
         }
     }
 
     fun openCamera() {
         try {
             val cachePdfs = File(context.cacheDir, "pdfs").apply { mkdirs() }
-            val tempFile = File.createTempFile("scan_", ".jpg", cachePdfs)
+            val cameraCaptureFile = File.createTempFile("scan_", ".jpg", cachePdfs)
             val uri = FileProvider.getUriForFile(
                 context,
                 "${context.packageName}.fileprovider",
-                tempFile
+                cameraCaptureFile
             )
-            tempCameraUri = uri
+            activeCameraCaptureUri = uri
             cameraLauncher.launch(uri)
         } catch (e: Exception) {
+            android.util.Log.e("MainScreen", "Cannot open camera", e)
             Toast.makeText(context, "Cannot open camera: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
         }
     }
@@ -286,7 +279,7 @@ fun MainScreen(
                         }
 
                         // Add Photos / Scan Camera Button
-                        IconButton(onClick = { showAddPagesSheet = true }) {
+                        IconButton(onClick = { captureSourceSheetTitle = "Add Pages" }) {
                             Icon(
                                 imageVector = Icons.Outlined.AddPhotoAlternate,
                                 contentDescription = "Add pages",
@@ -432,7 +425,7 @@ fun MainScreen(
                     MainNavTab.HOME -> {
                         HomeScreen(
                             recentPdfs = uiState.recentPdfs,
-                            onScanConvertClick = { showCaptureSourceSheet = true },
+                            onScanConvertClick = { captureSourceSheetTitle = "Scan & Convert to PDF" },
                             onGalleryClick = {
                                 photoPickerLauncher.launch(
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -442,7 +435,7 @@ fun MainScreen(
                             onSeeAllToolsClick = { currentTab = MainNavTab.TOOLS },
                             onSeeAllResultsClick = { currentTab = MainNavTab.RESULTS },
                             onPdfClick = { viewModel.openPdfInViewer(it) },
-                            onShareClick = { PdfShareUtil.sharePdf(context, it) },
+                            onShareClick = { PdfDocumentSharer.share(context, it) },
                             onDeleteClick = { viewModel.deleteRecentPdf(it) },
                             onToggleFavorite = { viewModel.toggleFavorite(it) }
                         )
@@ -460,7 +453,7 @@ fun MainScreen(
                             recentPdfs = uiState.recentPdfs,
                             categories = uiState.categories,
                             onPdfClick = { viewModel.openPdfInViewer(it) },
-                            onShareClick = { PdfShareUtil.sharePdf(context, it) },
+                            onShareClick = { PdfDocumentSharer.share(context, it) },
                             onDeleteClick = { viewModel.deleteRecentPdf(it) },
                             onToggleFavorite = { viewModel.toggleFavorite(it) },
                             onAssignFolders = { file, folders -> viewModel.updatePdfFolders(file, folders) },
@@ -821,7 +814,7 @@ fun MainScreen(
                 viewModel.openPdfInViewer(file)
             },
             onSharePdf = {
-                PdfShareUtil.sharePdf(context, successResult.file)
+                PdfDocumentSharer.share(context, successResult.file)
             },
             onDismiss = {
                 viewModel.dismissResultDialog()
@@ -842,31 +835,21 @@ fun MainScreen(
         )
     }
 
-    // Source picker for adding pages while editing
-    if (showAddPagesSheet) {
+    // Source picker for camera or photo gallery capture
+    captureSourceSheetTitle?.let { title ->
         CaptureSourceBottomSheet(
-            title = "Add Pages",
-            onCameraClick = { openCamera() },
+            title = title,
+            onCameraClick = {
+                captureSourceSheetTitle = null
+                openCamera()
+            },
             onGalleryClick = {
+                captureSourceSheetTitle = null
                 photoPickerLauncher.launch(
                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                 )
             },
-            onDismiss = { showAddPagesSheet = false }
-        )
-    }
-
-    // Source picker for initiating scan & convert from Home hero banner
-    if (showCaptureSourceSheet) {
-        CaptureSourceBottomSheet(
-            title = "Scan & Convert to PDF",
-            onCameraClick = { openCamera() },
-            onGalleryClick = {
-                photoPickerLauncher.launch(
-                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                )
-            },
-            onDismiss = { showCaptureSourceSheet = false }
+            onDismiss = { captureSourceSheetTitle = null }
         )
     }
 }

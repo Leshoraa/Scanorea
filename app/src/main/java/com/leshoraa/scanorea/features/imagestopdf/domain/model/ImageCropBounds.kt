@@ -51,9 +51,9 @@ data class ImageCropBounds(
             val normalizedRatio = (clampedTarget / clampedImgAspect).coerceIn(0.01f, 100f)
 
             return if (normalizedRatio <= 1.0f) {
-                val w = normalizedRatio
-                val left = ((1.0f - w) / 2f).coerceIn(0f, 0.5f)
-                val right = (left + w).coerceAtMost(1f)
+                val targetWidthRatio = normalizedRatio
+                val left = ((1.0f - targetWidthRatio) / 2f).coerceIn(0f, 0.5f)
+                val right = (left + targetWidthRatio).coerceAtMost(1f)
                 ImageCropBounds(
                     left = left,
                     top = 0f,
@@ -61,9 +61,9 @@ data class ImageCropBounds(
                     bottom = 1f
                 )
             } else {
-                val h = 1.0f / normalizedRatio
-                val top = ((1.0f - h) / 2f).coerceIn(0f, 0.5f)
-                val bottom = (top + h).coerceAtMost(1f)
+                val targetHeightRatio = 1.0f / normalizedRatio
+                val top = ((1.0f - targetHeightRatio) / 2f).coerceIn(0f, 0.5f)
+                val bottom = (top + targetHeightRatio).coerceAtMost(1f)
                 ImageCropBounds(
                     left = 0f,
                     top = top,

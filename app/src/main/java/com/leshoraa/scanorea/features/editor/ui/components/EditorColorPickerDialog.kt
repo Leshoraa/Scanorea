@@ -66,7 +66,7 @@ fun EditorColorPickerDialog(
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 6.dp,
+            tonalElevation = 0.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 16.dp)

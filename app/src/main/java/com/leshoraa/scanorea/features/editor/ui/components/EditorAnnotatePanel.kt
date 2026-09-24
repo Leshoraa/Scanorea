@@ -26,7 +26,7 @@ import androidx.compose.material.icons.outlined.Opacity
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material3.ElevatedFilterChip
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -81,7 +81,7 @@ fun EditorAnnotatePanel(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Pen Tool
-            ElevatedFilterChip(
+            FilterChip(
                 selected = selectedTool == AnnotationTool.PEN,
                 onClick = { onToolSelected(AnnotationTool.PEN) },
                 leadingIcon = {
@@ -99,7 +99,7 @@ fun EditorAnnotatePanel(
                     )
                 },
                 shape = RoundedCornerShape(10.dp),
-                colors = FilterChipDefaults.elevatedFilterChipColors(
+                colors = FilterChipDefaults.filterChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     labelColor = MaterialTheme.colorScheme.onSurface,
                     iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -107,11 +107,12 @@ fun EditorAnnotatePanel(
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                     selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
                 ),
+                elevation = FilterChipDefaults.filterChipElevation(0.dp),
                 border = null
             )
 
             // Highlighter Tool
-            ElevatedFilterChip(
+            FilterChip(
                 selected = selectedTool == AnnotationTool.HIGHLIGHTER,
                 onClick = { onToolSelected(AnnotationTool.HIGHLIGHTER) },
                 leadingIcon = {
@@ -129,7 +130,7 @@ fun EditorAnnotatePanel(
                     )
                 },
                 shape = RoundedCornerShape(10.dp),
-                colors = FilterChipDefaults.elevatedFilterChipColors(
+                colors = FilterChipDefaults.filterChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     labelColor = MaterialTheme.colorScheme.onSurface,
                     iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -137,11 +138,12 @@ fun EditorAnnotatePanel(
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                     selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
                 ),
+                elevation = FilterChipDefaults.filterChipElevation(0.dp),
                 border = null
             )
 
             // Redact Tool
-            ElevatedFilterChip(
+            FilterChip(
                 selected = selectedTool == AnnotationTool.REDACT,
                 onClick = { onToolSelected(AnnotationTool.REDACT) },
                 leadingIcon = {
@@ -159,7 +161,7 @@ fun EditorAnnotatePanel(
                     )
                 },
                 shape = RoundedCornerShape(10.dp),
-                colors = FilterChipDefaults.elevatedFilterChipColors(
+                colors = FilterChipDefaults.filterChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     labelColor = MaterialTheme.colorScheme.onSurface,
                     iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -167,11 +169,12 @@ fun EditorAnnotatePanel(
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                     selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
                 ),
+                elevation = FilterChipDefaults.filterChipElevation(0.dp),
                 border = null
             )
 
             // Rectangle Tool
-            ElevatedFilterChip(
+            FilterChip(
                 selected = selectedTool == AnnotationTool.RECT_SHAPE,
                 onClick = { onToolSelected(AnnotationTool.RECT_SHAPE) },
                 leadingIcon = {
@@ -189,7 +192,7 @@ fun EditorAnnotatePanel(
                     )
                 },
                 shape = RoundedCornerShape(10.dp),
-                colors = FilterChipDefaults.elevatedFilterChipColors(
+                colors = FilterChipDefaults.filterChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     labelColor = MaterialTheme.colorScheme.onSurface,
                     iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -197,11 +200,12 @@ fun EditorAnnotatePanel(
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                     selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
                 ),
+                elevation = FilterChipDefaults.filterChipElevation(0.dp),
                 border = null
             )
 
             // Circle Tool
-            ElevatedFilterChip(
+            FilterChip(
                 selected = selectedTool == AnnotationTool.OVAL_SHAPE,
                 onClick = { onToolSelected(AnnotationTool.OVAL_SHAPE) },
                 leadingIcon = {
@@ -219,7 +223,7 @@ fun EditorAnnotatePanel(
                     )
                 },
                 shape = RoundedCornerShape(10.dp),
-                colors = FilterChipDefaults.elevatedFilterChipColors(
+                colors = FilterChipDefaults.filterChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     labelColor = MaterialTheme.colorScheme.onSurface,
                     iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -227,11 +231,12 @@ fun EditorAnnotatePanel(
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                     selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
                 ),
+                elevation = FilterChipDefaults.filterChipElevation(0.dp),
                 border = null
             )
 
             // Arrow Tool
-            ElevatedFilterChip(
+            FilterChip(
                 selected = selectedTool == AnnotationTool.ARROW_SHAPE,
                 onClick = { onToolSelected(AnnotationTool.ARROW_SHAPE) },
                 leadingIcon = {
@@ -249,7 +254,7 @@ fun EditorAnnotatePanel(
                     )
                 },
                 shape = RoundedCornerShape(10.dp),
-                colors = FilterChipDefaults.elevatedFilterChipColors(
+                colors = FilterChipDefaults.filterChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     labelColor = MaterialTheme.colorScheme.onSurface,
                     iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -257,6 +262,7 @@ fun EditorAnnotatePanel(
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                     selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
                 ),
+                elevation = FilterChipDefaults.filterChipElevation(0.dp),
                 border = null
             )
         }

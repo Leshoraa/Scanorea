@@ -20,7 +20,7 @@ import androidx.compose.material.icons.outlined.Brightness6
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.RestartAlt
-import androidx.compose.material3.ElevatedFilterChip
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -70,7 +70,7 @@ fun EditorAdjustPanel(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Contrast Tool Chip
-            ElevatedFilterChip(
+            FilterChip(
                 selected = activeTool == AdjustmentTool.CONTRAST,
                 onClick = { activeTool = AdjustmentTool.CONTRAST },
                 leadingIcon = {
@@ -88,7 +88,7 @@ fun EditorAdjustPanel(
                     )
                 },
                 shape = RoundedCornerShape(10.dp),
-                colors = FilterChipDefaults.elevatedFilterChipColors(
+                colors = FilterChipDefaults.filterChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     labelColor = MaterialTheme.colorScheme.onSurface,
                     iconColor = MaterialTheme.colorScheme.primary,
@@ -96,11 +96,12 @@ fun EditorAdjustPanel(
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                     selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
                 ),
+                elevation = FilterChipDefaults.filterChipElevation(0.dp),
                 border = null
             )
 
             // Brightness Tool Chip
-            ElevatedFilterChip(
+            FilterChip(
                 selected = activeTool == AdjustmentTool.BRIGHTNESS,
                 onClick = { activeTool = AdjustmentTool.BRIGHTNESS },
                 leadingIcon = {
@@ -118,7 +119,7 @@ fun EditorAdjustPanel(
                     )
                 },
                 shape = RoundedCornerShape(10.dp),
-                colors = FilterChipDefaults.elevatedFilterChipColors(
+                colors = FilterChipDefaults.filterChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     labelColor = MaterialTheme.colorScheme.onSurface,
                     iconColor = MaterialTheme.colorScheme.primary,
@@ -126,11 +127,12 @@ fun EditorAdjustPanel(
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                     selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
                 ),
+                elevation = FilterChipDefaults.filterChipElevation(0.dp),
                 border = null
             )
 
             // Auto Clean Action Chip
-            ElevatedFilterChip(
+            FilterChip(
                 selected = false,
                 onClick = onAutoAdjust,
                 leadingIcon = {
@@ -148,18 +150,19 @@ fun EditorAdjustPanel(
                     )
                 },
                 shape = RoundedCornerShape(10.dp),
-                colors = FilterChipDefaults.elevatedFilterChipColors(
+                colors = FilterChipDefaults.filterChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     labelColor = MaterialTheme.colorScheme.onSurface,
                     iconColor = MaterialTheme.colorScheme.primary
                 ),
+                elevation = FilterChipDefaults.filterChipElevation(0.dp),
                 border = null
             )
 
             // Reset Action Chip: Restores initial device recommendation
             val isModified = kotlin.math.abs(page.contrast - page.initialContrast) > 0.01f ||
                     kotlin.math.abs(page.brightness - page.initialBrightness) > 0.5f
-            ElevatedFilterChip(
+            FilterChip(
                 selected = false,
                 onClick = onResetAdjustments,
                 enabled = isModified,
@@ -178,11 +181,12 @@ fun EditorAdjustPanel(
                     )
                 },
                 shape = RoundedCornerShape(10.dp),
-                colors = FilterChipDefaults.elevatedFilterChipColors(
+                colors = FilterChipDefaults.filterChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     labelColor = if (isModified) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                     iconColor = if (isModified) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 ),
+                elevation = FilterChipDefaults.filterChipElevation(0.dp),
                 border = null
             )
         }
