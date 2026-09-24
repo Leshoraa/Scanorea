@@ -57,6 +57,8 @@ fun EditorCropPanel(
     currentPageIndex: Int,
     totalPages: Int,
     isReordering: Boolean,
+    selectedRatio: CropAspectRatio = CropAspectRatio.FREE,
+    onRatioSelected: (CropAspectRatio) -> Unit = {},
     onCropBoundsChange: (ImageCropBounds) -> Unit,
     onRotatePage: () -> Unit,
     onResetCrop: () -> Unit,
@@ -67,7 +69,6 @@ fun EditorCropPanel(
     modifier: Modifier = Modifier
 ) {
     var showPagePicker by remember { mutableStateOf(false) }
-    var selectedRatio by remember(page.id) { mutableStateOf(CropAspectRatio.FREE) }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -87,7 +88,7 @@ fun EditorCropPanel(
                 ElevatedFilterChip(
                     selected = isSelected,
                     onClick = {
-                        selectedRatio = ratioPreset
+                        onRatioSelected(ratioPreset)
                         when (ratioPreset) {
                             CropAspectRatio.FREE -> {
                                 // Keep current crop boundaries, allowing free manual dragging
@@ -174,7 +175,7 @@ fun EditorCropPanel(
             // Reset Crop
             FilledTonalButton(
                 onClick = {
-                    selectedRatio = CropAspectRatio.FREE
+                    onRatioSelected(CropAspectRatio.FREE)
                     onResetCrop()
                 },
                 enabled = !page.cropBounds.isDefault,

@@ -267,14 +267,6 @@ class ImagesToPdfViewModel(
         _uiState.update { currentState ->
             currentState.copy(pages = currentState.pages + newPages)
         }
-
-        // Asynchronously analyze images in background to calibrate optimal sharpness/contrast & brightness
-        viewModelScope.launch(Dispatchers.Default) {
-            newPages.forEach { page ->
-                val analysis = ImageAnalyzer.analyze(page.uri, contentResolver)
-                recordAutoCalibration(page.id, analysis.optimalContrast, analysis.optimalBrightness)
-            }
-        }
     }
 
     /**

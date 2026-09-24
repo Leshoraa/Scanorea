@@ -64,6 +64,7 @@ import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.size.Precision
+import com.leshoraa.scanorea.features.imagestopdf.domain.model.CropAspectRatio
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImageCropBounds
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImagePage
 import kotlinx.coroutines.Job
@@ -85,6 +86,7 @@ fun EditorCanvasPager(
     movingTargetIndex: Int,
     liftProgress: Float,
     isCropMode: Boolean,
+    cropAspectRatio: CropAspectRatio = CropAspectRatio.FREE,
     onCropChange: (pageId: String, bounds: ImageCropBounds) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -209,6 +211,8 @@ fun EditorCanvasPager(
                     val haptic = LocalHapticFeedback.current
                     val localCropBoundsState = remember(page.id) { mutableStateOf(page.cropBounds) }
                     var activeCropHandle by remember { mutableStateOf(DragHandle.NONE) }
+                    val currentCropAspectRatio by rememberUpdatedState(cropAspectRatio)
+                    val currentEffectiveAspectRatio by rememberUpdatedState(page.effectiveAspectRatio)
 
                     LaunchedEffect(page.cropBounds) {
                         if (activeCropHandle == DragHandle.NONE && localCropBoundsState.value != page.cropBounds) {
@@ -289,6 +293,9 @@ fun EditorCanvasPager(
                                         if (dRight < edgeHitRadius) candidates.add(DragHandle.RIGHT_EDGE to dRight)
 
                                         handle = candidates.minByOrNull { it.second }?.first ?: DragHandle.NONE
+                                        if (handle == DragHandle.NONE && x in screenLeft..screenRight && y in screenTop..screenBottom) {
+                                            handle = DragHandle.BODY
+                                        }
                                         if (handle != DragHandle.NONE) {
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         }
@@ -389,44 +396,211 @@ fun EditorCanvasPager(
                                                 val minSize = 0.08f
 
                                                 val prev = localCropBoundsState.value
-                                                var newL = prev.left
-                                                var newT = prev.top
-                                                var newR = prev.right
-                                                var newB = prev.bottom
 
-                                                when (activeCropHandle) {
-                                                    DragHandle.TOP_LEFT -> {
-                                                        newL = (prev.left + deltaX).coerceIn(0f, prev.right - minSize)
-                                                        newT = (prev.top + deltaY).coerceIn(0f, prev.bottom - minSize)
+                                                if (activeCropHandle == DragHandle.BODY) {
+                                                    val boxWidth = prev.right - prev.left
+                                                    val boxHeight = prev.bottom - prev.top
+                                                    val newL = (prev.left + deltaX).coerceIn(0f, 1f - boxWidth)
+                                                    val newT = (prev.top + deltaY).coerceIn(0f, 1f - boxHeight)
+                                                    val newR = newL + boxWidth
+                                                    val newB = newT + boxHeight
+                                                    localCropBoundsState.value = ImageCropBounds(newL, newT, newR, newB)
+                                                } else if (currentCropAspectRatio == CropAspectRatio.FREE) {
+                                                    var newL = prev.left
+                                                    var newT = prev.top
+                                                    var newR = prev.right
+                                                    var newB = prev.bottom
+
+                                                    when (activeCropHandle) {
+                                                        DragHandle.TOP_LEFT -> {
+                                                            newL = (prev.left + deltaX).coerceIn(0f, prev.right - minSize)
+                                                            newT = (prev.top + deltaY).coerceIn(0f, prev.bottom - minSize)
+                                                        }
+                                                        DragHandle.TOP_RIGHT -> {
+                                                            newR = (prev.right + deltaX).coerceIn(prev.left + minSize, 1f)
+                                                            newT = (prev.top + deltaY).coerceIn(0f, prev.bottom - minSize)
+                                                        }
+                                                        DragHandle.BOTTOM_LEFT -> {
+                                                            newL = (prev.left + deltaX).coerceIn(0f, prev.right - minSize)
+                                                            newB = (prev.bottom + deltaY).coerceIn(prev.top + minSize, 1f)
+                                                        }
+                                                        DragHandle.BOTTOM_RIGHT -> {
+                                                            newR = (prev.right + deltaX).coerceIn(prev.left + minSize, 1f)
+                                                            newB = (prev.bottom + deltaY).coerceIn(prev.top + minSize, 1f)
+                                                        }
+                                                        DragHandle.TOP_EDGE -> {
+                                                            newT = (prev.top + deltaY).coerceIn(0f, prev.bottom - minSize)
+                                                        }
+                                                        DragHandle.BOTTOM_EDGE -> {
+                                                            newB = (prev.bottom + deltaY).coerceIn(prev.top + minSize, 1f)
+                                                        }
+                                                        DragHandle.LEFT_EDGE -> {
+                                                            newL = (prev.left + deltaX).coerceIn(0f, prev.right - minSize)
+                                                        }
+                                                        DragHandle.RIGHT_EDGE -> {
+                                                            newR = (prev.right + deltaX).coerceIn(prev.left + minSize, 1f)
+                                                        }
+                                                        DragHandle.BODY, DragHandle.NONE -> {}
                                                     }
-                                                    DragHandle.TOP_RIGHT -> {
-                                                        newR = (prev.right + deltaX).coerceIn(prev.left + minSize, 1f)
-                                                        newT = (prev.top + deltaY).coerceIn(0f, prev.bottom - minSize)
+                                                    if (newL < newR && newT < newB) {
+                                                        localCropBoundsState.value = ImageCropBounds.ofClamped(newL, newT, newR, newB, minSize)
                                                     }
-                                                    DragHandle.BOTTOM_LEFT -> {
-                                                        newL = (prev.left + deltaX).coerceIn(0f, prev.right - minSize)
-                                                        newB = (prev.bottom + deltaY).coerceIn(prev.top + minSize, 1f)
+                                                } else {
+                                                    val targetPhysicalRatio: Float = when (currentCropAspectRatio) {
+                                                        CropAspectRatio.FREE -> 1.0f
+                                                        CropAspectRatio.ORIGINAL -> currentEffectiveAspectRatio
+                                                        CropAspectRatio.A4 -> CropAspectRatio.A4.ratio ?: (1f / 1.4142f)
+                                                        CropAspectRatio.SQUARE -> 1.0f
                                                     }
-                                                    DragHandle.BOTTOM_RIGHT -> {
-                                                        newR = (prev.right + deltaX).coerceIn(prev.left + minSize, 1f)
-                                                        newB = (prev.bottom + deltaY).coerceIn(prev.top + minSize, 1f)
+                                                    val normRatio = (targetPhysicalRatio / currentEffectiveAspectRatio).coerceIn(0.01f, 100f)
+                                                    val prevW = prev.right - prev.left
+                                                    val prevH = prev.bottom - prev.top
+                                                    val minW = if (normRatio >= 1f) (minSize * normRatio).coerceIn(minSize, 0.9f) else minSize
+                                                    val minH = if (normRatio >= 1f) minSize else (minSize / normRatio).coerceIn(minSize, 0.9f)
+
+                                                    var newL = prev.left
+                                                    var newT = prev.top
+                                                    var newR = prev.right
+                                                    var newB = prev.bottom
+
+                                                    when (activeCropHandle) {
+                                                        DragHandle.BOTTOM_RIGHT -> {
+                                                            val maxW = (1f - prev.left).coerceAtLeast(minW)
+                                                            val maxH = (1f - prev.top).coerceAtLeast(minH)
+                                                            val limitW = if (maxW / maxH > normRatio) maxH * normRatio else maxW
+                                                            val limitH = limitW / normRatio
+
+                                                            val reqW = prevW + deltaX
+                                                            val reqH = prevH + deltaY
+                                                            var w = if (kotlin.math.abs(deltaX) >= kotlin.math.abs(deltaY * normRatio)) {
+                                                                reqW.coerceIn(minW, limitW)
+                                                            } else {
+                                                                (reqH * normRatio).coerceIn(minW, limitW)
+                                                            }
+                                                            var h = w / normRatio
+                                                            if (h > limitH) {
+                                                                h = limitH
+                                                                w = h * normRatio
+                                                            }
+                                                            newR = newL + w
+                                                            newB = newT + h
+                                                        }
+                                                        DragHandle.TOP_LEFT -> {
+                                                            val maxW = prev.right.coerceAtLeast(minW)
+                                                            val maxH = prev.bottom.coerceAtLeast(minH)
+                                                            val limitW = if (maxW / maxH > normRatio) maxH * normRatio else maxW
+                                                            val limitH = limitW / normRatio
+
+                                                            val reqW = prevW - deltaX
+                                                            val reqH = prevH - deltaY
+                                                            var w = if (kotlin.math.abs(deltaX) >= kotlin.math.abs(deltaY * normRatio)) {
+                                                                reqW.coerceIn(minW, limitW)
+                                                            } else {
+                                                                (reqH * normRatio).coerceIn(minW, limitW)
+                                                            }
+                                                            var h = w / normRatio
+                                                            if (h > limitH) {
+                                                                h = limitH
+                                                                w = h * normRatio
+                                                            }
+                                                            newL = newR - w
+                                                            newT = newB - h
+                                                        }
+                                                        DragHandle.TOP_RIGHT -> {
+                                                            val maxW = (1f - prev.left).coerceAtLeast(minW)
+                                                            val maxH = prev.bottom.coerceAtLeast(minH)
+                                                            val limitW = if (maxW / maxH > normRatio) maxH * normRatio else maxW
+                                                            val limitH = limitW / normRatio
+
+                                                            val reqW = prevW + deltaX
+                                                            val reqH = prevH - deltaY
+                                                            var w = if (kotlin.math.abs(deltaX) >= kotlin.math.abs(deltaY * normRatio)) {
+                                                                reqW.coerceIn(minW, limitW)
+                                                            } else {
+                                                                (reqH * normRatio).coerceIn(minW, limitW)
+                                                            }
+                                                            var h = w / normRatio
+                                                            if (h > limitH) {
+                                                                h = limitH
+                                                                w = h * normRatio
+                                                            }
+                                                            newR = newL + w
+                                                            newT = newB - h
+                                                        }
+                                                        DragHandle.BOTTOM_LEFT -> {
+                                                            val maxW = prev.right.coerceAtLeast(minW)
+                                                            val maxH = (1f - prev.top).coerceAtLeast(minH)
+                                                            val limitW = if (maxW / maxH > normRatio) maxH * normRatio else maxW
+                                                            val limitH = limitW / normRatio
+
+                                                            val reqW = prevW - deltaX
+                                                            val reqH = prevH + deltaY
+                                                            var w = if (kotlin.math.abs(deltaX) >= kotlin.math.abs(deltaY * normRatio)) {
+                                                                reqW.coerceIn(minW, limitW)
+                                                            } else {
+                                                                (reqH * normRatio).coerceIn(minW, limitW)
+                                                            }
+                                                            var h = w / normRatio
+                                                            if (h > limitH) {
+                                                                h = limitH
+                                                                w = h * normRatio
+                                                            }
+                                                            newL = newR - w
+                                                            newB = newT + h
+                                                        }
+                                                        DragHandle.LEFT_EDGE, DragHandle.RIGHT_EDGE -> {
+                                                            val maxW = (if (normRatio <= 1f) normRatio else 1f).coerceAtLeast(minW)
+                                                            val reqW = if (activeCropHandle == DragHandle.RIGHT_EDGE) prevW + deltaX else prevW - deltaX
+                                                            val w = reqW.coerceIn(minW, maxW)
+                                                            val h = w / normRatio
+                                                            val centerH = (prev.top + prev.bottom) / 2f
+                                                            var topCandidate = centerH - h / 2f
+                                                            var bottomCandidate = centerH + h / 2f
+                                                            if (topCandidate < 0f) {
+                                                                bottomCandidate += (0f - topCandidate)
+                                                                topCandidate = 0f
+                                                            }
+                                                            if (bottomCandidate > 1f) {
+                                                                topCandidate -= (bottomCandidate - 1f)
+                                                                bottomCandidate = 1f
+                                                            }
+                                                            newT = topCandidate.coerceIn(0f, 1f - h)
+                                                            newB = (newT + h).coerceIn(newT + minH, 1f)
+                                                            if (activeCropHandle == DragHandle.RIGHT_EDGE) {
+                                                                newR = (prev.left + w).coerceIn(prev.left + minW, 1f)
+                                                            } else {
+                                                                newL = (prev.right - w).coerceIn(0f, prev.right - minW)
+                                                            }
+                                                        }
+                                                        DragHandle.TOP_EDGE, DragHandle.BOTTOM_EDGE -> {
+                                                            val maxH = (if (normRatio >= 1f) 1f / normRatio else 1f).coerceAtLeast(minH)
+                                                            val reqH = if (activeCropHandle == DragHandle.BOTTOM_EDGE) prevH + deltaY else prevH - deltaY
+                                                            val h = reqH.coerceIn(minH, maxH)
+                                                            val w = h * normRatio
+                                                            val centerW = (prev.left + prev.right) / 2f
+                                                            var leftCandidate = centerW - w / 2f
+                                                            var rightCandidate = centerW + w / 2f
+                                                            if (leftCandidate < 0f) {
+                                                                rightCandidate += (0f - leftCandidate)
+                                                                leftCandidate = 0f
+                                                            }
+                                                            if (rightCandidate > 1f) {
+                                                                leftCandidate -= (rightCandidate - 1f)
+                                                                rightCandidate = 1f
+                                                            }
+                                                            newL = leftCandidate.coerceIn(0f, 1f - w)
+                                                            newR = (newL + w).coerceIn(newL + minW, 1f)
+                                                            if (activeCropHandle == DragHandle.BOTTOM_EDGE) {
+                                                                newB = (prev.top + h).coerceIn(prev.top + minH, 1f)
+                                                            } else {
+                                                                newT = (prev.bottom - h).coerceIn(0f, prev.bottom - minH)
+                                                            }
+                                                        }
+                                                        DragHandle.BODY, DragHandle.NONE -> {}
                                                     }
-                                                    DragHandle.TOP_EDGE -> {
-                                                        newT = (prev.top + deltaY).coerceIn(0f, prev.bottom - minSize)
+                                                    if (newL < newR && newT < newB) {
+                                                        localCropBoundsState.value = ImageCropBounds(newL, newT, newR, newB)
                                                     }
-                                                    DragHandle.BOTTOM_EDGE -> {
-                                                        newB = (prev.bottom + deltaY).coerceIn(prev.top + minSize, 1f)
-                                                    }
-                                                    DragHandle.LEFT_EDGE -> {
-                                                        newL = (prev.left + deltaX).coerceIn(0f, prev.right - minSize)
-                                                    }
-                                                    DragHandle.RIGHT_EDGE -> {
-                                                        newR = (prev.right + deltaX).coerceIn(prev.left + minSize, 1f)
-                                                    }
-                                                    DragHandle.NONE -> {}
-                                                }
-                                                if (newL < newR && newT < newB) {
-                                                    localCropBoundsState.value = ImageCropBounds.ofClamped(newL, newT, newR, newB, minSize)
                                                 }
                                             } else if (zoomScale > 1.05f) {
                                                 change.consume()

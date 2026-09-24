@@ -42,7 +42,8 @@ enum class DragHandle {
     TOP_EDGE,
     BOTTOM_EDGE,
     LEFT_EDGE,
-    RIGHT_EDGE
+    RIGHT_EDGE,
+    BODY
 }
 
 /**
@@ -84,12 +85,21 @@ fun EditorCropOverlayCanvas(
             )
         }
 
+        // Highlight whole-frame when dragging the body
+        if (activeHandle == DragHandle.BODY) {
+            drawRect(
+                color = primaryColor.copy(alpha = 0.12f),
+                topLeft = Offset(leftPx, topPx),
+                size = Size(rectWidth, rectHeight)
+            )
+        }
+
         // 2. Crop border outline (Solid, clean 1.5.dp line)
         drawRect(
-            color = Color.White.copy(alpha = 0.85f),
+            color = if (activeHandle == DragHandle.BODY) primaryColor else Color.White.copy(alpha = 0.85f),
             topLeft = Offset(leftPx, topPx),
             size = Size(rectWidth, rectHeight),
-            style = Stroke(width = 1.5.dp.toPx())
+            style = Stroke(width = if (activeHandle == DragHandle.BODY) 2.dp.toPx() else 1.5.dp.toPx())
         )
 
         // 3. Rule of Thirds Grid Lines (Subtle guide lines)
@@ -310,7 +320,10 @@ fun EditorCropOverlay(
                     if (dRight < edgeHitRadius) candidates.add(DragHandle.RIGHT_EDGE to dRight)
 
                     // Select candidate with the smallest distance
-                    val handle = candidates.minByOrNull { it.second }?.first ?: DragHandle.NONE
+                    var handle = candidates.minByOrNull { it.second }?.first ?: DragHandle.NONE
+                    if (handle == DragHandle.NONE && x in leftPx..rightPx && y in topPx..bottomPx) {
+                        handle = DragHandle.BODY
+                    }
 
                     if (handle != DragHandle.NONE) {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -419,6 +432,14 @@ fun EditorCropOverlay(
                                     }
                                     DragHandle.RIGHT_EDGE -> {
                                         newR = (prev.right + deltaX).coerceIn(prev.left + minSize, 1f)
+                                    }
+                                    DragHandle.BODY -> {
+                                        val boxWidth = prev.right - prev.left
+                                        val boxHeight = prev.bottom - prev.top
+                                        newL = (prev.left + deltaX).coerceIn(0f, 1f - boxWidth)
+                                        newT = (prev.top + deltaY).coerceIn(0f, 1f - boxHeight)
+                                        newR = newL + boxWidth
+                                        newB = newT + boxHeight
                                     }
                                     DragHandle.NONE -> {}
                                 }

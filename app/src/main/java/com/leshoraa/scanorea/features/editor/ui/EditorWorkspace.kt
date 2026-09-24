@@ -37,6 +37,7 @@ import com.leshoraa.scanorea.features.editor.ui.components.EditorCanvasPager
 import com.leshoraa.scanorea.features.editor.ui.components.EditorCategoryTabBar
 import com.leshoraa.scanorea.features.editor.ui.components.EditorCropPanel
 import com.leshoraa.scanorea.features.editor.ui.components.EditorFiltersPanel
+import com.leshoraa.scanorea.features.imagestopdf.domain.model.CropAspectRatio
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImageCropBounds
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImagePage
 import kotlinx.coroutines.launch
@@ -68,6 +69,9 @@ fun EditorWorkspace(
 ) {
     if (pages.isEmpty()) return
 
+    val currentPageIndex = pagerState.currentPage.coerceIn(0, pages.size - 1)
+    val currentPage = pages.getOrNull(currentPageIndex)
+
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
@@ -78,16 +82,20 @@ fun EditorWorkspace(
     var movingTargetIndex by remember { mutableIntStateOf(-1) }
     val liftAnim = remember { Animatable(0f) }
 
+    var selectedCropRatio by remember(currentPage?.id) { mutableStateOf(CropAspectRatio.FREE) }
     var originalCropBoundsOnEnter by remember { mutableStateOf(ImageCropBounds.DEFAULT) }
 
     LaunchedEffect(activeCategory) {
         if (activeCategory == EditorCategory.CROP) {
             val curr = pages.getOrNull(pagerState.currentPage)
             originalCropBoundsOnEnter = curr?.cropBounds ?: ImageCropBounds.DEFAULT
+        } else {
+            selectedCropRatio = CropAspectRatio.FREE
         }
     }
 
     val handleApplyCrop: () -> Unit = {
+        selectedCropRatio = CropAspectRatio.FREE
         activeCategory = EditorCategory.FILTERS
     }
 
@@ -96,6 +104,7 @@ fun EditorWorkspace(
         if (curr != null) {
             onCropChange(curr.id, originalCropBoundsOnEnter)
         }
+        selectedCropRatio = CropAspectRatio.FREE
         activeCategory = EditorCategory.FILTERS
     }
 
@@ -138,9 +147,6 @@ fun EditorWorkspace(
         }
     }
 
-    val currentPageIndex = pagerState.currentPage.coerceIn(0, pages.size - 1)
-    val currentPage = pages.getOrNull(currentPageIndex)
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -155,6 +161,7 @@ fun EditorWorkspace(
             movingTargetIndex = movingTargetIndex,
             liftProgress = liftAnim.value,
             isCropMode = activeCategory == EditorCategory.CROP,
+            cropAspectRatio = selectedCropRatio,
             onCropChange = onCropChange,
             modifier = Modifier.weight(1f)
         )
@@ -197,6 +204,8 @@ fun EditorWorkspace(
                                 currentPageIndex = currentPageIndex,
                                 totalPages = pages.size,
                                 isReordering = isReordering,
+                                selectedRatio = selectedCropRatio,
+                                onRatioSelected = { selectedCropRatio = it },
                                 onCropBoundsChange = { newBounds -> onCropChange(currentPage.id, newBounds) },
                                 onRotatePage = { onRotatePage(currentPage.id) },
                                 onResetCrop = { onResetCrop(currentPage.id) },
