@@ -80,6 +80,7 @@ import com.leshoraa.scanorea.core.util.PdfDocumentSharer
 import com.leshoraa.scanorea.features.editor.ui.EditorWorkspace
 import com.leshoraa.scanorea.features.editor.ui.components.DiscardChangesDialog
 import com.leshoraa.scanorea.features.editor.ui.components.EditorPagesGridDialog
+import com.leshoraa.scanorea.features.editor.ui.components.RenameDocumentDialog
 import com.leshoraa.scanorea.features.home.ui.HomeScreen
 import com.leshoraa.scanorea.features.imagestopdf.ui.ImagesToPdfViewModel
 import com.leshoraa.scanorea.features.imagestopdf.ui.components.CaptureSourceBottomSheet
@@ -559,210 +560,22 @@ fun MainScreen(
 
     // Document Rename Dialog
     if (isRenameDialogOpen) {
-        var tempFileName by remember(uiState.options.fileName) {
-            mutableStateOf(uiState.options.fileName.ifBlank { "Scanorea Document" })
-        }
-        var selectedPreset by remember { mutableStateOf<ConversionPreset?>(null) }
-        var presetsDropdownExpanded by remember { mutableStateOf(false) }
-        var showSavePresetDialog by remember { mutableStateOf(false) }
-        var newPresetName by remember { mutableStateOf("") }
-
-        AlertDialog(
-            onDismissRequest = { isRenameDialogOpen = false },
-            title = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Edit,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Text(
-                        text = "Rename Document",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+        RenameDocumentDialog(
+            currentFileName = uiState.options.fileName,
+            presets = uiState.presets,
+            onSave = { finalName, preset ->
+                preset?.let { viewModel.applyPreset(it) }
+                viewModel.updateFileName(finalName)
+                isRenameDialogOpen = false
             },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = "Enter a file name or choose a preset template with dynamic date tokens.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // TextField with Presets Dropdown
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        OutlinedTextField(
-                            value = tempFileName,
-                            onValueChange = {
-                                tempFileName = it
-                                selectedPreset = null
-                            },
-                            label = { Text("File Name") },
-                            placeholder = { Text("e.g. Scanned_Doc_{DD:MM:YYYY}", maxLines = 1) },
-                            singleLine = true,
-                            trailingIcon = {
-                                IconButton(onClick = { presetsDropdownExpanded = !presetsDropdownExpanded }) {
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowDropDown,
-                                        contentDescription = "Presets",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.medium
-                        )
-
-                        DropdownMenu(
-                            expanded = presetsDropdownExpanded,
-                            onDismissRequest = { presetsDropdownExpanded = false },
-                            modifier = Modifier.fillMaxWidth(0.85f)
-                        ) {
-                            Text(
-                                text = "Saved Presets",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
-
-                            uiState.presets.forEach { preset ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text(
-                                                text = preset.name,
-                                                fontWeight = FontWeight.Bold,
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                            Text(
-                                                text = preset.fileNameTemplate,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                    },
-                                    trailingIcon = {
-                                        if (preset.id != "preset_aljabar") {
-                                            IconButton(
-                                                onClick = { viewModel.deletePreset(preset.id) },
-                                                modifier = Modifier.size(24.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Outlined.Delete,
-                                                    contentDescription = "Delete preset",
-                                                    modifier = Modifier.size(16.dp),
-                                                    tint = MaterialTheme.colorScheme.error
-                                                )
-                                            }
-                                        }
-                                    },
-                                    onClick = {
-                                        selectedPreset = preset
-                                        tempFileName = TemplateDateEvaluator.evaluate(preset.fileNameTemplate)
-                                        presetsDropdownExpanded = false
-                                    }
-                                )
-                            }
-
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = "Save Current as New Preset...",
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Add,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                },
-                                onClick = {
-                                    presetsDropdownExpanded = false
-                                    showSavePresetDialog = true
-                                }
-                            )
-                        }
-                    }
-                }
+            onSaveNewPreset = { name, template ->
+                viewModel.saveNewPreset(name, template)
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (tempFileName.isNotBlank()) {
-                            val finalName = TemplateDateEvaluator.evaluate(tempFileName.trim())
-                            selectedPreset?.let { preset ->
-                                viewModel.applyPreset(preset)
-                            }
-                            viewModel.updateFileName(finalName)
-                        }
-                        isRenameDialogOpen = false
-                    }
-                ) {
-                    Text("Save")
-                }
+            onDeletePreset = { presetId ->
+                viewModel.deletePreset(presetId)
             },
-            dismissButton = {
-                TextButton(onClick = { isRenameDialogOpen = false }) {
-                    Text("Cancel")
-                }
-            }
+            onDismiss = { isRenameDialogOpen = false }
         )
-
-        // Nested Save Preset Dialog
-        if (showSavePresetDialog) {
-            AlertDialog(
-                onDismissRequest = { showSavePresetDialog = false },
-                title = { Text("Save as Preset") },
-                text = {
-                    Column {
-                        Text(
-                            text = "Save current file name as a quick preset for future documents.",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = newPresetName,
-                            onValueChange = { newPresetName = it },
-                            label = { Text("Preset Name") },
-                            placeholder = { Text("e.g. Aljabar, Homework") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            if (newPresetName.isNotBlank()) {
-                                val template = tempFileName.ifBlank { "Document_{DD:MM:YYYY}" }
-                                viewModel.saveNewPreset(newPresetName.trim(), template)
-                                newPresetName = ""
-                                showSavePresetDialog = false
-                            }
-                        }
-                    ) {
-                        Text("Save")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showSavePresetDialog = false }) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
     }
 
     // Modal Bottom Sheet for Conversion Options, Presets, and Save Location
@@ -815,6 +628,9 @@ fun MainScreen(
             },
             onSharePdf = {
                 PdfDocumentSharer.share(context, successResult.file)
+            },
+            onKeepInEditor = {
+                viewModel.dismissResultDialog()
             },
             onDismiss = {
                 viewModel.dismissResultDialog()

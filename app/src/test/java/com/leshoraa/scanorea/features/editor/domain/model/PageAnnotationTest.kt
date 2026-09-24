@@ -107,4 +107,12 @@ class PageAnnotationTest {
         assertTrue(StrokeSize.THIN.widthDp < StrokeSize.MEDIUM.widthDp)
         assertTrue(StrokeSize.MEDIUM.widthDp < StrokeSize.THICK.widthDp)
     }
+
+    @Test
+    fun annotationTool_containsNavigateOption() {
+        assertEquals("Navigate", AnnotationTool.NAVIGATE.label)
+        val tools = AnnotationTool.entries
+        assertTrue(tools.contains(AnnotationTool.NAVIGATE))
+        assertTrue(tools.contains(AnnotationTool.PEN))
+    }
 }

@@ -6,6 +6,7 @@ import java.util.UUID
  * Annotation tools available for document markup.
  */
 enum class AnnotationTool(val label: String) {
+    NAVIGATE("Navigate"),
     PEN("Pen"),
     HIGHLIGHTER("Highlighter"),
     REDACT("Redact"),

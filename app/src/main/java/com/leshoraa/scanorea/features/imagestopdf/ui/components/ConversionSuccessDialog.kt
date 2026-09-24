@@ -46,6 +46,7 @@ fun ConversionSuccessDialog(
     result: PdfConversionResult,
     onOpenPdf: () -> Unit,
     onSharePdf: () -> Unit,
+    onKeepInEditor: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     assignedFolders: List<String> = emptyList()
@@ -173,13 +174,32 @@ fun ConversionSuccessDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Dismiss")
+                    TextButton(
+                        onClick = onKeepInEditor
+                    ) {
+                        Text(
+                            text = "Keep in Editor",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    TextButton(
+                        onClick = onDismiss
+                    ) {
+                        Text(
+                            text = "Done",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }

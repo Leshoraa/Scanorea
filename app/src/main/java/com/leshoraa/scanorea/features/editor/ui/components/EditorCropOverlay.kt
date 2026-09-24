@@ -30,6 +30,7 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.leshoraa.scanorea.features.editor.domain.CropGestureCalculator
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImageCropBounds
 import kotlin.math.hypot
 
@@ -398,55 +399,13 @@ fun EditorCropOverlay(
                                 val deltaY = dragAmount.y / imageH
                                 val minSize = 0.08f
 
-                                val prev = localBoundsState.value
-                                var newL = prev.left
-                                var newT = prev.top
-                                var newR = prev.right
-                                var newB = prev.bottom
-
-                                when (activeHandle) {
-                                    DragHandle.TOP_LEFT -> {
-                                        newL = (prev.left + deltaX).coerceIn(0f, prev.right - minSize)
-                                        newT = (prev.top + deltaY).coerceIn(0f, prev.bottom - minSize)
-                                    }
-                                    DragHandle.TOP_RIGHT -> {
-                                        newR = (prev.right + deltaX).coerceIn(prev.left + minSize, 1f)
-                                        newT = (prev.top + deltaY).coerceIn(0f, prev.bottom - minSize)
-                                    }
-                                    DragHandle.BOTTOM_LEFT -> {
-                                        newL = (prev.left + deltaX).coerceIn(0f, prev.right - minSize)
-                                        newB = (prev.bottom + deltaY).coerceIn(prev.top + minSize, 1f)
-                                    }
-                                    DragHandle.BOTTOM_RIGHT -> {
-                                        newR = (prev.right + deltaX).coerceIn(prev.left + minSize, 1f)
-                                        newB = (prev.bottom + deltaY).coerceIn(prev.top + minSize, 1f)
-                                    }
-                                    DragHandle.TOP_EDGE -> {
-                                        newT = (prev.top + deltaY).coerceIn(0f, prev.bottom - minSize)
-                                    }
-                                    DragHandle.BOTTOM_EDGE -> {
-                                        newB = (prev.bottom + deltaY).coerceIn(prev.top + minSize, 1f)
-                                    }
-                                    DragHandle.LEFT_EDGE -> {
-                                        newL = (prev.left + deltaX).coerceIn(0f, prev.right - minSize)
-                                    }
-                                    DragHandle.RIGHT_EDGE -> {
-                                        newR = (prev.right + deltaX).coerceIn(prev.left + minSize, 1f)
-                                    }
-                                    DragHandle.BODY -> {
-                                        val boxWidth = prev.right - prev.left
-                                        val boxHeight = prev.bottom - prev.top
-                                        newL = (prev.left + deltaX).coerceIn(0f, 1f - boxWidth)
-                                        newT = (prev.top + deltaY).coerceIn(0f, 1f - boxHeight)
-                                        newR = newL + boxWidth
-                                        newB = newT + boxHeight
-                                    }
-                                    DragHandle.NONE -> {}
-                                }
-
-                                if (newL < newR && newT < newB) {
-                                    localBoundsState.value = ImageCropBounds.ofClamped(newL, newT, newR, newB, minSize)
-                                }
+                                localBoundsState.value = CropGestureCalculator.updateBounds(
+                                    currentBounds = localBoundsState.value,
+                                    activeHandle = activeHandle,
+                                    deltaX = deltaX,
+                                    deltaY = deltaY,
+                                    minSize = minSize
+                                )
                             } else if (currentZoomScale > 1.05f) {
                                 change.consume()
                                 currentOnPan(dragAmount)

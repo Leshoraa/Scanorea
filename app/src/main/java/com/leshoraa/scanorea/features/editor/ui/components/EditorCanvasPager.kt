@@ -66,6 +66,7 @@ import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.size.Precision
+import com.leshoraa.scanorea.features.editor.domain.CropGestureCalculator
 import com.leshoraa.scanorea.features.editor.domain.model.AnnotationColors
 import com.leshoraa.scanorea.features.editor.domain.model.AnnotationTool
 import com.leshoraa.scanorea.features.editor.domain.model.NormalizedPoint
@@ -302,7 +303,7 @@ fun EditorCanvasPager(
                                     var activePoints = mutableListOf<NormalizedPoint>()
                                     var activeAnno: PageAnnotation? = null
 
-                                    if (currentIsAnnotateMode) {
+                                    if (currentIsAnnotateMode && currentAnnotationTool != AnnotationTool.NAVIGATE) {
                                         val isInsideImage = startPos.x in (imgScreenLeft - 24f)..(imgScreenLeft + imgScreenW + 24f) &&
                                                 startPos.y in (imgScreenTop - 24f)..(imgScreenTop + imgScreenH + 24f)
                                         if (isInsideImage) {
@@ -311,6 +312,7 @@ fun EditorCanvasPager(
                                             activePoints = mutableListOf(startNorm)
 
                                             activeAnno = when (currentAnnotationTool) {
+                                                AnnotationTool.NAVIGATE -> null
                                                 AnnotationTool.PEN -> PageAnnotation.FreehandPath(
                                                     color = currentAnnotationColor,
                                                     strokeWidth = currentStrokeSize.widthDp,
@@ -532,6 +534,7 @@ fun EditorCanvasPager(
                                                 change.consume()
                                                 val currNorm = toNorm(change.position)
                                                 activeAnno = when (currentAnnotationTool) {
+                                                    AnnotationTool.NAVIGATE -> null
                                                     AnnotationTool.PEN -> {
                                                         activePoints.add(currNorm)
                                                         (activeAnno as? PageAnnotation.FreehandPath)?.copy(points = activePoints.toList())
@@ -583,214 +586,15 @@ fun EditorCanvasPager(
                                                 val deltaX = dragAmount.x / (fittedWPx * zoomScale)
                                                 val deltaY = dragAmount.y / (fittedHPx * zoomScale)
                                                 val minSize = 0.08f
-
-                                                val prev = localCropBoundsState.value
-
-                                                if (activeCropHandle == DragHandle.BODY) {
-                                                    val boxWidth = prev.right - prev.left
-                                                    val boxHeight = prev.bottom - prev.top
-                                                    val newL = (prev.left + deltaX).coerceIn(0f, 1f - boxWidth)
-                                                    val newT = (prev.top + deltaY).coerceIn(0f, 1f - boxHeight)
-                                                    val newR = newL + boxWidth
-                                                    val newB = newT + boxHeight
-                                                    localCropBoundsState.value = ImageCropBounds(newL, newT, newR, newB)
-                                                } else if (currentCropAspectRatio == CropAspectRatio.FREE) {
-                                                    var newL = prev.left
-                                                    var newT = prev.top
-                                                    var newR = prev.right
-                                                    var newB = prev.bottom
-
-                                                    when (activeCropHandle) {
-                                                        DragHandle.TOP_LEFT -> {
-                                                            newL = (prev.left + deltaX).coerceIn(0f, prev.right - minSize)
-                                                            newT = (prev.top + deltaY).coerceIn(0f, prev.bottom - minSize)
-                                                        }
-                                                        DragHandle.TOP_RIGHT -> {
-                                                            newR = (prev.right + deltaX).coerceIn(prev.left + minSize, 1f)
-                                                            newT = (prev.top + deltaY).coerceIn(0f, prev.bottom - minSize)
-                                                        }
-                                                        DragHandle.BOTTOM_LEFT -> {
-                                                            newL = (prev.left + deltaX).coerceIn(0f, prev.right - minSize)
-                                                            newB = (prev.bottom + deltaY).coerceIn(prev.top + minSize, 1f)
-                                                        }
-                                                        DragHandle.BOTTOM_RIGHT -> {
-                                                            newR = (prev.right + deltaX).coerceIn(prev.left + minSize, 1f)
-                                                            newB = (prev.bottom + deltaY).coerceIn(prev.top + minSize, 1f)
-                                                        }
-                                                        DragHandle.TOP_EDGE -> {
-                                                            newT = (prev.top + deltaY).coerceIn(0f, prev.bottom - minSize)
-                                                        }
-                                                        DragHandle.BOTTOM_EDGE -> {
-                                                            newB = (prev.bottom + deltaY).coerceIn(prev.top + minSize, 1f)
-                                                        }
-                                                        DragHandle.LEFT_EDGE -> {
-                                                            newL = (prev.left + deltaX).coerceIn(0f, prev.right - minSize)
-                                                        }
-                                                        DragHandle.RIGHT_EDGE -> {
-                                                            newR = (prev.right + deltaX).coerceIn(prev.left + minSize, 1f)
-                                                        }
-                                                        DragHandle.BODY, DragHandle.NONE -> {}
-                                                    }
-                                                    if (newL < newR && newT < newB) {
-                                                        localCropBoundsState.value = ImageCropBounds.ofClamped(newL, newT, newR, newB, minSize)
-                                                    }
-                                                } else {
-                                                    val targetPhysicalRatio: Float = when (currentCropAspectRatio) {
-                                                        CropAspectRatio.FREE -> 1.0f
-                                                        CropAspectRatio.ORIGINAL -> currentEffectiveAspectRatio
-                                                        CropAspectRatio.A4 -> CropAspectRatio.A4.ratio ?: (1f / 1.4142f)
-                                                        CropAspectRatio.SQUARE -> 1.0f
-                                                    }
-                                                    val normRatio = (targetPhysicalRatio / currentEffectiveAspectRatio).coerceIn(0.01f, 100f)
-                                                    val prevW = prev.right - prev.left
-                                                    val prevH = prev.bottom - prev.top
-                                                    val minW = if (normRatio >= 1f) (minSize * normRatio).coerceIn(minSize, 0.9f) else minSize
-                                                    val minH = if (normRatio >= 1f) minSize else (minSize / normRatio).coerceIn(minSize, 0.9f)
-
-                                                    var newL = prev.left
-                                                    var newT = prev.top
-                                                    var newR = prev.right
-                                                    var newB = prev.bottom
-
-                                                    when (activeCropHandle) {
-                                                        DragHandle.BOTTOM_RIGHT -> {
-                                                            val maxW = (1f - prev.left).coerceAtLeast(minW)
-                                                            val maxH = (1f - prev.top).coerceAtLeast(minH)
-                                                            val limitW = if (maxW / maxH > normRatio) maxH * normRatio else maxW
-                                                            val limitH = limitW / normRatio
-
-                                                            val reqW = prevW + deltaX
-                                                            val reqH = prevH + deltaY
-                                                            var w = if (kotlin.math.abs(deltaX) >= kotlin.math.abs(deltaY * normRatio)) {
-                                                                reqW.coerceIn(minW, limitW)
-                                                            } else {
-                                                                (reqH * normRatio).coerceIn(minW, limitW)
-                                                            }
-                                                            var h = w / normRatio
-                                                            if (h > limitH) {
-                                                                h = limitH
-                                                                w = h * normRatio
-                                                            }
-                                                            newR = newL + w
-                                                            newB = newT + h
-                                                        }
-                                                        DragHandle.TOP_LEFT -> {
-                                                            val maxW = prev.right.coerceAtLeast(minW)
-                                                            val maxH = prev.bottom.coerceAtLeast(minH)
-                                                            val limitW = if (maxW / maxH > normRatio) maxH * normRatio else maxW
-                                                            val limitH = limitW / normRatio
-
-                                                            val reqW = prevW - deltaX
-                                                            val reqH = prevH - deltaY
-                                                            var w = if (kotlin.math.abs(deltaX) >= kotlin.math.abs(deltaY * normRatio)) {
-                                                                reqW.coerceIn(minW, limitW)
-                                                            } else {
-                                                                (reqH * normRatio).coerceIn(minW, limitW)
-                                                            }
-                                                            var h = w / normRatio
-                                                            if (h > limitH) {
-                                                                h = limitH
-                                                                w = h * normRatio
-                                                            }
-                                                            newL = newR - w
-                                                            newT = newB - h
-                                                        }
-                                                        DragHandle.TOP_RIGHT -> {
-                                                            val maxW = (1f - prev.left).coerceAtLeast(minW)
-                                                            val maxH = prev.bottom.coerceAtLeast(minH)
-                                                            val limitW = if (maxW / maxH > normRatio) maxH * normRatio else maxW
-                                                            val limitH = limitW / normRatio
-
-                                                            val reqW = prevW + deltaX
-                                                            val reqH = prevH - deltaY
-                                                            var w = if (kotlin.math.abs(deltaX) >= kotlin.math.abs(deltaY * normRatio)) {
-                                                                reqW.coerceIn(minW, limitW)
-                                                            } else {
-                                                                (reqH * normRatio).coerceIn(minW, limitW)
-                                                            }
-                                                            var h = w / normRatio
-                                                            if (h > limitH) {
-                                                                h = limitH
-                                                                w = h * normRatio
-                                                            }
-                                                            newR = newL + w
-                                                            newT = newB - h
-                                                        }
-                                                        DragHandle.BOTTOM_LEFT -> {
-                                                            val maxW = prev.right.coerceAtLeast(minW)
-                                                            val maxH = (1f - prev.top).coerceAtLeast(minH)
-                                                            val limitW = if (maxW / maxH > normRatio) maxH * normRatio else maxW
-                                                            val limitH = limitW / normRatio
-
-                                                            val reqW = prevW - deltaX
-                                                            val reqH = prevH + deltaY
-                                                            var w = if (kotlin.math.abs(deltaX) >= kotlin.math.abs(deltaY * normRatio)) {
-                                                                reqW.coerceIn(minW, limitW)
-                                                            } else {
-                                                                (reqH * normRatio).coerceIn(minW, limitW)
-                                                            }
-                                                            var h = w / normRatio
-                                                            if (h > limitH) {
-                                                                h = limitH
-                                                                w = h * normRatio
-                                                            }
-                                                            newL = newR - w
-                                                            newB = newT + h
-                                                        }
-                                                        DragHandle.LEFT_EDGE, DragHandle.RIGHT_EDGE -> {
-                                                            val maxW = (if (normRatio <= 1f) normRatio else 1f).coerceAtLeast(minW)
-                                                            val reqW = if (activeCropHandle == DragHandle.RIGHT_EDGE) prevW + deltaX else prevW - deltaX
-                                                            val w = reqW.coerceIn(minW, maxW)
-                                                            val h = w / normRatio
-                                                            val centerH = (prev.top + prev.bottom) / 2f
-                                                            var topCandidate = centerH - h / 2f
-                                                            var bottomCandidate = centerH + h / 2f
-                                                            if (topCandidate < 0f) {
-                                                                bottomCandidate += (0f - topCandidate)
-                                                                topCandidate = 0f
-                                                            }
-                                                            if (bottomCandidate > 1f) {
-                                                                topCandidate -= (bottomCandidate - 1f)
-                                                                bottomCandidate = 1f
-                                                            }
-                                                            newT = topCandidate.coerceIn(0f, 1f - h)
-                                                            newB = (newT + h).coerceIn(newT + minH, 1f)
-                                                            if (activeCropHandle == DragHandle.RIGHT_EDGE) {
-                                                                newR = (prev.left + w).coerceIn(prev.left + minW, 1f)
-                                                            } else {
-                                                                newL = (prev.right - w).coerceIn(0f, prev.right - minW)
-                                                            }
-                                                        }
-                                                        DragHandle.TOP_EDGE, DragHandle.BOTTOM_EDGE -> {
-                                                            val maxH = (if (normRatio >= 1f) 1f / normRatio else 1f).coerceAtLeast(minH)
-                                                            val reqH = if (activeCropHandle == DragHandle.BOTTOM_EDGE) prevH + deltaY else prevH - deltaY
-                                                            val h = reqH.coerceIn(minH, maxH)
-                                                            val w = h * normRatio
-                                                            val centerW = (prev.left + prev.right) / 2f
-                                                            var leftCandidate = centerW - w / 2f
-                                                            var rightCandidate = centerW + w / 2f
-                                                            if (leftCandidate < 0f) {
-                                                                rightCandidate += (0f - leftCandidate)
-                                                                leftCandidate = 0f
-                                                            }
-                                                            if (rightCandidate > 1f) {
-                                                                leftCandidate -= (rightCandidate - 1f)
-                                                                rightCandidate = 1f
-                                                            }
-                                                            newL = leftCandidate.coerceIn(0f, 1f - w)
-                                                            newR = (newL + w).coerceIn(newL + minW, 1f)
-                                                            if (activeCropHandle == DragHandle.BOTTOM_EDGE) {
-                                                                newB = (prev.top + h).coerceIn(prev.top + minH, 1f)
-                                                            } else {
-                                                                newT = (prev.bottom - h).coerceIn(0f, prev.bottom - minH)
-                                                            }
-                                                        }
-                                                        DragHandle.BODY, DragHandle.NONE -> {}
-                                                    }
-                                                    if (newL < newR && newT < newB) {
-                                                        localCropBoundsState.value = ImageCropBounds(newL, newT, newR, newB)
-                                                    }
-                                                }
+                                                localCropBoundsState.value = CropGestureCalculator.updateBounds(
+                                                    currentBounds = localCropBoundsState.value,
+                                                    activeHandle = activeCropHandle,
+                                                    deltaX = deltaX,
+                                                    deltaY = deltaY,
+                                                    cropAspectRatio = currentCropAspectRatio,
+                                                    effectiveAspectRatio = currentEffectiveAspectRatio,
+                                                    minSize = minSize
+                                                )
                                             } else if (zoomScale > 1.05f) {
                                                 change.consume()
                                                 val maxPanX = ((fittedWPx * (zoomScale - 1f)) / 2f).coerceAtLeast(0f)
@@ -872,153 +676,26 @@ fun EditorCanvasPager(
                         }
                     }
 
-                    // Top-left Transient Filter Badge (hidden during crop mode)
-                    if (!isCropMode) {
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = isBadgeVisible,
-                            enter = fadeIn(animationSpec = tween(250)),
-                            exit = fadeOut(animationSpec = tween(350)),
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(12.dp)
-                        ) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
-                                shape = RoundedCornerShape(8.dp),
-                                shadowElevation = 0.dp
-                            ) {
-                                Text(
-                                    text = page.filter.label,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    // Floating Zoom Reset Badge / Pill
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = zoomScale > 1.05f,
-                        enter = fadeIn(tween(200)) + scaleIn(tween(200)),
-                        exit = fadeOut(tween(200)) + scaleOut(tween(200)),
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(top = 12.dp, end = if (!isCropMode) 88.dp else 12.dp)
-                    ) {
-                        Surface(
-                            onClick = {
-                                animateZoom(1f, Offset.Zero)
-                            },
-                            shape = RoundedCornerShape(16.dp),
-                            color = Color(0xDD202020),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)),
-                            shadowElevation = 0.dp
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "${String.format(Locale.US, "%.1f", zoomScale)}x",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    imageVector = Icons.Outlined.Close,
-                                    contentDescription = "Reset Zoom",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(13.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    // Top-right Page Indicator Badge
-                    Surface(
-                        color = Color.Black.copy(alpha = 0.65f),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(12.dp)
-                    ) {
-                        Text(
-                            text = "${pageIndex + 1} / ${pages.size}",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
+                    EditorCanvasBadges(
+                        page = page,
+                        pageIndex = pageIndex,
+                        totalPages = pages.size,
+                        isCropMode = isCropMode,
+                        isBadgeVisible = isBadgeVisible,
+                        zoomScale = zoomScale,
+                        onResetZoom = { animateZoom(1f, Offset.Zero) }
+                    )
                 }
             }
         }
 
         // Floating Lifted Card Overlay during reorder animation
         if (isReordering && movingPage != null) {
-            val liftedPage = movingPage
-            val colorMatrix = liftedPage.filter.createColorMatrix(liftedPage.contrast, liftedPage.brightness)
-            val colorFilter = colorMatrix?.let { ColorFilter.colorMatrix(ColorMatrix(it.array)) }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .zIndex(20f)
-                    .graphicsLayer {
-                        translationY = -46.dp.toPx() * liftProgress
-                        scaleX = 1f + 0.05f * liftProgress
-                        scaleY = 1f + 0.05f * liftProgress
-                    }
-                    .padding(4.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(liftedPage.uri)
-                            .transformations(
-                                PagePreviewTransformation(
-                                    rotationDegrees = liftedPage.rotationDegrees,
-                                    cropBounds = liftedPage.cropBounds
-                                )
-                            )
-                            .crossfade(false)
-                            .build(),
-                        contentDescription = liftedPage.displayName,
-                        contentScale = ContentScale.Fit,
-                        colorFilter = colorFilter,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(8.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                    )
-
-                    Surface(
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(12.dp),
-                        shadowElevation = 0.dp,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Moving to Page ${movingTargetIndex + 1}",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
-                    }
-                }
-            }
+            EditorReorderLiftedCard(
+                movingPage = movingPage,
+                movingTargetIndex = movingTargetIndex,
+                liftProgress = liftProgress
+            )
         }
 
         // Floating Top Markup Action Bar (Undo, Redo, Clear All)

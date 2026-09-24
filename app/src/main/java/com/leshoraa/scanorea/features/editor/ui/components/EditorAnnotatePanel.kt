@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Highlight
 import androidx.compose.material.icons.outlined.Opacity
 import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.PanTool
 import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.FilterChip
@@ -80,6 +81,37 @@ fun EditorAnnotatePanel(
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Navigate / Pan Mode Chip
+            FilterChip(
+                selected = selectedTool == AnnotationTool.NAVIGATE,
+                onClick = { onToolSelected(AnnotationTool.NAVIGATE) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.PanTool,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                },
+                label = {
+                    Text(
+                        text = AnnotationTool.NAVIGATE.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (selectedTool == AnnotationTool.NAVIGATE) FontWeight.Bold else FontWeight.Medium
+                    )
+                },
+                shape = RoundedCornerShape(10.dp),
+                colors = FilterChipDefaults.filterChipColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    labelColor = MaterialTheme.colorScheme.onSurface,
+                    iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                elevation = FilterChipDefaults.filterChipElevation(0.dp),
+                border = null
+            )
+
             // Pen Tool
             FilterChip(
                 selected = selectedTool == AnnotationTool.PEN,
@@ -269,116 +301,125 @@ fun EditorAnnotatePanel(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Row 2: Color Swatches + Custom Picker + Stroke Size Chips + Opacity
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Preset Color Circles
-            AnnotationColors.PRESETS.forEach { colorLong ->
-                val isSelected = selectedColor == colorLong
-                val color = Color(colorLong)
-                Box(
-                    modifier = Modifier
-                        .size(26.dp)
-                        .clip(CircleShape)
-                        .background(color)
-                        .border(
-                            width = if (isSelected) 3.dp else 1.dp,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.35f),
-                            shape = CircleShape
-                        )
-                        .clickable { onColorSelected(colorLong) }
-                )
-            }
-
-            // Custom Color & Opacity Picker Button
-            Surface(
-                onClick = { isColorPickerVisible = true },
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.size(28.dp)
+        if (selectedTool != AnnotationTool.NAVIGATE) {
+            // Row 2: Color Swatches + Custom Picker + Stroke Size Chips + Opacity
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Outlined.Palette,
-                        contentDescription = "Custom Color & Opacity",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
+                // Preset Color Circles
+                AnnotationColors.PRESETS.forEach { colorLong ->
+                    val isSelected = selectedColor == colorLong
+                    val color = Color(colorLong)
+                    Box(
+                        modifier = Modifier
+                            .size(26.dp)
+                            .clip(CircleShape)
+                            .background(color)
+                            .border(
+                                width = if (isSelected) 3.dp else 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.35f),
+                                shape = CircleShape
+                            )
+                            .clickable { onColorSelected(colorLong) }
                     )
                 }
-            }
 
-            VerticalDivider(
-                modifier = Modifier
-                    .height(20.dp)
-                    .padding(horizontal = 4.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
-            )
-
-            // Stroke Size Selector Chips
-            StrokeSize.entries.forEach { size ->
-                val isSelected = selectedStrokeSize == size
+                // Custom Color & Opacity Picker Button
                 Surface(
-                    onClick = { onStrokeSizeSelected(size) },
+                    onClick = { isColorPickerVisible = true },
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Outlined.Palette,
+                            contentDescription = "Custom Color & Opacity",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                VerticalDivider(
+                    modifier = Modifier
+                        .height(20.dp)
+                        .padding(horizontal = 4.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                )
+
+                // Stroke Size Selector Chips
+                StrokeSize.entries.forEach { size ->
+                    val isSelected = selectedStrokeSize == size
+                    Surface(
+                        onClick = { onStrokeSizeSelected(size) },
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+                        modifier = Modifier.height(28.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(horizontal = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = size.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                softWrap = false,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+
+                VerticalDivider(
+                    modifier = Modifier
+                        .height(20.dp)
+                        .padding(horizontal = 4.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+                )
+
+                // Opacity Indicator & Button
+                Surface(
+                    onClick = { isColorPickerVisible = true },
                     shape = RoundedCornerShape(8.dp),
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     modifier = Modifier.height(28.dp)
                 ) {
-                    Box(
-                        modifier = Modifier.padding(horizontal = 10.dp),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Opacity,
+                            contentDescription = "Opacity",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp)
+                        )
                         Text(
-                            text = size.label,
+                            text = "${(selectedAlpha * 100).roundToInt()}%",
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Medium,
                             softWrap = false,
                             maxLines = 1
                         )
                     }
                 }
             }
-
-            VerticalDivider(
-                modifier = Modifier
-                    .height(20.dp)
-                    .padding(horizontal = 4.dp),
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
+        } else {
+            Text(
+                text = "Drag with 1 finger to pan canvas. Pinch with 2 fingers to zoom.",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 4.dp)
             )
-
-            // Opacity Indicator & Button
-            Surface(
-                onClick = { isColorPickerVisible = true },
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.height(28.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Opacity,
-                        contentDescription = "Opacity",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = "${(selectedAlpha * 100).roundToInt()}%",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Medium,
-                        softWrap = false,
-                        maxLines = 1
-                    )
-                }
-            }
         }
     }
 
