@@ -86,7 +86,8 @@ class ImagesToPdfViewModel(
         if (recentPdfsRepository == null) return
         viewModelScope.launch {
             val recents = recentPdfsRepository.getRecentPdfs()
-            _uiState.update { it.copy(recentPdfs = recents) }
+            val categories = recentPdfsRepository.getCategories()
+            _uiState.update { it.copy(recentPdfs = recents, categories = categories) }
         }
     }
 
@@ -179,6 +180,38 @@ class ImagesToPdfViewModel(
         PdfThumbnailLoader.evict(file)
         viewModelScope.launch {
             recentPdfsRepository.deletePdf(file)
+            loadRecentPdfs()
+        }
+    }
+
+    fun toggleFavorite(file: File) {
+        if (recentPdfsRepository == null) return
+        viewModelScope.launch {
+            recentPdfsRepository.toggleFavorite(file)
+            loadRecentPdfs()
+        }
+    }
+
+    fun updatePdfCategory(file: File, category: String?) {
+        if (recentPdfsRepository == null) return
+        viewModelScope.launch {
+            recentPdfsRepository.updatePdfCategory(file, category)
+            loadRecentPdfs()
+        }
+    }
+
+    fun addCategory(category: String) {
+        if (recentPdfsRepository == null) return
+        viewModelScope.launch {
+            recentPdfsRepository.addCategory(category)
+            loadRecentPdfs()
+        }
+    }
+
+    fun deleteCategory(category: String) {
+        if (recentPdfsRepository == null) return
+        viewModelScope.launch {
+            recentPdfsRepository.deleteCategory(category)
             loadRecentPdfs()
         }
     }

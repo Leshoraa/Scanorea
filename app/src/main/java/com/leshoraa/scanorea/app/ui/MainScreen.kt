@@ -456,7 +456,8 @@ fun MainScreen(
                             onSeeAllResultsClick = { currentTab = MainNavTab.RESULTS },
                             onPdfClick = { viewModel.openPdfInViewer(it) },
                             onShareClick = { PdfShareUtil.sharePdf(context, it) },
-                            onDeleteClick = { viewModel.deleteRecentPdf(it) }
+                            onDeleteClick = { viewModel.deleteRecentPdf(it) },
+                            onToggleFavorite = { viewModel.toggleFavorite(it) }
                         )
                     }
 
@@ -470,9 +471,14 @@ fun MainScreen(
                     MainNavTab.RESULTS -> {
                         ResultsScreen(
                             recentPdfs = uiState.recentPdfs,
+                            categories = uiState.categories,
                             onPdfClick = { viewModel.openPdfInViewer(it) },
                             onShareClick = { PdfShareUtil.sharePdf(context, it) },
-                            onDeleteClick = { viewModel.deleteRecentPdf(it) }
+                            onDeleteClick = { viewModel.deleteRecentPdf(it) },
+                            onToggleFavorite = { viewModel.toggleFavorite(it) },
+                            onAssignCategory = { file, category -> viewModel.updatePdfCategory(file, category) },
+                            onAddCategory = { viewModel.addCategory(it) },
+                            onDeleteCategory = { viewModel.deleteCategory(it) }
                         )
                     }
 

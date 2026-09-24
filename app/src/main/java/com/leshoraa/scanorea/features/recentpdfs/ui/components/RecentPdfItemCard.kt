@@ -12,9 +12,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -23,6 +27,7 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -48,7 +53,9 @@ fun RecentPdfItemCard(
     onPdfClick: (File) -> Unit,
     onShareClick: (File) -> Unit,
     onDeleteClick: (File) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onToggleFavorite: ((File) -> Unit)? = null,
+    onMoveToFolderClick: ((File) -> Unit)? = null
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -88,6 +95,45 @@ fun RecentPdfItemCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (!recent.category.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Folder,
+                                contentDescription = null,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = recent.category,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (onToggleFavorite != null) {
+                IconButton(
+                    onClick = { onToggleFavorite(recent.file) },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = if (recent.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                        contentDescription = if (recent.isFavorite) "Remove from favorites" else "Add to favorites",
+                        tint = if (recent.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
 
             Box {
@@ -136,6 +182,40 @@ fun RecentPdfItemCard(
                             onShareClick(recent.file)
                         }
                     )
+
+                    if (onMoveToFolderClick != null) {
+                        DropdownMenuItem(
+                            text = { Text("Move to Folder") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Outlined.DriveFileMove,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                onMoveToFolderClick(recent.file)
+                            }
+                        )
+                    }
+
+                    if (onToggleFavorite != null) {
+                        DropdownMenuItem(
+                            text = { Text(if (recent.isFavorite) "Remove from Favorites" else "Add to Favorites") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = if (recent.isFavorite) Icons.Outlined.StarBorder else Icons.Filled.Star,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                onToggleFavorite(recent.file)
+                            }
+                        )
+                    }
 
                     DropdownMenuItem(
                         text = {

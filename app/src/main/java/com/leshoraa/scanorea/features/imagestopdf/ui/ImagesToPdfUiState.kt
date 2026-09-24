@@ -26,6 +26,7 @@ data class ImagesToPdfUiState(
     val activeFilter: ImageFilterType = ImageFilterType.BLACK_AND_WHITE,
     val activePdfViewerFile: File? = null,
     val recentPdfs: List<RecentPdf> = emptyList(),
+    val categories: List<String> = emptyList(),
     val presets: List<ConversionPreset> = emptyList(),
     val destinationFolderUri: Uri? = null,
     val destinationFolderDisplayName: String = "Internal: Scanorea/pdfs",

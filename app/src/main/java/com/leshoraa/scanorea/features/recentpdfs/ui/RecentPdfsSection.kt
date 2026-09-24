@@ -20,9 +20,9 @@ import java.io.File
 
 /**
  * Modern dashboard section for recently generated PDF documents:
- * - Green document icon badge
- * - Clean title and relative time ("2.4 MB • 2 minutes ago")
- * - 3-dots overflow menu (Open, Share, Delete)
+ * - Document thumbnail and badge
+ * - Clean title, file size, relative timestamp, and category badge
+ * - Favorite quick toggle and 3-dots overflow menu (Open, Share, Move to Folder, Delete)
  * - Section header with "See All" button
  */
 @Composable
@@ -33,7 +33,9 @@ fun RecentPdfsSection(
     onDeleteClick: (File) -> Unit,
     modifier: Modifier = Modifier,
     maxDisplayCount: Int = 4,
-    onSeeAllClick: (() -> Unit)? = null
+    onSeeAllClick: (() -> Unit)? = null,
+    onToggleFavorite: ((File) -> Unit)? = null,
+    onMoveToFolderClick: ((File) -> Unit)? = null
 ) {
     if (recentPdfs.isEmpty()) return
 
@@ -79,10 +81,11 @@ fun RecentPdfsSection(
                     recent = recent,
                     onPdfClick = onPdfClick,
                     onShareClick = onShareClick,
-                    onDeleteClick = onDeleteClick
+                    onDeleteClick = onDeleteClick,
+                    onToggleFavorite = onToggleFavorite,
+                    onMoveToFolderClick = onMoveToFolderClick
                 )
             }
         }
     }
 }
-

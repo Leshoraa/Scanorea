@@ -30,7 +30,9 @@ fun HomeScreen(
     onPdfClick: (File) -> Unit,
     onShareClick: (File) -> Unit,
     onDeleteClick: (File) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onToggleFavorite: ((File) -> Unit)? = null,
+    onMoveToFolderClick: ((File) -> Unit)? = null
 ) {
     Column(
         modifier = modifier
@@ -56,7 +58,9 @@ fun HomeScreen(
             onSeeAllClick = onSeeAllResultsClick,
             onPdfClick = onPdfClick,
             onShareClick = onShareClick,
-            onDeleteClick = onDeleteClick
+            onDeleteClick = onDeleteClick,
+            onToggleFavorite = onToggleFavorite,
+            onMoveToFolderClick = onMoveToFolderClick
         )
     }
 }
