@@ -43,4 +43,41 @@ class ImagesToPdfUiStateTest {
         val state = ImagesToPdfUiState(defaultFilter = com.leshoraa.scanorea.core.filter.ImageFilterType.ORIGINAL)
         assertEquals(com.leshoraa.scanorea.core.filter.ImageFilterType.ORIGINAL, state.defaultFilter)
     }
+
+    @Test
+    fun canUndoAnnotation_reflectsAnnotationState() {
+        val dummyUri = android.net.TestUri("content://media/1")
+        val annotation = com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation.FreehandPath(
+            color = 0xFFFF0000,
+            alpha = 1.0f,
+            points = emptyList()
+        )
+        val pageWithAnno = ImagePage(id = "p1", uri = dummyUri, annotations = listOf(annotation))
+        val pageWithoutAnno = ImagePage(id = "p2", uri = dummyUri, annotations = emptyList())
+
+        val state = ImagesToPdfUiState(pages = listOf(pageWithAnno, pageWithoutAnno))
+
+        assertTrue(state.canUndoAnnotation("p1"))
+        assertFalse(state.canUndoAnnotation("p2"))
+        assertFalse(state.canUndoAnnotation("p_unknown"))
+    }
+
+    @Test
+    fun canRedoAnnotation_reflectsRedoMapState() {
+        val annotation = com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation.FreehandPath(
+            color = 0xFFFF0000,
+            alpha = 0.5f,
+            points = emptyList()
+        )
+        val state = ImagesToPdfUiState(
+            redoAnnotationsMap = mapOf(
+                "p1" to listOf(annotation),
+                "p2" to emptyList()
+            )
+        )
+
+        assertTrue(state.canRedoAnnotation("p1"))
+        assertFalse(state.canRedoAnnotation("p2"))
+        assertFalse(state.canRedoAnnotation("p_unknown"))
+    }
 }

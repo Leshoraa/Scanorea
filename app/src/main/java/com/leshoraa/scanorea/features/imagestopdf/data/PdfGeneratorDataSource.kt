@@ -68,7 +68,8 @@ class PdfGeneratorDataSource(
                         pageHeight = pageHeight,
                         margin = options.marginPoints,
                         isFitToImage = options.pageSize == PdfPageSize.FIT_TO_IMAGE,
-                        paint = paint
+                        paint = paint,
+                        annotations = imagePage.annotations
                     )
 
                     pdfDocument.finishPage(page)
@@ -139,27 +140,145 @@ class PdfGeneratorDataSource(
         pageHeight: Int,
         margin: Float,
         isFitToImage: Boolean,
-        paint: Paint
+        paint: Paint,
+        annotations: List<com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation> = emptyList()
     ) {
+        val destinationRect: RectF
         if (isFitToImage) {
+            destinationRect = RectF(0f, 0f, bitmap.width.toFloat(), bitmap.height.toFloat())
             canvas.drawBitmap(bitmap, 0f, 0f, paint)
-            return
+        } else {
+            val printableWidth = (pageWidth - (margin * 2)).coerceAtLeast(1f)
+            val printableHeight = (pageHeight - (margin * 2)).coerceAtLeast(1f)
+
+            val scaleX = printableWidth / bitmap.width.toFloat()
+            val scaleY = printableHeight / bitmap.height.toFloat()
+            val scale = min(scaleX, scaleY)
+
+            val destinationWidth = bitmap.width * scale
+            val destinationHeight = bitmap.height * scale
+
+            val left = margin + (printableWidth - destinationWidth) / 2f
+            val top = margin + (printableHeight - destinationHeight) / 2f
+
+            destinationRect = RectF(left, top, left + destinationWidth, top + destinationHeight)
+            canvas.drawBitmap(bitmap, null, destinationRect, paint)
         }
 
-        val printableWidth = (pageWidth - (margin * 2)).coerceAtLeast(1f)
-        val printableHeight = (pageHeight - (margin * 2)).coerceAtLeast(1f)
+        if (annotations.isNotEmpty()) {
+            renderAnnotations(canvas, destinationRect, annotations)
+        }
+    }
 
-        val scaleX = printableWidth / bitmap.width.toFloat()
-        val scaleY = printableHeight / bitmap.height.toFloat()
-        val scale = min(scaleX, scaleY)
+    private fun renderAnnotations(
+        canvas: android.graphics.Canvas,
+        destinationRect: RectF,
+        annotations: List<com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation>
+    ) {
+        val docW = destinationRect.width()
+        val docH = destinationRect.height()
+        if (docW <= 0f || docH <= 0f) return
 
-        val destinationWidth = bitmap.width * scale
-        val destinationHeight = bitmap.height * scale
+        val scaleFactor = (docW / 360f).coerceIn(0.5f, 5f)
 
-        val left = margin + (printableWidth - destinationWidth) / 2f
-        val top = margin + (printableHeight - destinationHeight) / 2f
+        for (annotation in annotations) {
+            when (annotation) {
+                is com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation.FreehandPath -> {
+                    val strokePx = (annotation.strokeWidth * scaleFactor).coerceAtLeast(1.5f)
+                    val pathPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = annotation.color.toInt()
+                        style = Paint.Style.STROKE
+                        strokeWidth = strokePx
+                        strokeCap = Paint.Cap.ROUND
+                        strokeJoin = Paint.Join.ROUND
+                    }
+                    if (annotation.points.size > 1) {
+                        val path = android.graphics.Path()
+                        val first = annotation.points.first()
+                        path.moveTo(destinationRect.left + first.x * docW, destinationRect.top + first.y * docH)
+                        for (i in 1 until annotation.points.size) {
+                            val p = annotation.points[i]
+                            path.lineTo(destinationRect.left + p.x * docW, destinationRect.top + p.y * docH)
+                        }
+                        canvas.drawPath(path, pathPaint)
+                    } else if (annotation.points.size == 1) {
+                        val p = annotation.points.first()
+                        pathPaint.style = Paint.Style.FILL
+                        canvas.drawCircle(
+                            destinationRect.left + p.x * docW,
+                            destinationRect.top + p.y * docH,
+                            strokePx / 2f,
+                            pathPaint
+                        )
+                    }
+                }
 
-        val destinationRect = RectF(left, top, left + destinationWidth, top + destinationHeight)
-        canvas.drawBitmap(bitmap, null, destinationRect, paint)
+                is com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation.RectBox -> {
+                    val l = destinationRect.left + kotlin.math.min(annotation.left, annotation.right) * docW
+                    val t = destinationRect.top + kotlin.math.min(annotation.top, annotation.bottom) * docH
+                    val r = destinationRect.left + kotlin.math.max(annotation.left, annotation.right) * docW
+                    val b = destinationRect.top + kotlin.math.max(annotation.top, annotation.bottom) * docH
+
+                    val boxPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        val baseColor = annotation.color.toInt()
+                        val alphaInt = (annotation.alpha * 255f).toInt().coerceIn(0, 255)
+                        color = android.graphics.Color.argb(
+                            alphaInt,
+                            android.graphics.Color.red(baseColor),
+                            android.graphics.Color.green(baseColor),
+                            android.graphics.Color.blue(baseColor)
+                        )
+                        style = if (annotation.isFilled) Paint.Style.FILL else Paint.Style.STROKE
+                        if (!annotation.isFilled) {
+                            strokeWidth = (annotation.strokeWidth * scaleFactor).coerceAtLeast(1.5f)
+                        }
+                    }
+                    canvas.drawRect(l, t, r, b, boxPaint)
+                }
+
+                is com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation.OvalShape -> {
+                    val l = destinationRect.left + kotlin.math.min(annotation.left, annotation.right) * docW
+                    val t = destinationRect.top + kotlin.math.min(annotation.top, annotation.bottom) * docH
+                    val r = destinationRect.left + kotlin.math.max(annotation.left, annotation.right) * docW
+                    val b = destinationRect.top + kotlin.math.max(annotation.top, annotation.bottom) * docH
+
+                    val ovalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = annotation.color.toInt()
+                        style = Paint.Style.STROKE
+                        strokeWidth = (annotation.strokeWidth * scaleFactor).coerceAtLeast(1.5f)
+                    }
+                    canvas.drawOval(RectF(l, t, r, b), ovalPaint)
+                }
+
+                is com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation.ArrowLine -> {
+                    val sx = destinationRect.left + annotation.startX * docW
+                    val sy = destinationRect.top + annotation.startY * docH
+                    val ex = destinationRect.left + annotation.endX * docW
+                    val ey = destinationRect.top + annotation.endY * docH
+                    val strokePx = (annotation.strokeWidth * scaleFactor).coerceAtLeast(2f)
+
+                    val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        color = annotation.color.toInt()
+                        style = Paint.Style.STROKE
+                        strokeWidth = strokePx
+                        strokeCap = Paint.Cap.ROUND
+                        strokeJoin = Paint.Join.ROUND
+                    }
+                    canvas.drawLine(sx, sy, ex, ey, linePaint)
+
+                    // Draw Arrowhead
+                    val angle = kotlin.math.atan2((ey - sy).toDouble(), (ex - sx).toDouble())
+                    val arrowLen = (strokePx * 3.8).coerceIn(12.0 * (scaleFactor / 1.5), 48.0 * (scaleFactor / 1.5))
+                    val arrowAngle = Math.PI / 6.0
+                    val x1 = (ex - arrowLen * kotlin.math.cos(angle - arrowAngle)).toFloat()
+                    val y1 = (ey - arrowLen * kotlin.math.sin(angle - arrowAngle)).toFloat()
+                    val x2 = (ex - arrowLen * kotlin.math.cos(angle + arrowAngle)).toFloat()
+                    val y2 = (ey - arrowLen * kotlin.math.sin(angle + arrowAngle)).toFloat()
+
+                    canvas.drawLine(ex, ey, x1, y1, linePaint)
+                    canvas.drawLine(ex, ey, x2, y2, linePaint)
+                }
+            }
+        }
     }
 }

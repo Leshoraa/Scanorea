@@ -19,7 +19,9 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -30,8 +32,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.core.filter.ImageFilterType
+import com.leshoraa.scanorea.features.editor.domain.model.AnnotationColors
+import com.leshoraa.scanorea.features.editor.domain.model.AnnotationTool
 import com.leshoraa.scanorea.features.editor.domain.model.EditorCategory
+import com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation
+import com.leshoraa.scanorea.features.editor.domain.model.StrokeSize
 import com.leshoraa.scanorea.features.editor.ui.components.EditorAdjustPanel
+import com.leshoraa.scanorea.features.editor.ui.components.EditorAnnotatePanel
 import com.leshoraa.scanorea.features.editor.ui.components.EditorBottomActionBar
 import com.leshoraa.scanorea.features.editor.ui.components.EditorCanvasPager
 import com.leshoraa.scanorea.features.editor.ui.components.EditorCategoryTabBar
@@ -63,6 +70,12 @@ fun EditorWorkspace(
     onCropChange: (pageId: String, bounds: ImageCropBounds) -> Unit,
     onRotatePage: (pageId: String) -> Unit,
     onResetCrop: (pageId: String) -> Unit,
+    canUndoAnnotation: Boolean = false,
+    canRedoAnnotation: Boolean = false,
+    onAddAnnotation: (pageId: String, annotation: PageAnnotation) -> Unit = { _, _ -> },
+    onUndoAnnotation: (pageId: String) -> Unit = {},
+    onRedoAnnotation: (pageId: String) -> Unit = {},
+    onClearAnnotations: (pageId: String) -> Unit = {},
     onCancel: () -> Unit,
     onOpenOptionsSheet: () -> Unit,
     modifier: Modifier = Modifier
@@ -76,6 +89,11 @@ fun EditorWorkspace(
     val coroutineScope = rememberCoroutineScope()
 
     var activeCategory by remember { mutableStateOf(EditorCategory.FILTERS) }
+
+    var selectedAnnotationTool by remember { mutableStateOf(AnnotationTool.PEN) }
+    var selectedAnnotationColor by remember { mutableLongStateOf(AnnotationColors.PRESETS.first()) }
+    var selectedAnnotationAlpha by remember { mutableFloatStateOf(1.0f) }
+    var selectedStrokeSize by remember { mutableStateOf(StrokeSize.MEDIUM) }
 
     var isReordering by remember { mutableStateOf(false) }
     var movingPage by remember { mutableStateOf<ImagePage?>(null) }
@@ -163,6 +181,17 @@ fun EditorWorkspace(
             isCropMode = activeCategory == EditorCategory.CROP,
             cropAspectRatio = selectedCropRatio,
             onCropChange = onCropChange,
+            isAnnotateMode = activeCategory == EditorCategory.MARKUP,
+            activeAnnotationTool = selectedAnnotationTool,
+            selectedAnnotationColor = selectedAnnotationColor,
+            selectedAnnotationAlpha = selectedAnnotationAlpha,
+            selectedStrokeSize = selectedStrokeSize,
+            canUndoAnnotation = canUndoAnnotation,
+            canRedoAnnotation = canRedoAnnotation,
+            onAddAnnotation = onAddAnnotation,
+            onUndoAnnotation = { currentPage?.let { onUndoAnnotation(it.id) } },
+            onRedoAnnotation = { currentPage?.let { onRedoAnnotation(it.id) } },
+            onClearAnnotations = { currentPage?.let { onClearAnnotations(it.id) } },
             modifier = Modifier.weight(1f)
         )
 
@@ -225,6 +254,18 @@ fun EditorWorkspace(
                                     }
                                 },
                                 onMovePage = { src, tgt -> startMoveAnimation(src, tgt) }
+                            )
+                        }
+                        EditorCategory.MARKUP -> {
+                            EditorAnnotatePanel(
+                                selectedTool = selectedAnnotationTool,
+                                onToolSelected = { selectedAnnotationTool = it },
+                                selectedColor = selectedAnnotationColor,
+                                onColorSelected = { selectedAnnotationColor = it },
+                                selectedAlpha = selectedAnnotationAlpha,
+                                onAlphaSelected = { selectedAnnotationAlpha = it },
+                                selectedStrokeSize = selectedStrokeSize,
+                                onStrokeSizeSelected = { selectedStrokeSize = it }
                             )
                         }
                     }

@@ -18,6 +18,7 @@ import com.leshoraa.scanorea.features.imagestopdf.domain.model.CompressionProfil
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ConversionProgress
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImageCropBounds
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImagePage
+import com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfConversionOptions
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageOrientation
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageSize
@@ -368,6 +369,75 @@ class ImagesToPdfViewModel(
 
     fun resetPageCrop(pageId: String) {
         updatePageCrop(pageId, ImageCropBounds.DEFAULT)
+    }
+
+    fun addPageAnnotation(pageId: String, annotation: PageAnnotation) {
+        _uiState.update { currentState ->
+            val updatedPages = currentState.pages.map { page ->
+                if (page.id == pageId) {
+                    page.copy(annotations = page.annotations + annotation)
+                } else {
+                    page
+                }
+            }
+            val updatedRedo = currentState.redoAnnotationsMap + (pageId to emptyList())
+            currentState.copy(pages = updatedPages, redoAnnotationsMap = updatedRedo)
+        }
+    }
+
+    fun undoPageAnnotation(pageId: String) {
+        _uiState.update { currentState ->
+            val targetPage = currentState.pages.find { it.id == pageId } ?: return@update currentState
+            if (targetPage.annotations.isEmpty()) return@update currentState
+
+            val annotationToUndo = targetPage.annotations.last()
+            val updatedPages = currentState.pages.map { page ->
+                if (page.id == pageId) {
+                    page.copy(annotations = page.annotations.dropLast(1))
+                } else {
+                    page
+                }
+            }
+            val currentRedoList = currentState.redoAnnotationsMap[pageId] ?: emptyList()
+            val updatedRedo = currentState.redoAnnotationsMap + (pageId to (currentRedoList + annotationToUndo))
+            currentState.copy(pages = updatedPages, redoAnnotationsMap = updatedRedo)
+        }
+    }
+
+    fun redoPageAnnotation(pageId: String) {
+        _uiState.update { currentState ->
+            val redoList = currentState.redoAnnotationsMap[pageId] ?: return@update currentState
+            if (redoList.isEmpty()) return@update currentState
+
+            val annotationToRedo = redoList.last()
+            val updatedPages = currentState.pages.map { page ->
+                if (page.id == pageId) {
+                    page.copy(annotations = page.annotations + annotationToRedo)
+                } else {
+                    page
+                }
+            }
+            val updatedRedo = currentState.redoAnnotationsMap + (pageId to redoList.dropLast(1))
+            currentState.copy(pages = updatedPages, redoAnnotationsMap = updatedRedo)
+        }
+    }
+
+    fun clearPageAnnotations(pageId: String) {
+        _uiState.update { currentState ->
+            val targetPage = currentState.pages.find { it.id == pageId } ?: return@update currentState
+            if (targetPage.annotations.isEmpty()) return@update currentState
+
+            val currentRedoList = currentState.redoAnnotationsMap[pageId] ?: emptyList()
+            val updatedRedo = currentState.redoAnnotationsMap + (pageId to (currentRedoList + targetPage.annotations))
+            val updatedPages = currentState.pages.map { page ->
+                if (page.id == pageId) {
+                    page.copy(annotations = emptyList())
+                } else {
+                    page
+                }
+            }
+            currentState.copy(pages = updatedPages, redoAnnotationsMap = updatedRedo)
+        }
     }
 
     fun setGridView(enabled: Boolean) {

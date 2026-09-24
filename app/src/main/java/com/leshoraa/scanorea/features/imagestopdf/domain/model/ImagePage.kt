@@ -4,6 +4,8 @@ import android.net.Uri
 
 import com.leshoraa.scanorea.core.filter.ImageFilterType
 
+import com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation
+
 /**
  * Represents a single image page intended to be included in the PDF.
  *
@@ -20,6 +22,7 @@ import com.leshoraa.scanorea.core.filter.ImageFilterType
  * @param height Original intrinsic image height in pixels.
  * @param initialContrast Auto-calibrated initial contrast recommendation from device analysis.
  * @param initialBrightness Auto-calibrated initial brightness recommendation from device analysis.
+ * @param annotations Vector annotations drawn on this page.
  */
 data class ImagePage(
     val id: String,
@@ -34,7 +37,8 @@ data class ImagePage(
     val width: Int = 0,
     val height: Int = 0,
     val initialContrast: Float = 1.0f,
-    val initialBrightness: Float = 0.0f
+    val initialBrightness: Float = 0.0f,
+    val annotations: List<PageAnnotation> = emptyList()
 ) {
     /**
      * Resolves the effective uncropped aspect ratio (width / height) accounting for 90° / 270° orientation.

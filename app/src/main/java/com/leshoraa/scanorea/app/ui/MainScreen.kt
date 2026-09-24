@@ -495,6 +495,7 @@ fun MainScreen(
                 }
             } else {
                 val estimatedBytes = uiState.options.compressionProfile.estimateSizeBytes(uiState.pages)
+                val currentPage = uiState.pages.getOrNull(pagerState.currentPage)
                 EditorWorkspace(
                     pages = uiState.pages,
                     pagerState = pagerState,
@@ -520,6 +521,20 @@ fun MainScreen(
                     },
                     onResetCrop = { pageId ->
                         viewModel.resetPageCrop(pageId)
+                    },
+                    canUndoAnnotation = currentPage?.let { uiState.canUndoAnnotation(it.id) } ?: false,
+                    canRedoAnnotation = currentPage?.let { uiState.canRedoAnnotation(it.id) } ?: false,
+                    onAddAnnotation = { pageId, annotation ->
+                        viewModel.addPageAnnotation(pageId, annotation)
+                    },
+                    onUndoAnnotation = { pageId ->
+                        viewModel.undoPageAnnotation(pageId)
+                    },
+                    onRedoAnnotation = { pageId ->
+                        viewModel.redoPageAnnotation(pageId)
+                    },
+                    onClearAnnotations = { pageId ->
+                        viewModel.clearPageAnnotations(pageId)
                     },
                     onCancel = { viewModel.clearAllPages() },
                     onOpenOptionsSheet = { viewModel.showOptionsBottomSheet(true) }

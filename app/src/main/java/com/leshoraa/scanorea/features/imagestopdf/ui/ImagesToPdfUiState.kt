@@ -29,7 +29,8 @@ data class ImagesToPdfUiState(
     val presets: List<ConversionPreset> = emptyList(),
     val destinationFolderUri: Uri? = null,
     val destinationFolderDisplayName: String = "Internal: Scanorea/pdfs",
-    val carouselPageIndex: Int = 0
+    val carouselPageIndex: Int = 0,
+    val redoAnnotationsMap: Map<String, List<com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation>> = emptyMap()
 ) {
     val hasPages: Boolean
         get() = pages.isNotEmpty()
@@ -39,4 +40,10 @@ data class ImagesToPdfUiState(
 
     val currentPage: ImagePage?
         get() = pages.getOrNull(carouselPageIndex.coerceIn(0, (pages.size - 1).coerceAtLeast(0)))
+
+    fun canUndoAnnotation(pageId: String): Boolean =
+        pages.find { it.id == pageId }?.annotations?.isNotEmpty() == true
+
+    fun canRedoAnnotation(pageId: String): Boolean =
+        redoAnnotationsMap[pageId]?.isNotEmpty() == true
 }
