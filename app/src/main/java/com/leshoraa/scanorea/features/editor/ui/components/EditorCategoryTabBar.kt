@@ -35,7 +35,7 @@ fun EditorCategoryTabBar(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         HorizontalDivider(
-            color = Color.White.copy(alpha = 0.12f),
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
             thickness = 1.dp
         )
 
@@ -53,7 +53,7 @@ fun EditorCategoryTabBar(
                 Surface(
                     onClick = { onCategorySelected(category) },
                     shape = RoundedCornerShape(50),
-                    color = if (isSelected) Color(0xFF2C2C2C) else Color.Transparent,
+                    color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
                     modifier = Modifier.padding(horizontal = 4.dp)
                 ) {
                     Row(
@@ -65,7 +65,7 @@ fun EditorCategoryTabBar(
                                 imageVector = category.icon,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                         }
@@ -73,7 +73,7 @@ fun EditorCategoryTabBar(
                             text = category.label,
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.65f)
+                            color = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

@@ -115,7 +115,7 @@ fun EditorCropPanel(
                     shape = RoundedCornerShape(10.dp),
                     colors = FilterChipDefaults.elevatedFilterChipColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        labelColor = Color.White.copy(alpha = 0.9f),
+                        labelColor = MaterialTheme.colorScheme.onSurface,
                         selectedContainerColor = MaterialTheme.colorScheme.primary,
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                     ),
@@ -168,7 +168,7 @@ fun EditorCropPanel(
                     text = "Rotate (${page.rotationDegrees}°)",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -189,7 +189,7 @@ fun EditorCropPanel(
                 Icon(
                     imageVector = Icons.Outlined.RestartAlt,
                     contentDescription = "Reset Crop",
-                    tint = if (!page.cropBounds.isDefault) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.38f),
+                    tint = if (!page.cropBounds.isDefault) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
@@ -197,7 +197,7 @@ fun EditorCropPanel(
                     text = "Reset",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (!page.cropBounds.isDefault) Color.White else Color.White.copy(alpha = 0.38f)
+                    color = if (!page.cropBounds.isDefault) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
             }
 
@@ -248,7 +248,7 @@ fun EditorCropPanel(
                             text = "Move...",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 

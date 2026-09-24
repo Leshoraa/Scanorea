@@ -404,7 +404,7 @@ fun PdfViewerScreen(
                                 colors = CardDefaults.cardColors(
                                     containerColor = Color.White
                                 ),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                             ) {
                                 if (bitmap != null) {
                                     Image(
@@ -434,7 +434,7 @@ fun PdfViewerScreen(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.88f),
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         shape = RoundedCornerShape(16.dp),
-                        shadowElevation = 3.dp,
+                        shadowElevation = 0.dp,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(bottom = 18.dp)
@@ -486,7 +486,7 @@ fun PdfViewerScreen(
                             colors = CardDefaults.cardColors(
                                 containerColor = Color.White
                             ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {
                             if (bitmap != null) {
                                 Image(

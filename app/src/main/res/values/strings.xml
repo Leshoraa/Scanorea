@@ -1,3 +1,36 @@
 <resources>
     <string name="app_name">Scanorea</string>
+
+    <!-- Folder Organization & Management -->
+    <string name="folder_organize_title">Organize in Folders</string>
+    <string name="folder_new_folder">New Folder</string>
+    <string name="folder_create">Create</string>
+    <string name="folder_rename">Rename</string>
+    <string name="folder_rename_title">Rename Folder</string>
+    <string name="folder_delete">Delete</string>
+    <string name="folder_delete_title">Delete Folder?</string>
+    <string name="folder_cancel">Cancel</string>
+    <string name="folder_done">Done</string>
+    <string name="folder_clear_all">Clear All</string>
+    <string name="folder_name_placeholder">Folder name (e.g. Invoices)</string>
+    <string name="folder_create_description">Create a folder to organize your PDFs.</string>
+    <string name="folder_rename_description">Enter a new name for \"%1$s\".</string>
+    <string name="folder_delete_confirmation">Are you sure you want to delete \"%1$s\"? Your PDF documents will not be deleted, they will just become uncategorized.</string>
+    <string name="folder_empty_message">No folders created yet</string>
+    <string name="folder_error_already_exists">A folder with this name already exists</string>
+    <string name="folder_error_reserved">\"All\" and \"Favorites\" are reserved names</string>
+    <string name="folder_error_invalid_chars">Folder name cannot contain / \\ : * ? \" &lt; &gt; |</string>
+    <string name="conversion_organize_hint">Choose folders to categorize this document</string>
+
+    <!-- Editor & Document Discard -->
+    <string name="editor_discard_title">Discard changes?</string>
+    <string name="editor_discard_message">Are you sure you want to exit? All unsaved pages and edits will be lost.</string>
+    <string name="editor_discard_confirm">Discard</string>
+    <string name="editor_discard_cancel">Keep Editing</string>
+
+    <!-- Capture & Source Selection -->
+    <string name="add_pages_title">Add Pages</string>
+    <string name="add_pages_camera">Take Photo with Camera</string>
+    <string name="add_pages_gallery">Choose from Gallery</string>
+    <string name="convert_to_pdf">Convert to PDF</string>
 </resources>

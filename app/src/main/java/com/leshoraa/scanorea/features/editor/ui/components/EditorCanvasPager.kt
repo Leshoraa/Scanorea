@@ -194,8 +194,8 @@ fun EditorCanvasPager(
                     .alpha(if (isBeingMoved) 0f else 1f)
                     .padding(horizontal = 4.dp, vertical = 2.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF161616)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 BoxWithConstraints(
                     modifier = Modifier
@@ -885,7 +885,7 @@ fun EditorCanvasPager(
                             Surface(
                                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
                                 shape = RoundedCornerShape(8.dp),
-                                shadowElevation = 2.dp
+                                shadowElevation = 0.dp
                             ) {
                                 Text(
                                     text = page.filter.label,
@@ -914,7 +914,7 @@ fun EditorCanvasPager(
                             shape = RoundedCornerShape(16.dp),
                             color = Color(0xDD202020),
                             border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)),
-                            shadowElevation = 6.dp
+                            shadowElevation = 0.dp
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -974,8 +974,8 @@ fun EditorCanvasPager(
                     }
                     .padding(4.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF222222)),
-                elevation = CardDefaults.cardElevation(defaultElevation = (6.dp + 18.dp * liftProgress))
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -1004,7 +1004,7 @@ fun EditorCanvasPager(
                     Surface(
                         color = MaterialTheme.colorScheme.primary,
                         shape = RoundedCornerShape(12.dp),
-                        shadowElevation = 4.dp,
+                        shadowElevation = 0.dp,
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .padding(16.dp)

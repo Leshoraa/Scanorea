@@ -1,5 +1,9 @@
 package com.leshoraa.scanorea.features.recentpdfs.ui
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,11 +22,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.MoreVert
@@ -56,8 +62,9 @@ import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.features.recentpdfs.domain.model.RecentPdf
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.CreateFolderDialog
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.DeleteFolderConfirmationDialog
-import com.leshoraa.scanorea.features.recentpdfs.ui.components.MoveToFolderDialog
+import com.leshoraa.scanorea.features.recentpdfs.ui.components.OrganizeDocumentBottomSheet
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.RecentPdfItemCard
+import com.leshoraa.scanorea.features.recentpdfs.ui.components.RenameFolderDialog
 import java.io.File
 
 /**
@@ -85,10 +92,12 @@ fun ResultsScreen(
     onShareClick: (File) -> Unit,
     onDeleteClick: (File) -> Unit,
     onToggleFavorite: (File) -> Unit,
-    onAssignCategory: (File, String?) -> Unit,
+    onAssignFolders: (File, List<String>) -> Unit,
     onAddCategory: (String) -> Unit,
+    onRenameCategory: (String, String) -> Unit,
     onDeleteCategory: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onAssignCategory: ((File, String?) -> Unit)? = null
 ) {
     var currentFilter by remember { mutableStateOf<DocumentFilter>(DocumentFilter.All) }
     var searchQuery by remember { mutableStateOf("") }
@@ -97,6 +106,7 @@ fun ResultsScreen(
     var sortDescending by remember { mutableStateOf(true) }
 
     var showCreateFolderDialog by remember { mutableStateOf(false) }
+    var folderToRename by remember { mutableStateOf<String?>(null) }
     var documentToMove by remember { mutableStateOf<RecentPdf?>(null) }
     var folderToDelete by remember { mutableStateOf<String?>(null) }
 
@@ -104,7 +114,9 @@ fun ResultsScreen(
         var list = when (val filter = currentFilter) {
             is DocumentFilter.All -> recentPdfs
             is DocumentFilter.Favorites -> recentPdfs.filter { it.isFavorite }
-            is DocumentFilter.Category -> recentPdfs.filter { it.category.equals(filter.name, ignoreCase = true) }
+            is DocumentFilter.Category -> recentPdfs.filter { pdf ->
+                pdf.folders.any { it.equals(filter.name, ignoreCase = true) }
+            }
         }
         if (searchQuery.isNotBlank()) {
             list = list.filter { it.name.contains(searchQuery.trim(), ignoreCase = true) }
@@ -115,9 +127,6 @@ fun ResultsScreen(
             list.sortedBy { it.name.lowercase() }
         }
     }
-
-    val allCount = recentPdfs.size
-    val favoritesCount = remember(recentPdfs) { recentPdfs.count { it.isFavorite } }
 
     Column(
         modifier = modifier.fillMaxSize()
@@ -165,30 +174,6 @@ fun ResultsScreen(
                                 sortDescending = !sortDescending
                             }
                         )
-
-                        if (currentFilter is DocumentFilter.Category) {
-                            val activeFolder = (currentFilter as DocumentFilter.Category).name
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = "Delete \"$activeFolder\" Folder",
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Outlined.Delete,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                },
-                                onClick = {
-                                    showOptionsMenu = false
-                                    folderToDelete = activeFolder
-                                }
-                            )
-                        }
                     }
                 }
             },
@@ -244,7 +229,7 @@ fun ResultsScreen(
                 FilterChip(
                     selected = currentFilter is DocumentFilter.All,
                     onClick = { currentFilter = DocumentFilter.All },
-                    label = { Text("All ($allCount)") }
+                    label = { Text("All") }
                 )
             }
 
@@ -259,26 +244,20 @@ fun ResultsScreen(
                             modifier = Modifier.size(16.dp)
                         )
                     },
-                    label = { Text("Favorites ($favoritesCount)") }
+                    label = { Text("Favorites") }
                 )
             }
 
             items(categories, key = { it }) { category ->
-                val count = recentPdfs.count { it.category.equals(category, ignoreCase = true) }
                 val isSelected = currentFilter is DocumentFilter.Category &&
                     (currentFilter as DocumentFilter.Category).name.equals(category, ignoreCase = true)
 
-                FilterChip(
-                    selected = isSelected,
+                FolderFilterChip(
+                    category = category,
+                    isSelected = isSelected,
                     onClick = { currentFilter = DocumentFilter.Category(category) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Folder,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    },
-                    label = { Text("$category ($count)") }
+                    onRename = { folderToRename = category },
+                    onDelete = { folderToDelete = category }
                 )
             }
 
@@ -324,7 +303,7 @@ fun ResultsScreen(
                         else -> Triple(
                             Icons.Outlined.Description,
                             "No results yet",
-                            "Converted PDF documents will appear here"
+                            "PDF documents will appear here"
                         )
                     }
 
@@ -386,27 +365,51 @@ fun ResultsScreen(
 
     if (showCreateFolderDialog) {
         CreateFolderDialog(
+            existingCategories = categories,
             onConfirm = { name ->
                 onAddCategory(name)
                 showCreateFolderDialog = false
-                currentFilter = DocumentFilter.Category(name)
+                documentToMove?.let { doc ->
+                    val updatedFolders = (doc.folders + name).distinct()
+                    documentToMove = doc.copy(folders = updatedFolders)
+                } ?: run {
+                    currentFilter = DocumentFilter.Category(name)
+                }
             },
             onDismiss = { showCreateFolderDialog = false }
         )
     }
 
     documentToMove?.let { doc ->
-        MoveToFolderDialog(
+        OrganizeDocumentBottomSheet(
             pdf = doc,
             categories = categories,
-            onSelectCategory = { newCategory ->
-                onAssignCategory(doc.file, newCategory)
+            onConfirmFolders = { selectedFolders ->
+                onAssignFolders(doc.file, selectedFolders)
+                onAssignCategory?.invoke(doc.file, selectedFolders.firstOrNull())
                 documentToMove = null
             },
             onDismiss = { documentToMove = null },
             onCreateNewFolder = {
                 showCreateFolderDialog = true
             }
+        )
+    }
+
+    folderToRename?.let { oldName ->
+        RenameFolderDialog(
+            currentName = oldName,
+            existingCategories = categories,
+            onConfirm = { newName ->
+                onRenameCategory(oldName, newName)
+                folderToRename = null
+                if (currentFilter is DocumentFilter.Category &&
+                    (currentFilter as DocumentFilter.Category).name.equals(oldName, ignoreCase = true)
+                ) {
+                    currentFilter = DocumentFilter.Category(newName)
+                }
+            },
+            onDismiss = { folderToRename = null }
         )
     }
 
@@ -424,5 +427,105 @@ fun ResultsScreen(
             },
             onDismiss = { folderToDelete = null }
         )
+    }
+}
+
+/**
+ * Filter chip for document folders supporting single-tap to filter and
+ * long-press to show a contextual menu with Rename and Delete options.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FolderFilterChip(
+    category: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showMenu by remember { mutableStateOf(false) }
+
+    Box(modifier = modifier) {
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+            contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+            border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            modifier = Modifier
+                .height(32.dp)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = { showMenu = true }
+                )
+        ) {
+            Row(
+                modifier = Modifier.padding(start = 10.dp, end = if (isSelected) 6.dp else 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Folder,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = category,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+                )
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = "Folder options",
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clickable { showMenu = true },
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+        }
+
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Rename") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                onClick = {
+                    showMenu = false
+                    onRename()
+                }
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = "Delete",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                onClick = {
+                    showMenu = false
+                    onDelete()
+                }
+            )
+        }
     }
 }

@@ -27,7 +27,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -216,15 +215,6 @@ fun PdfFastScroller(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .offset { IntOffset(x = 0, y = targetThumbY.roundToInt()) }
-                    .shadow(
-                        elevation = if (isDragging) 8.dp else 3.dp,
-                        shape = RoundedCornerShape(
-                            topStart = 18.dp,
-                            bottomStart = 18.dp,
-                            topEnd = 6.dp,
-                            bottomEnd = 6.dp
-                        )
-                    )
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

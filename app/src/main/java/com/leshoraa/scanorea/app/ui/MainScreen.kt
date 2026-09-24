@@ -78,9 +78,11 @@ import com.leshoraa.scanorea.app.navigation.MainNavTab
 import com.leshoraa.scanorea.core.util.FileSizeFormatter
 import com.leshoraa.scanorea.core.util.PdfShareUtil
 import com.leshoraa.scanorea.features.editor.ui.EditorWorkspace
+import com.leshoraa.scanorea.features.editor.ui.components.DiscardChangesDialog
 import com.leshoraa.scanorea.features.editor.ui.components.EditorPagesGridDialog
 import com.leshoraa.scanorea.features.home.ui.HomeScreen
 import com.leshoraa.scanorea.features.imagestopdf.ui.ImagesToPdfViewModel
+import com.leshoraa.scanorea.features.imagestopdf.ui.components.CaptureSourceBottomSheet
 import com.leshoraa.scanorea.features.imagestopdf.ui.components.ConversionOptionsBottomSheet
 import com.leshoraa.scanorea.features.imagestopdf.ui.components.ConversionProgressDialog
 import com.leshoraa.scanorea.features.imagestopdf.ui.components.ConversionSuccessDialog
@@ -112,6 +114,9 @@ fun MainScreen(
     var isPagesGridVisible by remember { mutableStateOf(false) }
     var showEditorMenu by remember { mutableStateOf(false) }
     var isPresetManagerVisible by remember { mutableStateOf(false) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+    var showAddPagesSheet by remember { mutableStateOf(false) }
+    var showCaptureSourceSheet by remember { mutableStateOf(false) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia()
@@ -217,9 +222,9 @@ fun MainScreen(
         return
     }
 
-    // Back button handling
+    // Back button handling: Intercept unsaved changes with Discard confirmation dialog
     if (uiState.hasPages) {
-        BackHandler { viewModel.clearAllPages() }
+        BackHandler { showDiscardDialog = true }
     } else if (currentTab != MainNavTab.HOME) {
         BackHandler { currentTab = MainNavTab.HOME }
     }
@@ -234,11 +239,11 @@ fun MainScreen(
 
                 TopAppBar(
                     navigationIcon = {
-                        IconButton(onClick = { viewModel.clearAllPages() }) {
+                        IconButton(onClick = { showDiscardDialog = true }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                                 contentDescription = "Back to Home",
-                                tint = Color.White
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     },
@@ -251,7 +256,7 @@ fun MainScreen(
                                     text = uiState.options.fileName.ifBlank { "Scanorea Document" },
                                     fontWeight = FontWeight.Bold,
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -266,7 +271,7 @@ fun MainScreen(
                             Text(
                                 text = "${uiState.pageCount} ${if (uiState.pageCount == 1) "page" else "pages"}  •  ~${FileSizeFormatter.format(estimatedBytes)}",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.65f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     },
@@ -276,22 +281,16 @@ fun MainScreen(
                             Icon(
                                 imageVector = Icons.Outlined.GridView,
                                 contentDescription = "Grid Overview",
-                                tint = Color.White
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
-                        // Add Photos Button
-                        IconButton(
-                            onClick = {
-                                photoPickerLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
-                            }
-                        ) {
+                        // Add Photos / Scan Camera Button
+                        IconButton(onClick = { showAddPagesSheet = true }) {
                             Icon(
                                 imageVector = Icons.Outlined.AddPhotoAlternate,
-                                contentDescription = "Add photos",
-                                tint = Color.White
+                                contentDescription = "Add pages",
+                                tint = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
@@ -301,7 +300,7 @@ fun MainScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.MoreVert,
                                     contentDescription = "More Options",
-                                    tint = Color.White
+                                    tint = MaterialTheme.colorScheme.onSurface
                                 )
                             }
 
@@ -370,7 +369,7 @@ fun MainScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color(0xFF0C0C0C)
+                        containerColor = MaterialTheme.colorScheme.surface
                     )
                 )
             } else if (currentTab == MainNavTab.HOME) {
@@ -389,14 +388,6 @@ fun MainScreen(
                             )
                         }
                     },
-                    actions = {
-                        IconButton(onClick = { currentTab = MainNavTab.SETTINGS }) {
-                            Icon(
-                                imageVector = Icons.Outlined.Settings,
-                                contentDescription = "Settings"
-                            )
-                        }
-                    },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     )
@@ -407,7 +398,7 @@ fun MainScreen(
             if (!uiState.hasPages) {
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    tonalElevation = 3.dp
+                    tonalElevation = 0.dp
                 ) {
                     MainNavTab.entries.forEach { tab ->
                         NavigationBarItem(
@@ -441,11 +432,7 @@ fun MainScreen(
                     MainNavTab.HOME -> {
                         HomeScreen(
                             recentPdfs = uiState.recentPdfs,
-                            onScanConvertClick = {
-                                photoPickerLauncher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
-                            },
+                            onScanConvertClick = { showCaptureSourceSheet = true },
                             onGalleryClick = {
                                 photoPickerLauncher.launch(
                                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
@@ -476,8 +463,9 @@ fun MainScreen(
                             onShareClick = { PdfShareUtil.sharePdf(context, it) },
                             onDeleteClick = { viewModel.deleteRecentPdf(it) },
                             onToggleFavorite = { viewModel.toggleFavorite(it) },
-                            onAssignCategory = { file, category -> viewModel.updatePdfCategory(file, category) },
+                            onAssignFolders = { file, folders -> viewModel.updatePdfFolders(file, folders) },
                             onAddCategory = { viewModel.addCategory(it) },
+                            onRenameCategory = { oldName, newName -> viewModel.renameCategory(oldName, newName) },
                             onDeleteCategory = { viewModel.deleteCategory(it) }
                         )
                     }
@@ -805,7 +793,11 @@ fun MainScreen(
             onConvertClick = {
                 viewModel.showOptionsBottomSheet(false)
                 viewModel.convertImagesToPdf()
-            }
+            },
+            categories = uiState.categories,
+            selectedFolders = uiState.selectedFolders,
+            onToggleFolder = { viewModel.toggleSelectedFolder(it) },
+            onCreateNewFolder = { viewModel.createNewFolder(it) }
         )
     }
 
@@ -817,17 +809,64 @@ fun MainScreen(
     // Success Dialog on conversion completion
     val successResult = uiState.conversionResult
     if (successResult != null) {
+        val assignedFolders = uiState.recentPdfs.find { it.name == successResult.file.name }?.folders ?: uiState.selectedFolders
         ConversionSuccessDialog(
             result = successResult,
+            assignedFolders = assignedFolders,
             onOpenPdf = {
                 val file = successResult.file
                 viewModel.dismissResultDialog()
+                viewModel.clearAllPages()
+                currentTab = MainNavTab.RESULTS
                 viewModel.openPdfInViewer(file)
             },
             onSharePdf = {
                 PdfShareUtil.sharePdf(context, successResult.file)
             },
-            onDismiss = { viewModel.dismissResultDialog() }
+            onDismiss = {
+                viewModel.dismissResultDialog()
+                viewModel.clearAllPages()
+                currentTab = MainNavTab.RESULTS
+            }
+        )
+    }
+
+    // Confirmation dialog before discarding unsaved edits/scans
+    if (showDiscardDialog) {
+        DiscardChangesDialog(
+            onConfirmDiscard = {
+                showDiscardDialog = false
+                viewModel.clearAllPages()
+            },
+            onDismiss = { showDiscardDialog = false }
+        )
+    }
+
+    // Source picker for adding pages while editing
+    if (showAddPagesSheet) {
+        CaptureSourceBottomSheet(
+            title = "Add Pages",
+            onCameraClick = { openCamera() },
+            onGalleryClick = {
+                photoPickerLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            },
+            onDismiss = { showAddPagesSheet = false }
+        )
+    }
+
+    // Source picker for initiating scan & convert from Home hero banner
+    if (showCaptureSourceSheet) {
+        CaptureSourceBottomSheet(
+            title = "Scan & Convert to PDF",
+            onCameraClick = { openCamera() },
+            onGalleryClick = {
+                photoPickerLauncher.launch(
+                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            },
+            onDismiss = { showCaptureSourceSheet = false }
         )
     }
 }

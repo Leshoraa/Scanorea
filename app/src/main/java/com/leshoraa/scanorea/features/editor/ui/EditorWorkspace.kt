@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -168,7 +169,7 @@ fun EditorWorkspace(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0C0C0C))
+            .background(MaterialTheme.colorScheme.surface)
     ) {
         // Image Canvas & Pager Viewport
         EditorCanvasPager(

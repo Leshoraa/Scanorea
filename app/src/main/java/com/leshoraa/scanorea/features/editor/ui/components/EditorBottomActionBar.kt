@@ -21,10 +21,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.leshoraa.scanorea.core.util.FileSizeFormatter
+import com.leshoraa.scanorea.R
 
 /**
  * Bottom action bar with persistent Cancel and Convert to PDF actions,
@@ -53,7 +53,7 @@ fun EditorBottomActionBar(
                     text = "Cancel",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White.copy(alpha = 0.8f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -84,7 +84,7 @@ fun EditorBottomActionBar(
                     text = "Cancel",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -104,7 +104,7 @@ fun EditorBottomActionBar(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Convert to PDF (~${FileSizeFormatter.format(estimatedSizeBytes)})",
+                    text = stringResource(R.string.convert_to_pdf),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold
                 )

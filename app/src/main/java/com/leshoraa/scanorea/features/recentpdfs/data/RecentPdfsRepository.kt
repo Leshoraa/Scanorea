@@ -23,7 +23,7 @@ class RecentPdfsRepository(
         private const val KEY_CATEGORIES = "document_categories"
         private const val KEY_METADATA_MAP = "document_metadata_map"
 
-        val DEFAULT_CATEGORIES = listOf("Work", "Study", "Receipts")
+        val DEFAULT_CATEGORIES = listOf("Work", "Study")
     }
 
     suspend fun getCategories(): List<String> = withContext(Dispatchers.IO) {
@@ -37,7 +37,8 @@ class RecentPdfsRepository(
             val list = mutableListOf<String>()
             for (i in 0 until arr.length()) {
                 val item = arr.getString(i).trim()
-                if (item.isNotEmpty() && !list.contains(item)) {
+                // Sanitize out old Receipts default and ensure no duplicates
+                if (item.isNotEmpty() && !item.equals("Receipts", ignoreCase = true) && !list.contains(item)) {
                     list.add(item)
                 }
             }
@@ -45,6 +46,7 @@ class RecentPdfsRepository(
                 saveCategoriesList(DEFAULT_CATEGORIES)
                 DEFAULT_CATEGORIES
             } else {
+                saveCategoriesList(list)
                 list
             }
         } catch (_: Exception) {
@@ -66,6 +68,68 @@ class RecentPdfsRepository(
         true
     }
 
+    suspend fun renameCategory(oldCategory: String, newCategory: String): Boolean = withContext(Dispatchers.IO) {
+        val oldTrimmed = oldCategory.trim()
+        val newTrimmed = newCategory.trim()
+        if (newTrimmed.isEmpty() ||
+            newTrimmed.equals("All", ignoreCase = true) ||
+            newTrimmed.equals("Favorites", ignoreCase = true)
+        ) {
+            return@withContext false
+        }
+
+        val current = getCategories().toMutableList()
+        val index = current.indexOfFirst { it.equals(oldTrimmed, ignoreCase = true) }
+        if (index == -1) return@withContext false
+
+        // Check if new name conflicts with another category
+        val conflict = current.indices.any { it != index && current[it].equals(newTrimmed, ignoreCase = true) }
+        if (conflict) return@withContext false
+
+        current[index] = newTrimmed
+        saveCategoriesList(current)
+
+        // Update all documents assigned to oldCategory
+        val metadataMap = getMetadataMap()
+        var modified = false
+        for (key in metadataMap.keys()) {
+            val docObj = metadataMap.getJSONObject(key)
+            var docModified = false
+
+            // Update folders array if present
+            val foldersArr = docObj.optJSONArray("folders")
+            if (foldersArr != null) {
+                val updatedArr = JSONArray()
+                for (i in 0 until foldersArr.length()) {
+                    val f = foldersArr.optString(i)
+                    if (f.equals(oldTrimmed, ignoreCase = true)) {
+                        updatedArr.put(newTrimmed)
+                        docModified = true
+                    } else {
+                        updatedArr.put(f)
+                    }
+                }
+                if (docModified) {
+                    docObj.put("folders", updatedArr)
+                }
+            }
+
+            if (docObj.optString("category").equals(oldTrimmed, ignoreCase = true)) {
+                docObj.put("category", newTrimmed)
+                docModified = true
+            }
+
+            if (docModified) {
+                modified = true
+            }
+        }
+        if (modified) {
+            saveMetadataMap(metadataMap)
+        }
+
+        true
+    }
+
     suspend fun deleteCategory(category: String): Boolean = withContext(Dispatchers.IO) {
         val current = getCategories().toMutableList()
         val removed = current.removeAll { it.equals(category.trim(), ignoreCase = true) }
@@ -75,8 +139,35 @@ class RecentPdfsRepository(
             var modified = false
             for (key in metadataMap.keys()) {
                 val docObj = metadataMap.getJSONObject(key)
+                var docModified = false
+
+                val foldersArr = docObj.optJSONArray("folders")
+                if (foldersArr != null) {
+                    val updatedArr = JSONArray()
+                    for (i in 0 until foldersArr.length()) {
+                        val f = foldersArr.optString(i)
+                        if (!f.equals(category.trim(), ignoreCase = true)) {
+                            updatedArr.put(f)
+                        } else {
+                            docModified = true
+                        }
+                    }
+                    if (docModified) {
+                        docObj.put("folders", updatedArr)
+                    }
+                }
+
                 if (docObj.optString("category").equals(category.trim(), ignoreCase = true)) {
-                    docObj.remove("category")
+                    val remainingFirst = docObj.optJSONArray("folders")?.optString(0)?.takeIf { it.isNotBlank() }
+                    if (remainingFirst != null) {
+                        docObj.put("category", remainingFirst)
+                    } else {
+                        docObj.remove("category")
+                    }
+                    docModified = true
+                }
+
+                if (docModified) {
                     modified = true
                 }
             }
@@ -102,7 +193,22 @@ class RecentPdfsRepository(
 
         val pdfList = pdfFiles.map { file ->
             val docObj = metadataMap.optJSONObject(file.name)
-            val category = docObj?.optString("category")?.takeIf { it.isNotBlank() }
+            val foldersList = mutableListOf<String>()
+            val foldersArr = docObj?.optJSONArray("folders")
+            if (foldersArr != null) {
+                for (i in 0 until foldersArr.length()) {
+                    val f = foldersArr.optString(i).trim()
+                    if (f.isNotEmpty() && !foldersList.contains(f)) {
+                        foldersList.add(f)
+                    }
+                }
+            } else {
+                val legacyCategory = docObj?.optString("category")?.trim()
+                if (!legacyCategory.isNullOrEmpty()) {
+                    foldersList.add(legacyCategory)
+                }
+            }
+
             val isFavorite = docObj?.optBoolean("isFavorite", false) ?: false
             val tagsList = mutableListOf<String>()
             val tagsArr = docObj?.optJSONArray("tags")
@@ -118,7 +224,7 @@ class RecentPdfsRepository(
                 name = file.name,
                 sizeBytes = file.length(),
                 lastModifiedMillis = file.lastModified(),
-                category = category,
+                folders = foldersList,
                 isFavorite = isFavorite,
                 tags = tagsList
             )
@@ -139,18 +245,26 @@ class RecentPdfsRepository(
         pdfList
     }
 
-    suspend fun updatePdfCategory(file: File, category: String?): Boolean = withContext(Dispatchers.IO) {
+    suspend fun updatePdfFolders(file: File, folders: List<String>): Boolean = withContext(Dispatchers.IO) {
         val metadataMap = getMetadataMap()
         val docObj = metadataMap.optJSONObject(file.name) ?: JSONObject()
-        val trimmed = category?.trim()
-        if (trimmed.isNullOrEmpty()) {
-            docObj.remove("category")
+        val distinctFolders = folders.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        val foldersArr = JSONArray()
+        distinctFolders.forEach { foldersArr.put(it) }
+        docObj.put("folders", foldersArr)
+        if (distinctFolders.isNotEmpty()) {
+            docObj.put("category", distinctFolders.first())
         } else {
-            docObj.put("category", trimmed)
+            docObj.remove("category")
         }
         metadataMap.put(file.name, docObj)
         saveMetadataMap(metadataMap)
         true
+    }
+
+    suspend fun updatePdfCategory(file: File, category: String?): Boolean = withContext(Dispatchers.IO) {
+        val folderList = if (category.isNullOrBlank()) emptyList() else listOf(category.trim())
+        updatePdfFolders(file, folderList)
     }
 
     suspend fun toggleFavorite(file: File): Boolean = withContext(Dispatchers.IO) {

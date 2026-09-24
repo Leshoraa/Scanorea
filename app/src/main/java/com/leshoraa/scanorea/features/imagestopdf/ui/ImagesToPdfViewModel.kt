@@ -192,6 +192,14 @@ class ImagesToPdfViewModel(
         }
     }
 
+    fun updatePdfFolders(file: File, folders: List<String>) {
+        if (recentPdfsRepository == null) return
+        viewModelScope.launch {
+            recentPdfsRepository.updatePdfFolders(file, folders)
+            loadRecentPdfs()
+        }
+    }
+
     fun updatePdfCategory(file: File, category: String?) {
         if (recentPdfsRepository == null) return
         viewModelScope.launch {
@@ -208,11 +216,53 @@ class ImagesToPdfViewModel(
         }
     }
 
+    fun renameCategory(oldCategory: String, newCategory: String) {
+        if (recentPdfsRepository == null) return
+        viewModelScope.launch {
+            recentPdfsRepository.renameCategory(oldCategory, newCategory)
+            loadRecentPdfs()
+        }
+    }
+
     fun deleteCategory(category: String) {
         if (recentPdfsRepository == null) return
         viewModelScope.launch {
             recentPdfsRepository.deleteCategory(category)
             loadRecentPdfs()
+        }
+    }
+
+    fun toggleSelectedFolder(folder: String) {
+        _uiState.update { currentState ->
+            val trimmed = folder.trim()
+            val updated = if (currentState.selectedFolders.contains(trimmed)) {
+                currentState.selectedFolders - trimmed
+            } else {
+                currentState.selectedFolders + trimmed
+            }
+            currentState.copy(selectedFolders = updated)
+        }
+    }
+
+    fun setSelectedFolders(folders: List<String>) {
+        _uiState.update { it.copy(selectedFolders = folders.map { f -> f.trim() }.filter { f -> f.isNotEmpty() }) }
+    }
+
+    fun createNewFolder(folderName: String) {
+        if (recentPdfsRepository == null) return
+        val trimmed = folderName.trim()
+        if (trimmed.isEmpty()) return
+        viewModelScope.launch {
+            val added = recentPdfsRepository.addCategory(trimmed)
+            if (added) {
+                val categories = recentPdfsRepository.getCategories()
+                _uiState.update {
+                    it.copy(
+                        categories = categories,
+                        selectedFolders = if (!it.selectedFolders.contains(trimmed)) it.selectedFolders + trimmed else it.selectedFolders
+                    )
+                }
+            }
         }
     }
 
@@ -363,7 +413,7 @@ class ImagesToPdfViewModel(
 
     fun clearAllPages() {
         _uiState.update { currentState ->
-            currentState.copy(pages = emptyList())
+            currentState.copy(pages = emptyList(), selectedFolders = emptyList())
         }
     }
 
@@ -548,6 +598,10 @@ class ImagesToPdfViewModel(
                         _uiState.update { it.copy(isConverting = true) }
                     }
                     is ResourceResult.Success -> {
+                        val chosenFolders = _uiState.value.selectedFolders
+                        if (chosenFolders.isNotEmpty() && recentPdfsRepository != null) {
+                            recentPdfsRepository.updatePdfFolders(result.data.file, chosenFolders)
+                        }
                         _uiState.update {
                             it.copy(
                                 isConverting = false,

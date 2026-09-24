@@ -42,7 +42,7 @@ fun EditorMarkupActionBar(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.95f)
         ),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
     ) {
         Row(

@@ -90,7 +90,7 @@ fun EditorAdjustPanel(
                 shape = RoundedCornerShape(10.dp),
                 colors = FilterChipDefaults.elevatedFilterChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    labelColor = Color.White.copy(alpha = 0.9f),
+                    labelColor = MaterialTheme.colorScheme.onSurface,
                     iconColor = MaterialTheme.colorScheme.primary,
                     selectedContainerColor = MaterialTheme.colorScheme.primary,
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
@@ -120,7 +120,7 @@ fun EditorAdjustPanel(
                 shape = RoundedCornerShape(10.dp),
                 colors = FilterChipDefaults.elevatedFilterChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    labelColor = Color.White.copy(alpha = 0.9f),
+                    labelColor = MaterialTheme.colorScheme.onSurface,
                     iconColor = MaterialTheme.colorScheme.primary,
                     selectedContainerColor = MaterialTheme.colorScheme.primary,
                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
@@ -150,7 +150,7 @@ fun EditorAdjustPanel(
                 shape = RoundedCornerShape(10.dp),
                 colors = FilterChipDefaults.elevatedFilterChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    labelColor = Color.White.copy(alpha = 0.9f),
+                    labelColor = MaterialTheme.colorScheme.onSurface,
                     iconColor = MaterialTheme.colorScheme.primary
                 ),
                 border = null
@@ -180,8 +180,8 @@ fun EditorAdjustPanel(
                 shape = RoundedCornerShape(10.dp),
                 colors = FilterChipDefaults.elevatedFilterChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    labelColor = if (isModified) Color.White.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.38f),
-                    iconColor = if (isModified) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.38f)
+                    labelColor = if (isModified) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                    iconColor = if (isModified) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 ),
                 border = null
             )
@@ -200,7 +200,7 @@ fun EditorAdjustPanel(
             Icon(
                 imageVector = Icons.Outlined.Remove,
                 contentDescription = "Decrease",
-                tint = Color.White.copy(alpha = 0.6f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp)
             )
 
@@ -246,7 +246,7 @@ fun EditorAdjustPanel(
             Icon(
                 imageVector = Icons.Outlined.Add,
                 contentDescription = "Increase",
-                tint = Color.White.copy(alpha = 0.6f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp)
             )
 

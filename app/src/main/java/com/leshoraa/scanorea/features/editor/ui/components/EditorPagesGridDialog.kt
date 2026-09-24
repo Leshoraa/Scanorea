@@ -454,7 +454,6 @@ fun EditorPagesGridDialog(
                                     translationY = dragStartOffset.y + dragOffset.y
                                     scaleX = 1.08f
                                     scaleY = 1.08f
-                                    shadowElevation = 18.dp.toPx()
                                 },
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(

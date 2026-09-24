@@ -31,7 +31,8 @@ data class ImagesToPdfUiState(
     val destinationFolderUri: Uri? = null,
     val destinationFolderDisplayName: String = "Internal: Scanorea/pdfs",
     val carouselPageIndex: Int = 0,
-    val redoAnnotationsMap: Map<String, List<com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation>> = emptyMap()
+    val redoAnnotationsMap: Map<String, List<com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation>> = emptyMap(),
+    val selectedFolders: List<String> = emptyList()
 ) {
     val hasPages: Boolean
         get() = pages.isNotEmpty()
