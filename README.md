@@ -59,22 +59,33 @@ Scanorea/
 │   │   │   │   │   └── util/
 │   │   │   │   │       ├── DateTimeFormatter.kt
 │   │   │   │   │       ├── FileSizeFormatter.kt
-│   │   │   │   │       └── PdfShareUtil.kt
+│   │   │   │   │       └── PdfDocumentSharer.kt
 │   │   │   │   ├── features/
 │   │   │   │   │   ├── editor/
-│   │   │   │   │   │   ├── domain/model/
-│   │   │   │   │   │   │   ├── AdjustmentTool.kt
-│   │   │   │   │   │   │   └── EditorCategory.kt
+│   │   │   │   │   │   ├── domain/
+│   │   │   │   │   │   │   ├── CropGestureCalculator.kt
+│   │   │   │   │   │   │   └── model/
+│   │   │   │   │   │   │       ├── AdjustmentTool.kt
+│   │   │   │   │   │   │       ├── EditorCategory.kt
+│   │   │   │   │   │   │       ├── HsvColor.kt
+│   │   │   │   │   │   │       └── PageAnnotation.kt
 │   │   │   │   │   │   └── ui/
 │   │   │   │   │   │       ├── components/
 │   │   │   │   │   │       │   ├── EditorAdjustPanel.kt
+│   │   │   │   │   │       │   ├── EditorAnnotatePanel.kt
 │   │   │   │   │   │       │   ├── EditorBottomActionBar.kt
+│   │   │   │   │   │       │   ├── EditorCanvasBadges.kt
 │   │   │   │   │   │       │   ├── EditorCanvasPager.kt
 │   │   │   │   │   │       │   ├── EditorCategoryTabBar.kt
+│   │   │   │   │   │       │   ├── EditorColorPickerDialog.kt
+│   │   │   │   │   │       │   ├── EditorCropOverlay.kt
 │   │   │   │   │   │       │   ├── EditorCropPanel.kt
 │   │   │   │   │   │       │   ├── EditorFiltersPanel.kt
+│   │   │   │   │   │       │   ├── EditorReorderLiftedCard.kt
 │   │   │   │   │   │       │   ├── EditorRulerSlider.kt
-│   │   │   │   │   │       │   └── EditorSuggestionsPanel.kt
+│   │   │   │   │   │       │   ├── EditorSuggestionsPanel.kt
+│   │   │   │   │   │       │   ├── EditorTextAnnotationDialog.kt
+│   │   │   │   │   │       │   └── RenameDocumentDialog.kt
 │   │   │   │   │   │       └── EditorWorkspace.kt
 │   │   │   │   │   ├── home/
 │   │   │   │   │   │   └── ui/

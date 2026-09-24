@@ -39,6 +39,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
@@ -47,7 +48,27 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.leshoraa.scanorea.features.editor.domain.model.AnnotationColors
+import com.leshoraa.scanorea.features.editor.domain.model.HsvColor
 import kotlin.math.roundToInt
+
+private val COLOR_PREVIEW_SIZE = 60.dp
+private val PALETTE_BOX_HEIGHT = 170.dp
+private val SLIDER_TRACK_HEIGHT = 24.dp
+private val PRESET_SWATCH_SIZE = 28.dp
+private val THUMB_OUTER_RADIUS = 11.dp
+private val THUMB_INNER_RADIUS = 9.dp
+private val CHECKERBOARD_LIGHT_COLOR = Color.White
+private val CHECKERBOARD_DARK_COLOR = Color(0xFFE2E2E2)
+
+private val RAINBOW_HUE_SPECTRUM: List<Color> = listOf(
+    Color.Red,
+    Color.Yellow,
+    Color.Green,
+    Color.Cyan,
+    Color.Blue,
+    Color.Magenta,
+    Color.Red
+)
 
 /**
  * Material 3 Dialog allowing users to select any custom color and opacity.
@@ -60,24 +81,27 @@ fun EditorColorPickerDialog(
     onColorConfirmed: (color: Long, alpha: Float) -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    val initialHsv = remember(initialColor) {
-        val hsv = FloatArray(3)
-        android.graphics.Color.colorToHSV(initialColor.toInt(), hsv)
-        hsv
+    val initialHsv = remember(initialColor, initialAlpha) {
+        HsvColor.fromColorLong(initialColor, initialAlpha)
     }
 
-    var hue by remember { mutableFloatStateOf(initialHsv[0]) }
-    var saturation by remember { mutableFloatStateOf(initialHsv[1]) }
-    var value by remember { mutableFloatStateOf(initialHsv[2]) }
-    var alpha by remember { mutableFloatStateOf(initialAlpha.coerceIn(0.05f, 1.0f)) }
+    var selectedHue by remember { mutableFloatStateOf(initialHsv.hue) }
+    var selectedSaturation by remember { mutableFloatStateOf(initialHsv.saturation) }
+    var selectedValue by remember { mutableFloatStateOf(initialHsv.value) }
+    var selectedAlpha by remember { mutableFloatStateOf(initialHsv.alpha) }
 
-    val currentColorInt = android.graphics.Color.HSVToColor(floatArrayOf(hue, saturation, value))
-    val red = android.graphics.Color.red(currentColorInt)
-    val green = android.graphics.Color.green(currentColorInt)
-    val blue = android.graphics.Color.blue(currentColorInt)
-    val currentColorLong = (0xFFL shl 24) or (red.toLong() shl 16) or (green.toLong() shl 8) or blue.toLong()
-    val solidColor = Color(red, green, blue)
-    val currentColorWithAlpha = solidColor.copy(alpha = alpha)
+    val currentHsvColor = remember(selectedHue, selectedSaturation, selectedValue, selectedAlpha) {
+        HsvColor(
+            hue = selectedHue,
+            saturation = selectedSaturation,
+            value = selectedValue,
+            alpha = selectedAlpha
+        )
+    }
+
+    val currentColorLong = remember(currentHsvColor) { currentHsvColor.toColorLong() }
+    val solidColor = remember(currentHsvColor) { Color(currentHsvColor.toColorLong()) }
+    val currentColorWithAlpha = remember(solidColor, selectedAlpha) { solidColor.copy(alpha = selectedAlpha) }
 
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
@@ -95,7 +119,6 @@ fun EditorColorPickerDialog(
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header
                 Text(
                     text = "Color & Opacity",
                     style = MaterialTheme.typography.titleMedium,
@@ -105,7 +128,6 @@ fun EditorColorPickerDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Color Preview Box with Hex code and Alpha percentage
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -113,7 +135,7 @@ fun EditorColorPickerDialog(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(60.dp)
+                            .size(COLOR_PREVIEW_SIZE)
                             .clip(RoundedCornerShape(14.dp))
                             .border(
                                 width = 1.dp,
@@ -130,16 +152,15 @@ fun EditorColorPickerDialog(
                     }
 
                     Column(modifier = Modifier.weight(1f)) {
-                        val hexString = String.format("#%02X%02X%02X", red, green, blue)
                         Text(
-                            text = hexString,
+                            text = currentHsvColor.toHexString(),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             fontFamily = FontFamily.Monospace,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Opacity: ${(alpha * 100).roundToInt()}%",
+                            text = "Opacity: ${(selectedAlpha * 100).roundToInt()}%",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -148,18 +169,17 @@ fun EditorColorPickerDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Preset Swatches for Quick Picking
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    AnnotationColors.PRESETS.forEach { preset ->
-                        val presetColor = Color(preset)
-                        val isSelected = preset == currentColorLong
+                    AnnotationColors.PRESETS.forEach { presetColorLong ->
+                        val presetColor = Color(presetColorLong)
+                        val isSelected = presetColorLong == currentColorLong
                         Box(
                             modifier = Modifier
-                                .size(28.dp)
+                                .size(PRESET_SWATCH_SIZE)
                                 .clip(CircleShape)
                                 .background(presetColor)
                                 .border(
@@ -168,11 +188,10 @@ fun EditorColorPickerDialog(
                                     shape = CircleShape
                                 )
                                 .clickable {
-                                    val presetHsv = FloatArray(3)
-                                    android.graphics.Color.colorToHSV(preset.toInt(), presetHsv)
-                                    hue = presetHsv[0]
-                                    saturation = presetHsv[1]
-                                    value = presetHsv[2]
+                                    val presetHsv = HsvColor.fromColorLong(presetColorLong, selectedAlpha)
+                                    selectedHue = presetHsv.hue
+                                    selectedSaturation = presetHsv.saturation
+                                    selectedValue = presetHsv.value
                                 }
                         )
                     }
@@ -180,23 +199,21 @@ fun EditorColorPickerDialog(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // 2D Saturation-Value Color Palette Box
                 SaturationValueBox(
-                    hue = hue,
-                    saturation = saturation,
-                    value = value,
-                    onColorChanged = { s, v ->
-                        saturation = s
-                        value = v
+                    hue = selectedHue,
+                    saturation = selectedSaturation,
+                    value = selectedValue,
+                    onColorChanged = { newSaturation, newValue ->
+                        selectedSaturation = newSaturation
+                        selectedValue = newValue
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(170.dp)
+                        .height(PALETTE_BOX_HEIGHT)
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Rainbow Hue Bar Label & Slider
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -209,7 +226,7 @@ fun EditorColorPickerDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "${hue.roundToInt()}°",
+                        text = "${selectedHue.roundToInt()}°",
                         style = MaterialTheme.typography.labelSmall,
                         fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.onSurface
@@ -219,14 +236,13 @@ fun EditorColorPickerDialog(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 HueBar(
-                    hue = hue,
-                    onHueChanged = { hue = it },
+                    hue = selectedHue,
+                    onHueChanged = { updatedHue -> selectedHue = updatedHue },
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Alpha Opacity Bar Label & Slider
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -239,7 +255,7 @@ fun EditorColorPickerDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "${(alpha * 100).roundToInt()}%",
+                        text = "${(selectedAlpha * 100).roundToInt()}%",
                         style = MaterialTheme.typography.labelSmall,
                         fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.onSurface
@@ -249,15 +265,14 @@ fun EditorColorPickerDialog(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 AlphaBar(
-                    alpha = alpha,
+                    alpha = selectedAlpha,
                     baseColor = solidColor,
-                    onAlphaChanged = { alpha = it },
+                    onAlphaChanged = { updatedAlpha -> selectedAlpha = updatedAlpha },
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(22.dp))
 
-                // Actions
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
@@ -276,7 +291,7 @@ fun EditorColorPickerDialog(
 
                     Button(
                         onClick = {
-                            onColorConfirmed(currentColorLong, alpha)
+                            onColorConfirmed(currentColorLong, selectedAlpha)
                             onDismissRequest()
                         },
                         elevation = ButtonDefaults.buttonElevation(
@@ -299,9 +314,7 @@ fun EditorColorPickerDialog(
 }
 
 /**
- * 2D Saturation-Value box that renders a dual-gradient canvas.
- * Horizontal gradient transitions from white to pure hue.
- * Vertical gradient transitions from transparent to solid black.
+ * 2D Saturation-Value palette box rendering a dual-gradient canvas.
  */
 @Composable
 private fun SaturationValueBox(
@@ -312,7 +325,8 @@ private fun SaturationValueBox(
     modifier: Modifier = Modifier
 ) {
     val pureHueColor = remember(hue) {
-        Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, 1f, 1f)))
+        val rgb = HsvColor.hsvToRgb(hue, 1f, 1f)
+        Color(rgb.red, rgb.green, rgb.blue)
     }
 
     Box(
@@ -325,19 +339,32 @@ private fun SaturationValueBox(
             )
             .pointerInput(Unit) {
                 awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    val sDown = (down.position.x / size.width.toFloat()).coerceIn(0f, 1f)
-                    val vDown = (1f - (down.position.y / size.height.toFloat())).coerceIn(0f, 1f)
-                    onColorChanged(sDown, vDown)
+                    val initialDown = awaitFirstDown(requireUnconsumed = false)
+                    val initialSaturation = (initialDown.position.x / size.width.toFloat()).coerceIn(
+                        HsvColor.MIN_FRACTION,
+                        HsvColor.MAX_FRACTION
+                    )
+                    val initialValue = (1f - (initialDown.position.y / size.height.toFloat())).coerceIn(
+                        HsvColor.MIN_FRACTION,
+                        HsvColor.MAX_FRACTION
+                    )
+                    onColorChanged(initialSaturation, initialValue)
 
                     while (true) {
-                        val event = awaitPointerEvent()
-                        val current = event.changes.firstOrNull { it.id == down.id } ?: break
-                        if (!current.pressed) break
-                        current.consume()
-                        val s = (current.position.x / size.width.toFloat()).coerceIn(0f, 1f)
-                        val v = (1f - (current.position.y / size.height.toFloat())).coerceIn(0f, 1f)
-                        onColorChanged(s, v)
+                        val pointerEvent = awaitPointerEvent()
+                        val currentChange = pointerEvent.changes.firstOrNull { it.id == initialDown.id } ?: break
+                        if (!currentChange.pressed) break
+                        currentChange.consume()
+
+                        val updatedSaturation = (currentChange.position.x / size.width.toFloat()).coerceIn(
+                            HsvColor.MIN_FRACTION,
+                            HsvColor.MAX_FRACTION
+                        )
+                        val updatedValue = (1f - (currentChange.position.y / size.height.toFloat())).coerceIn(
+                            HsvColor.MIN_FRACTION,
+                            HsvColor.MAX_FRACTION
+                        )
+                        onColorChanged(updatedSaturation, updatedValue)
                     }
                 }
             }
@@ -354,20 +381,20 @@ private fun SaturationValueBox(
                 )
             )
 
-            val selectorX = saturation * size.width
-            val selectorY = (1f - value) * size.height
-            val center = Offset(selectorX, selectorY)
+            val selectorPositionX = saturation * size.width
+            val selectorPositionY = (1f - value) * size.height
+            val selectorCenter = Offset(selectorPositionX, selectorPositionY)
 
             drawCircle(
                 color = Color.Black.copy(alpha = 0.5f),
-                radius = 11.dp.toPx(),
-                center = center,
+                radius = THUMB_OUTER_RADIUS.toPx(),
+                center = selectorCenter,
                 style = Stroke(width = 3.dp.toPx())
             )
             drawCircle(
                 color = Color.White,
-                radius = 9.dp.toPx(),
-                center = center,
+                radius = THUMB_INNER_RADIUS.toPx(),
+                center = selectorCenter,
                 style = Stroke(width = 2.dp.toPx())
             )
         }
@@ -383,62 +410,30 @@ private fun HueBar(
     onHueChanged: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val rainbowColors = remember {
-        listOf(
-            Color.Red,
-            Color.Yellow,
-            Color.Green,
-            Color.Cyan,
-            Color.Blue,
-            Color.Magenta,
-            Color.Red
-        )
-    }
-
     Box(
         modifier = modifier
-            .height(24.dp)
+            .height(SLIDER_TRACK_HEIGHT)
             .clip(RoundedCornerShape(12.dp))
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.outlineVariant,
                 shape = RoundedCornerShape(12.dp)
             )
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    val hDown = ((down.position.x / size.width.toFloat()) * 360f).coerceIn(0f, 360f)
-                    onHueChanged(hDown)
-
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val current = event.changes.firstOrNull { it.id == down.id } ?: break
-                        if (!current.pressed) break
-                        current.consume()
-                        val h = ((current.position.x / size.width.toFloat()) * 360f).coerceIn(0f, 360f)
-                        onHueChanged(h)
-                    }
-                }
+            .horizontalFractionTracker { horizontalFraction ->
+                val calculatedHue = (horizontalFraction * HsvColor.MAX_HUE).coerceIn(
+                    HsvColor.MIN_HUE,
+                    HsvColor.MAX_HUE
+                )
+                onHueChanged(calculatedHue)
             }
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawRect(
-                brush = Brush.horizontalGradient(colors = rainbowColors)
+                brush = Brush.horizontalGradient(colors = RAINBOW_HUE_SPECTRUM)
             )
 
-            val thumbX = (hue / 360f).coerceIn(0f, 1f) * size.width
-            val center = Offset(thumbX, size.height / 2f)
-
-            drawCircle(
-                color = Color.Black.copy(alpha = 0.5f),
-                radius = 11.dp.toPx(),
-                center = center
-            )
-            drawCircle(
-                color = Color.White,
-                radius = 9.dp.toPx(),
-                center = center
-            )
+            val thumbPositionX = (hue / HsvColor.MAX_HUE).coerceIn(HsvColor.MIN_FRACTION, HsvColor.MAX_FRACTION) * size.width
+            drawContrastThumbIndicator(center = Offset(thumbPositionX, size.height / 2f))
         }
     }
 }
@@ -455,28 +450,19 @@ private fun AlphaBar(
 ) {
     Box(
         modifier = modifier
-            .height(24.dp)
+            .height(SLIDER_TRACK_HEIGHT)
             .clip(RoundedCornerShape(12.dp))
             .border(
                 width = 1.dp,
                 color = MaterialTheme.colorScheme.outlineVariant,
                 shape = RoundedCornerShape(12.dp)
             )
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    val aDown = (down.position.x / size.width.toFloat()).coerceIn(0.05f, 1.0f)
-                    onAlphaChanged(aDown)
-
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val current = event.changes.firstOrNull { it.id == down.id } ?: break
-                        if (!current.pressed) break
-                        current.consume()
-                        val a = (current.position.x / size.width.toFloat()).coerceIn(0.05f, 1.0f)
-                        onAlphaChanged(a)
-                    }
-                }
+            .horizontalFractionTracker { horizontalFraction ->
+                val calculatedAlpha = horizontalFraction.coerceIn(
+                    HsvColor.MIN_ALPHA,
+                    HsvColor.MAX_ALPHA
+                )
+                onAlphaChanged(calculatedAlpha)
             }
     ) {
         CheckerboardPattern(modifier = Modifier.fillMaxSize(), squareSizeDp = 6.dp)
@@ -485,25 +471,14 @@ private fun AlphaBar(
             drawRect(
                 brush = Brush.horizontalGradient(
                     colors = listOf(
-                        baseColor.copy(alpha = 0.05f),
-                        baseColor.copy(alpha = 1.0f)
+                        baseColor.copy(alpha = HsvColor.MIN_ALPHA),
+                        baseColor.copy(alpha = HsvColor.MAX_ALPHA)
                     )
                 )
             )
 
-            val thumbX = alpha.coerceIn(0.05f, 1.0f) * size.width
-            val center = Offset(thumbX, size.height / 2f)
-
-            drawCircle(
-                color = Color.Black.copy(alpha = 0.5f),
-                radius = 11.dp.toPx(),
-                center = center
-            )
-            drawCircle(
-                color = Color.White,
-                radius = 9.dp.toPx(),
-                center = center
-            )
+            val thumbPositionX = alpha.coerceIn(HsvColor.MIN_ALPHA, HsvColor.MAX_ALPHA) * size.width
+            drawContrastThumbIndicator(center = Offset(thumbPositionX, size.height / 2f))
         }
     }
 }
@@ -517,18 +492,61 @@ private fun CheckerboardPattern(
     squareSizeDp: Dp = 8.dp
 ) {
     Canvas(modifier = modifier) {
-        val squareSize = squareSizeDp.toPx()
-        val numCols = (size.width / squareSize).toInt() + 1
-        val numRows = (size.height / squareSize).toInt() + 1
-        for (row in 0 until numRows) {
-            for (col in 0 until numCols) {
-                val color = if ((row + col) % 2 == 0) Color.White else Color(0xFFE2E2E2)
+        val squareSizePx = squareSizeDp.toPx()
+        val columnCount = (size.width / squareSizePx).toInt() + 1
+        val rowCount = (size.height / squareSizePx).toInt() + 1
+        for (rowIndex in 0 until rowCount) {
+            for (columnIndex in 0 until columnCount) {
+                val squareColor = if ((rowIndex + columnIndex) % 2 == 0) {
+                    CHECKERBOARD_LIGHT_COLOR
+                } else {
+                    CHECKERBOARD_DARK_COLOR
+                }
                 drawRect(
-                    color = color,
-                    topLeft = Offset(col * squareSize, row * squareSize),
-                    size = Size(squareSize, squareSize)
+                    color = squareColor,
+                    topLeft = Offset(columnIndex * squareSizePx, rowIndex * squareSizePx),
+                    size = Size(squareSizePx, squareSizePx)
                 )
             }
         }
     }
+}
+
+/**
+ * Shared modifier extension handling pointer gestures for 1D horizontal slider bars.
+ */
+private fun Modifier.horizontalFractionTracker(
+    onFractionChanged: (Float) -> Unit
+): Modifier = pointerInput(Unit) {
+    awaitEachGesture {
+        val initialDown = awaitFirstDown(requireUnconsumed = false)
+        val initialFraction = (initialDown.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+        onFractionChanged(initialFraction)
+
+        while (true) {
+            val pointerEvent = awaitPointerEvent()
+            val currentChange = pointerEvent.changes.firstOrNull { it.id == initialDown.id } ?: break
+            if (!currentChange.pressed) break
+            currentChange.consume()
+
+            val updatedFraction = (currentChange.position.x / size.width.toFloat()).coerceIn(0f, 1f)
+            onFractionChanged(updatedFraction)
+        }
+    }
+}
+
+/**
+ * Draws a high-contrast circular thumb indicator visible against both light and dark backgrounds.
+ */
+private fun DrawScope.drawContrastThumbIndicator(center: Offset) {
+    drawCircle(
+        color = Color.Black.copy(alpha = 0.5f),
+        radius = THUMB_OUTER_RADIUS.toPx(),
+        center = center
+    )
+    drawCircle(
+        color = Color.White,
+        radius = THUMB_INNER_RADIUS.toPx(),
+        center = center
+    )
 }

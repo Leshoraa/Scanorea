@@ -25,167 +25,166 @@ object CropGestureCalculator {
         if (activeHandle == DragHandle.BODY) {
             val boxWidth = currentBounds.right - currentBounds.left
             val boxHeight = currentBounds.bottom - currentBounds.top
-            val newL = (currentBounds.left + deltaX).coerceIn(0f, 1f - boxWidth)
-            val newT = (currentBounds.top + deltaY).coerceIn(0f, 1f - boxHeight)
-            return ImageCropBounds(newL, newT, newL + boxWidth, newT + boxHeight)
+            val newLeft = (currentBounds.left + deltaX).coerceIn(0f, 1f - boxWidth)
+            val newTop = (currentBounds.top + deltaY).coerceIn(0f, 1f - boxHeight)
+            return ImageCropBounds(newLeft, newTop, newLeft + boxWidth, newTop + boxHeight)
         }
 
         if (cropAspectRatio == CropAspectRatio.FREE) {
-            var newL = currentBounds.left
-            var newT = currentBounds.top
-            var newR = currentBounds.right
-            var newB = currentBounds.bottom
+            var newLeft = currentBounds.left
+            var newTop = currentBounds.top
+            var newRight = currentBounds.right
+            var newBottom = currentBounds.bottom
 
             when (activeHandle) {
                 DragHandle.TOP_LEFT -> {
-                    newL = (currentBounds.left + deltaX).coerceIn(0f, currentBounds.right - minSize)
-                    newT = (currentBounds.top + deltaY).coerceIn(0f, currentBounds.bottom - minSize)
+                    newLeft = (currentBounds.left + deltaX).coerceIn(0f, currentBounds.right - minSize)
+                    newTop = (currentBounds.top + deltaY).coerceIn(0f, currentBounds.bottom - minSize)
                 }
                 DragHandle.TOP_RIGHT -> {
-                    newR = (currentBounds.right + deltaX).coerceIn(currentBounds.left + minSize, 1f)
-                    newT = (currentBounds.top + deltaY).coerceIn(0f, currentBounds.bottom - minSize)
+                    newRight = (currentBounds.right + deltaX).coerceIn(currentBounds.left + minSize, 1f)
+                    newTop = (currentBounds.top + deltaY).coerceIn(0f, currentBounds.bottom - minSize)
                 }
                 DragHandle.BOTTOM_LEFT -> {
-                    newL = (currentBounds.left + deltaX).coerceIn(0f, currentBounds.right - minSize)
-                    newB = (currentBounds.bottom + deltaY).coerceIn(currentBounds.top + minSize, 1f)
+                    newLeft = (currentBounds.left + deltaX).coerceIn(0f, currentBounds.right - minSize)
+                    newBottom = (currentBounds.bottom + deltaY).coerceIn(currentBounds.top + minSize, 1f)
                 }
                 DragHandle.BOTTOM_RIGHT -> {
-                    newR = (currentBounds.right + deltaX).coerceIn(currentBounds.left + minSize, 1f)
-                    newB = (currentBounds.bottom + deltaY).coerceIn(currentBounds.top + minSize, 1f)
+                    newRight = (currentBounds.right + deltaX).coerceIn(currentBounds.left + minSize, 1f)
+                    newBottom = (currentBounds.bottom + deltaY).coerceIn(currentBounds.top + minSize, 1f)
                 }
                 DragHandle.TOP_EDGE -> {
-                    newT = (currentBounds.top + deltaY).coerceIn(0f, currentBounds.bottom - minSize)
+                    newTop = (currentBounds.top + deltaY).coerceIn(0f, currentBounds.bottom - minSize)
                 }
                 DragHandle.BOTTOM_EDGE -> {
-                    newB = (currentBounds.bottom + deltaY).coerceIn(currentBounds.top + minSize, 1f)
+                    newBottom = (currentBounds.bottom + deltaY).coerceIn(currentBounds.top + minSize, 1f)
                 }
                 DragHandle.LEFT_EDGE -> {
-                    newL = (currentBounds.left + deltaX).coerceIn(0f, currentBounds.right - minSize)
+                    newLeft = (currentBounds.left + deltaX).coerceIn(0f, currentBounds.right - minSize)
                 }
                 DragHandle.RIGHT_EDGE -> {
-                    newR = (currentBounds.right + deltaX).coerceIn(currentBounds.left + minSize, 1f)
+                    newRight = (currentBounds.right + deltaX).coerceIn(currentBounds.left + minSize, 1f)
                 }
                 DragHandle.BODY, DragHandle.NONE -> {}
             }
 
-            return if (newL < newR && newT < newB) {
-                ImageCropBounds.ofClamped(newL, newT, newR, newB, minSize)
+            return if (newLeft < newRight && newTop < newBottom) {
+                ImageCropBounds.ofClamped(newLeft, newTop, newRight, newBottom, minSize)
             } else {
                 currentBounds
             }
         }
 
-        // Constrained aspect ratio calculations
         val targetPhysicalRatio: Float = when (cropAspectRatio) {
             CropAspectRatio.FREE -> 1.0f
             CropAspectRatio.ORIGINAL -> effectiveAspectRatio
             CropAspectRatio.A4 -> CropAspectRatio.A4.ratio ?: (1f / 1.4142f)
             CropAspectRatio.SQUARE -> 1.0f
         }
-        val normRatio = (targetPhysicalRatio / effectiveAspectRatio).coerceIn(0.01f, 100f)
-        val prevW = currentBounds.right - currentBounds.left
-        val prevH = currentBounds.bottom - currentBounds.top
-        val minW = if (normRatio >= 1f) (minSize * normRatio).coerceIn(minSize, 0.9f) else minSize
-        val minH = if (normRatio >= 1f) minSize else (minSize / normRatio).coerceIn(minSize, 0.9f)
+        val normalizedRatio = (targetPhysicalRatio / effectiveAspectRatio).coerceIn(0.01f, 100f)
+        val previousWidth = currentBounds.right - currentBounds.left
+        val previousHeight = currentBounds.bottom - currentBounds.top
+        val minimumWidth = if (normalizedRatio >= 1f) (minSize * normalizedRatio).coerceIn(minSize, 0.9f) else minSize
+        val minimumHeight = if (normalizedRatio >= 1f) minSize else (minSize / normalizedRatio).coerceIn(minSize, 0.9f)
 
-        var newL = currentBounds.left
-        var newT = currentBounds.top
-        var newR = currentBounds.right
-        var newB = currentBounds.bottom
+        var newLeft = currentBounds.left
+        var newTop = currentBounds.top
+        var newRight = currentBounds.right
+        var newBottom = currentBounds.bottom
 
         when (activeHandle) {
             DragHandle.BOTTOM_RIGHT -> {
-                val maxW = (1f - currentBounds.left).coerceAtLeast(minW)
-                val maxH = (1f - currentBounds.top).coerceAtLeast(minH)
-                val limitW = if (maxW / maxH > normRatio) maxH * normRatio else maxW
-                val limitH = limitW / normRatio
+                val maximumWidth = (1f - currentBounds.left).coerceAtLeast(minimumWidth)
+                val maximumHeight = (1f - currentBounds.top).coerceAtLeast(minimumHeight)
+                val limitWidth = if (maximumWidth / maximumHeight > normalizedRatio) maximumHeight * normalizedRatio else maximumWidth
+                val limitHeight = limitWidth / normalizedRatio
 
-                val reqW = prevW + deltaX
-                val reqH = prevH + deltaY
-                var w = if (abs(deltaX) >= abs(deltaY * normRatio)) {
-                    reqW.coerceIn(minW, limitW)
+                val requestedWidth = previousWidth + deltaX
+                val requestedHeight = previousHeight + deltaY
+                var constrainedWidth = if (abs(deltaX) >= abs(deltaY * normalizedRatio)) {
+                    requestedWidth.coerceIn(minimumWidth, limitWidth)
                 } else {
-                    (reqH * normRatio).coerceIn(minW, limitW)
+                    (requestedHeight * normalizedRatio).coerceIn(minimumWidth, limitWidth)
                 }
-                var h = w / normRatio
-                if (h > limitH) {
-                    h = limitH
-                    w = h * normRatio
+                var constrainedHeight = constrainedWidth / normalizedRatio
+                if (constrainedHeight > limitHeight) {
+                    constrainedHeight = limitHeight
+                    constrainedWidth = constrainedHeight * normalizedRatio
                 }
-                newR = newL + w
-                newB = newT + h
+                newRight = newLeft + constrainedWidth
+                newBottom = newTop + constrainedHeight
             }
             DragHandle.TOP_LEFT -> {
-                val maxW = currentBounds.right.coerceAtLeast(minW)
-                val maxH = currentBounds.bottom.coerceAtLeast(minH)
-                val limitW = if (maxW / maxH > normRatio) maxH * normRatio else maxW
-                val limitH = limitW / normRatio
+                val maximumWidth = currentBounds.right.coerceAtLeast(minimumWidth)
+                val maximumHeight = currentBounds.bottom.coerceAtLeast(minimumHeight)
+                val limitWidth = if (maximumWidth / maximumHeight > normalizedRatio) maximumHeight * normalizedRatio else maximumWidth
+                val limitHeight = limitWidth / normalizedRatio
 
-                val reqW = prevW - deltaX
-                val reqH = prevH - deltaY
-                var w = if (abs(deltaX) >= abs(deltaY * normRatio)) {
-                    reqW.coerceIn(minW, limitW)
+                val requestedWidth = previousWidth - deltaX
+                val requestedHeight = previousHeight - deltaY
+                var constrainedWidth = if (abs(deltaX) >= abs(deltaY * normalizedRatio)) {
+                    requestedWidth.coerceIn(minimumWidth, limitWidth)
                 } else {
-                    (reqH * normRatio).coerceIn(minW, limitW)
+                    (requestedHeight * normalizedRatio).coerceIn(minimumWidth, limitWidth)
                 }
-                var h = w / normRatio
-                if (h > limitH) {
-                    h = limitH
-                    w = h * normRatio
+                var constrainedHeight = constrainedWidth / normalizedRatio
+                if (constrainedHeight > limitHeight) {
+                    constrainedHeight = limitHeight
+                    constrainedWidth = constrainedHeight * normalizedRatio
                 }
-                newL = newR - w
-                newT = newB - h
+                newLeft = newRight - constrainedWidth
+                newTop = newBottom - constrainedHeight
             }
             DragHandle.TOP_RIGHT -> {
-                val maxW = (1f - currentBounds.left).coerceAtLeast(minW)
-                val maxH = currentBounds.bottom.coerceAtLeast(minH)
-                val limitW = if (maxW / maxH > normRatio) maxH * normRatio else maxW
-                val limitH = limitW / normRatio
+                val maximumWidth = (1f - currentBounds.left).coerceAtLeast(minimumWidth)
+                val maximumHeight = currentBounds.bottom.coerceAtLeast(minimumHeight)
+                val limitWidth = if (maximumWidth / maximumHeight > normalizedRatio) maximumHeight * normalizedRatio else maximumWidth
+                val limitHeight = limitWidth / normalizedRatio
 
-                val reqW = prevW + deltaX
-                val reqH = prevH - deltaY
-                var w = if (abs(deltaX) >= abs(deltaY * normRatio)) {
-                    reqW.coerceIn(minW, limitW)
+                val requestedWidth = previousWidth + deltaX
+                val requestedHeight = previousHeight - deltaY
+                var constrainedWidth = if (abs(deltaX) >= abs(deltaY * normalizedRatio)) {
+                    requestedWidth.coerceIn(minimumWidth, limitWidth)
                 } else {
-                    (reqH * normRatio).coerceIn(minW, limitW)
+                    (requestedHeight * normalizedRatio).coerceIn(minimumWidth, limitWidth)
                 }
-                var h = w / normRatio
-                if (h > limitH) {
-                    h = limitH
-                    w = h * normRatio
+                var constrainedHeight = constrainedWidth / normalizedRatio
+                if (constrainedHeight > limitHeight) {
+                    constrainedHeight = limitHeight
+                    constrainedWidth = constrainedHeight * normalizedRatio
                 }
-                newR = newL + w
-                newT = newB - h
+                newRight = newLeft + constrainedWidth
+                newTop = newBottom - constrainedHeight
             }
             DragHandle.BOTTOM_LEFT -> {
-                val maxW = currentBounds.right.coerceAtLeast(minW)
-                val maxH = (1f - currentBounds.top).coerceAtLeast(minH)
-                val limitW = if (maxW / maxH > normRatio) maxH * normRatio else maxW
-                val limitH = limitW / normRatio
+                val maximumWidth = currentBounds.right.coerceAtLeast(minimumWidth)
+                val maximumHeight = (1f - currentBounds.top).coerceAtLeast(minimumHeight)
+                val limitWidth = if (maximumWidth / maximumHeight > normalizedRatio) maximumHeight * normalizedRatio else maximumWidth
+                val limitHeight = limitWidth / normalizedRatio
 
-                val reqW = prevW - deltaX
-                val reqH = prevH + deltaY
-                var w = if (abs(deltaX) >= abs(deltaY * normRatio)) {
-                    reqW.coerceIn(minW, limitW)
+                val requestedWidth = previousWidth - deltaX
+                val requestedHeight = previousHeight + deltaY
+                var constrainedWidth = if (abs(deltaX) >= abs(deltaY * normalizedRatio)) {
+                    requestedWidth.coerceIn(minimumWidth, limitWidth)
                 } else {
-                    (reqH * normRatio).coerceIn(minW, limitW)
+                    (requestedHeight * normalizedRatio).coerceIn(minimumWidth, limitWidth)
                 }
-                var h = w / normRatio
-                if (h > limitH) {
-                    h = limitH
-                    w = h * normRatio
+                var constrainedHeight = constrainedWidth / normalizedRatio
+                if (constrainedHeight > limitHeight) {
+                    constrainedHeight = limitHeight
+                    constrainedWidth = constrainedHeight * normalizedRatio
                 }
-                newL = newR - w
-                newB = newT + h
+                newLeft = newRight - constrainedWidth
+                newBottom = newTop + constrainedHeight
             }
             DragHandle.LEFT_EDGE, DragHandle.RIGHT_EDGE -> {
-                val maxW = (if (normRatio <= 1f) normRatio else 1f).coerceAtLeast(minW)
-                val reqW = if (activeHandle == DragHandle.RIGHT_EDGE) prevW + deltaX else prevW - deltaX
-                val w = reqW.coerceIn(minW, maxW)
-                val h = w / normRatio
-                val centerH = (currentBounds.top + currentBounds.bottom) / 2f
-                var topCandidate = centerH - h / 2f
-                var bottomCandidate = centerH + h / 2f
+                val maximumWidth = (if (normalizedRatio <= 1f) normalizedRatio else 1f).coerceAtLeast(minimumWidth)
+                val requestedWidth = if (activeHandle == DragHandle.RIGHT_EDGE) previousWidth + deltaX else previousWidth - deltaX
+                val constrainedWidth = requestedWidth.coerceIn(minimumWidth, maximumWidth)
+                val constrainedHeight = constrainedWidth / normalizedRatio
+                val centerVertical = (currentBounds.top + currentBounds.bottom) / 2f
+                var topCandidate = centerVertical - constrainedHeight / 2f
+                var bottomCandidate = centerVertical + constrainedHeight / 2f
                 if (topCandidate < 0f) {
                     bottomCandidate += (0f - topCandidate)
                     topCandidate = 0f
@@ -194,22 +193,22 @@ object CropGestureCalculator {
                     topCandidate -= (bottomCandidate - 1f)
                     bottomCandidate = 1f
                 }
-                newT = topCandidate.coerceIn(0f, 1f - h)
-                newB = (newT + h).coerceIn(newT + minH, 1f)
+                newTop = topCandidate.coerceIn(0f, 1f - constrainedHeight)
+                newBottom = (newTop + constrainedHeight).coerceIn(newTop + minimumHeight, 1f)
                 if (activeHandle == DragHandle.RIGHT_EDGE) {
-                    newR = (currentBounds.left + w).coerceIn(currentBounds.left + minW, 1f)
+                    newRight = (currentBounds.left + constrainedWidth).coerceIn(currentBounds.left + minimumWidth, 1f)
                 } else {
-                    newL = (currentBounds.right - w).coerceIn(0f, currentBounds.right - minW)
+                    newLeft = (currentBounds.right - constrainedWidth).coerceIn(0f, currentBounds.right - minimumWidth)
                 }
             }
             DragHandle.TOP_EDGE, DragHandle.BOTTOM_EDGE -> {
-                val maxH = (if (normRatio >= 1f) 1f / normRatio else 1f).coerceAtLeast(minH)
-                val reqH = if (activeHandle == DragHandle.BOTTOM_EDGE) prevH + deltaY else prevH - deltaY
-                val h = reqH.coerceIn(minH, maxH)
-                val w = h * normRatio
-                val centerW = (currentBounds.left + currentBounds.right) / 2f
-                var leftCandidate = centerW - w / 2f
-                var rightCandidate = centerW + w / 2f
+                val maximumHeight = (if (normalizedRatio >= 1f) 1f / normalizedRatio else 1f).coerceAtLeast(minimumHeight)
+                val requestedHeight = if (activeHandle == DragHandle.BOTTOM_EDGE) previousHeight + deltaY else previousHeight - deltaY
+                val constrainedHeight = requestedHeight.coerceIn(minimumHeight, maximumHeight)
+                val constrainedWidth = constrainedHeight * normalizedRatio
+                val centerHorizontal = (currentBounds.left + currentBounds.right) / 2f
+                var leftCandidate = centerHorizontal - constrainedWidth / 2f
+                var rightCandidate = centerHorizontal + constrainedWidth / 2f
                 if (leftCandidate < 0f) {
                     rightCandidate += (0f - leftCandidate)
                     leftCandidate = 0f
@@ -218,19 +217,19 @@ object CropGestureCalculator {
                     leftCandidate -= (rightCandidate - 1f)
                     rightCandidate = 1f
                 }
-                newL = leftCandidate.coerceIn(0f, 1f - w)
-                newR = (newL + w).coerceIn(newL + minW, 1f)
+                newLeft = leftCandidate.coerceIn(0f, 1f - constrainedWidth)
+                newRight = (newLeft + constrainedWidth).coerceIn(newLeft + minimumWidth, 1f)
                 if (activeHandle == DragHandle.BOTTOM_EDGE) {
-                    newB = (currentBounds.top + h).coerceIn(currentBounds.top + minH, 1f)
+                    newBottom = (currentBounds.top + constrainedHeight).coerceIn(currentBounds.top + minimumHeight, 1f)
                 } else {
-                    newT = (currentBounds.bottom - h).coerceIn(0f, currentBounds.bottom - minH)
+                    newTop = (currentBounds.bottom - constrainedHeight).coerceIn(0f, currentBounds.bottom - minimumHeight)
                 }
             }
             DragHandle.BODY, DragHandle.NONE -> {}
         }
 
-        return if (newL < newR && newT < newB) {
-            ImageCropBounds(newL, newT, newR, newB)
+        return if (newLeft < newRight && newTop < newBottom) {
+            ImageCropBounds(newLeft, newTop, newRight, newBottom)
         } else {
             currentBounds
         }
