@@ -27,6 +27,7 @@ data class ImagesToPdfUiState(
     val activePdfViewerFile: File? = null,
     val recentPdfs: List<RecentPdf> = emptyList(),
     val categories: List<String> = emptyList(),
+    val pinnedFolders: List<String> = listOf("Favorites", "Work", "Study"),
     val presets: List<ConversionPreset> = emptyList(),
     val destinationFolderUri: Uri? = null,
     val destinationFolderDisplayName: String = "Internal: Scanorea/pdfs",

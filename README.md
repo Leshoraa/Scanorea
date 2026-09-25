@@ -10,6 +10,10 @@ Scanorea is a modern Android application for converting batches of photos into h
   - *Instant B&W on Import*: Automatically applies high-contrast black-and-white thresholding (`contrast = 2.2f`, `offset = -120f`) to remove paper shadows, yellowing, and ambient gradients.
   - *Per-Page Sharpness & Brightness*: Dedicated sliders for Sharpness/Contrast (0.5x - 2.5x) and Brightness (-50 to +50) with quick reset.
   - *Interactive Filter Chips*: Quick-switch chips for Original Color, B&W Document, Grayscale, Magic Color (Enhanced), and a "To All" batch action.
+- **4-Corner Perspective Correction & Auto Paper Detection**:
+  - *Automatic Edge Detection*: Analyzes document luminosity gradients to locate 4 paper corners automatically without external heavyweight dependencies.
+  - *Interactive Manual Adjustment*: Visual overlay with 4 touch-draggable corner pins, geometric convex validation, and haptic feedback.
+  - *Hardware-Accelerated Homography*: Real-time perspective unwarping using projective matrix mapping and bilinear anti-aliased bitmap shaders.
 - **Conversion Presets with Automated Date Tokens**:
   - Save, load, and manage conversion presets (paper size, orientation, compression, name template).
   - Dynamic date token evaluation: templates like `Rendra_23.XX.XXXX_Aljabar_{DD:MM:YYYY}` automatically evaluate `{DD:MM:YYYY}` to today's date (e.g., `21-09-2026`).
@@ -24,7 +28,11 @@ Scanorea is a modern Android application for converting batches of photos into h
   - Dynamic page-under-scrollbar detection: automatically updates the page indicator (`1 / N` -> `2 / N`) based on whichever paper sheet is currently intersecting the scrollbar thumb.
   - Smooth pinch-to-zoom and pan gestures using Android's native `android.graphics.pdf.PdfRenderer`.
 - **Custom Save Location (SAF)**: Choose a custom destination folder via Storage Access Framework (`OpenDocumentTree`) in the conversion options sheet or use "Save As" in the viewer.
-- **Recent Documents Dashboard**: Access, preview, share, and manage previously converted PDFs directly from the home screen.
+- **Recent Documents Dashboard with Pinned Folders Grid**:
+  - Google Photos-style 2x2 grid featuring up to 3 pinned categories plus an "Other" entry for complete folder management.
+  - Default pinned categories (`Favorites`, `Work`, `Study`) out of the box for immediate utility.
+  - Full-featured `AllFoldersBottomSheet` displaying document counts, pin/unpin toggles (max 3 pinned limit), folder creation, renaming, and deletion.
+  - Access, preview, share, and manage previously converted PDFs directly from the dashboard with category filtering.
 - **Dynamic Material You Design**: Fully adapts to Android 12+ system wallpaper color accents (Monet engine) with support for Dark Theme and edge-to-edge system navigation.
 
 ## Architecture
@@ -64,8 +72,11 @@ Scanorea/
 │   │   │   │   │   ├── editor/
 │   │   │   │   │   │   ├── domain/
 │   │   │   │   │   │   │   ├── CropGestureCalculator.kt
+│   │   │   │   │   │   │   ├── DocumentCornerDetector.kt
+│   │   │   │   │   │   │   ├── PerspectiveWarpCalculator.kt
 │   │   │   │   │   │   │   └── model/
 │   │   │   │   │   │   │       ├── AdjustmentTool.kt
+│   │   │   │   │   │   │       ├── DocumentQuad.kt
 │   │   │   │   │   │   │       ├── EditorCategory.kt
 │   │   │   │   │   │   │       ├── HsvColor.kt
 │   │   │   │   │   │   │       └── PageAnnotation.kt
@@ -81,10 +92,12 @@ Scanorea/
 │   │   │   │   │   │       │   ├── EditorCropOverlay.kt
 │   │   │   │   │   │       │   ├── EditorCropPanel.kt
 │   │   │   │   │   │       │   ├── EditorFiltersPanel.kt
+│   │   │   │   │   │       │   ├── EditorPerspectiveOverlay.kt
 │   │   │   │   │   │       │   ├── EditorReorderLiftedCard.kt
 │   │   │   │   │   │       │   ├── EditorRulerSlider.kt
 │   │   │   │   │   │       │   ├── EditorSuggestionsPanel.kt
 │   │   │   │   │   │       │   ├── EditorTextAnnotationDialog.kt
+│   │   │   │   │   │       │   ├── PagePreviewTransformation.kt
 │   │   │   │   │   │       │   └── RenameDocumentDialog.kt
 │   │   │   │   │   │       └── EditorWorkspace.kt
 │   │   │   │   │   ├── home/
@@ -141,6 +154,8 @@ Scanorea/
 │   │   │   │   │   │   │   └── RecentPdf.kt
 │   │   │   │   │   │   └── ui/
 │   │   │   │   │   │       ├── components/
+│   │   │   │   │   │       │   ├── AllFoldersBottomSheet.kt
+│   │   │   │   │   │       │   ├── FolderGridSection.kt
 │   │   │   │   │   │       │   └── RecentPdfItemCard.kt
 │   │   │   │   │   │       ├── RecentPdfsSection.kt
 │   │   │   │   │   │       └── ResultsScreen.kt
@@ -233,3 +248,5 @@ adb shell am start -n com.leshoraa.scanorea/.MainActivity
 
 ## Architecture Decisions
 - [ADR 0001: Architecture for Images to PDF Conversion and Jetpack Compose UI](docs/adr/0001-images-to-pdf-architecture.md)
+- [ADR 0002: 4-Corner Perspective Correction and Paper Corner Detection Architecture](docs/adr/0002-perspective-correction-and-corner-detection.md)
+- [ADR 0003: Pinned Folders 2x2 Grid Navigation and Categorization Architecture](docs/adr/0003-pinned-folders-grid-navigation.md)

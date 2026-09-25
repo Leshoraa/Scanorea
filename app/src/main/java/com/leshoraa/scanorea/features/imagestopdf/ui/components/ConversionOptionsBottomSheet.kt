@@ -26,7 +26,6 @@ import androidx.compose.material.icons.outlined.CreateNewFolder
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -502,12 +501,6 @@ fun ConversionOptionsBottomSheet(
                             .height(50.dp),
                         shape = MaterialTheme.shapes.large
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.PictureAsPdf,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Convert to PDF",
                             style = MaterialTheme.typography.titleSmall,

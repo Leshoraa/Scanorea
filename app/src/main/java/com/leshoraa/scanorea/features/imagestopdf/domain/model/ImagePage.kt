@@ -3,7 +3,7 @@ package com.leshoraa.scanorea.features.imagestopdf.domain.model
 import android.net.Uri
 
 import com.leshoraa.scanorea.core.filter.ImageFilterType
-
+import com.leshoraa.scanorea.features.editor.domain.model.DocumentQuad
 import com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation
 
 /**
@@ -34,6 +34,7 @@ data class ImagePage(
     val brightness: Float = 0.0f,
     val rotationDegrees: Int = 0,
     val cropBounds: ImageCropBounds = ImageCropBounds(),
+    val perspectiveQuad: DocumentQuad = DocumentQuad.DEFAULT,
     val width: Int = 0,
     val height: Int = 0,
     val initialContrast: Float = 1.0f,

@@ -10,6 +10,8 @@ import android.graphics.Canvas
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import com.leshoraa.scanorea.core.filter.ImageFilterType
+import com.leshoraa.scanorea.features.editor.domain.PerspectiveWarpCalculator
+import com.leshoraa.scanorea.features.editor.domain.model.DocumentQuad
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImageCropBounds
 import java.io.IOException
 import java.io.InputStream
@@ -32,7 +34,8 @@ class ImageDecoderDataSource(private val context: Context) {
         contrast: Float = 1.0f,
         brightness: Float = 0.0f,
         rotationDegrees: Int = 0,
-        cropBounds: ImageCropBounds = ImageCropBounds.DEFAULT
+        cropBounds: ImageCropBounds = ImageCropBounds.DEFAULT,
+        perspectiveQuad: DocumentQuad = DocumentQuad.DEFAULT
     ): Bitmap {
         val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true
@@ -77,19 +80,30 @@ class ImageDecoderDataSource(private val context: Context) {
             orientedBitmap
         }
 
+        // Apply perspective keystone rectification if specified
+        val warpedBitmap = if (!perspectiveQuad.isDefault && perspectiveQuad.isValidConvex()) {
+            val warped = PerspectiveWarpCalculator.warpBitmap(rotatedBitmap, perspectiveQuad)
+            if (warped != rotatedBitmap) {
+                rotatedBitmap.recycle()
+            }
+            warped
+        } else {
+            rotatedBitmap
+        }
+
         // Apply custom normalized crop boundaries if specified
         val croppedBitmap = if (!cropBounds.isDefault) {
-            val srcX = (cropBounds.left * rotatedBitmap.width).toInt().coerceIn(0, rotatedBitmap.width - 1)
-            val srcY = (cropBounds.top * rotatedBitmap.height).toInt().coerceIn(0, rotatedBitmap.height - 1)
-            val srcW = ((cropBounds.right - cropBounds.left) * rotatedBitmap.width).toInt().coerceIn(1, rotatedBitmap.width - srcX)
-            val srcH = ((cropBounds.bottom - cropBounds.top) * rotatedBitmap.height).toInt().coerceIn(1, rotatedBitmap.height - srcY)
-            val cropped = Bitmap.createBitmap(rotatedBitmap, srcX, srcY, srcW, srcH)
-            if (cropped != rotatedBitmap) {
-                rotatedBitmap.recycle()
+            val srcX = (cropBounds.left * warpedBitmap.width).toInt().coerceIn(0, warpedBitmap.width - 1)
+            val srcY = (cropBounds.top * warpedBitmap.height).toInt().coerceIn(0, warpedBitmap.height - 1)
+            val srcW = ((cropBounds.right - cropBounds.left) * warpedBitmap.width).toInt().coerceIn(1, warpedBitmap.width - srcX)
+            val srcH = ((cropBounds.bottom - cropBounds.top) * warpedBitmap.height).toInt().coerceIn(1, warpedBitmap.height - srcY)
+            val cropped = Bitmap.createBitmap(warpedBitmap, srcX, srcY, srcW, srcH)
+            if (cropped != warpedBitmap) {
+                warpedBitmap.recycle()
             }
             cropped
         } else {
-            rotatedBitmap
+            warpedBitmap
         }
 
         return applyFilter(croppedBitmap, filter, contrast, brightness)

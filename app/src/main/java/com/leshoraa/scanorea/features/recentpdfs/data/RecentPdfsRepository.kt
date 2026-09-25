@@ -21,9 +21,12 @@ class RecentPdfsRepository(
     companion object {
         private const val PREFS_NAME = "scanorea_document_metadata"
         private const val KEY_CATEGORIES = "document_categories"
+        private const val KEY_PINNED_FOLDERS = "document_pinned_folders"
         private const val KEY_METADATA_MAP = "document_metadata_map"
 
-        val DEFAULT_CATEGORIES = listOf("Work", "Study")
+        const val MAX_PINNED_FOLDERS = 3
+        val DEFAULT_CATEGORIES = listOf("Work", "Study", "Personal")
+        val DEFAULT_PINNED_FOLDERS = listOf("Favorites", "Work", "Study")
     }
 
     suspend fun getCategories(): List<String> = withContext(Dispatchers.IO) {
@@ -32,25 +35,20 @@ class RecentPdfsRepository(
             saveCategoriesList(DEFAULT_CATEGORIES)
             return@withContext DEFAULT_CATEGORIES
         }
-        try {
-            val arr = JSONArray(raw)
-            val list = mutableListOf<String>()
-            for (i in 0 until arr.length()) {
-                val item = arr.getString(i).trim()
-                // Sanitize out old Receipts default and ensure no duplicates
-                if (item.isNotEmpty() && !item.equals("Receipts", ignoreCase = true) && !list.contains(item)) {
-                    list.add(item)
-                }
+        val items = deserializeStringList(raw)
+        val list = mutableListOf<String>()
+        for (item in items) {
+            val trimmed = item.trim()
+            if (trimmed.isNotEmpty() && !trimmed.equals("Receipts", ignoreCase = true) && !list.contains(trimmed)) {
+                list.add(trimmed)
             }
-            if (list.isEmpty()) {
-                saveCategoriesList(DEFAULT_CATEGORIES)
-                DEFAULT_CATEGORIES
-            } else {
-                saveCategoriesList(list)
-                list
-            }
-        } catch (_: Exception) {
+        }
+        if (list.isEmpty()) {
+            saveCategoriesList(DEFAULT_CATEGORIES)
             DEFAULT_CATEGORIES
+        } else {
+            saveCategoriesList(list)
+            list
         }
     }
 
@@ -92,39 +90,50 @@ class RecentPdfsRepository(
         // Update all documents assigned to oldCategory
         val metadataMap = getMetadataMap()
         var modified = false
-        for (key in metadataMap.keys()) {
-            val docObj = metadataMap.getJSONObject(key)
-            var docModified = false
+        val keys = metadataMap.keys()
+        if (keys != null) {
+            for (key in keys) {
+                val docObj = metadataMap.optJSONObject(key) ?: continue
+                var docModified = false
 
-            // Update folders array if present
-            val foldersArr = docObj.optJSONArray("folders")
-            if (foldersArr != null) {
-                val updatedArr = JSONArray()
-                for (i in 0 until foldersArr.length()) {
-                    val folderName = foldersArr.optString(i)
-                    if (folderName.equals(oldTrimmed, ignoreCase = true)) {
-                        updatedArr.put(newTrimmed)
-                        docModified = true
-                    } else {
-                        updatedArr.put(folderName)
+                // Update folders array if present
+                val foldersArr = docObj.optJSONArray("folders")
+                if (foldersArr != null) {
+                    val updatedArr = JSONArray()
+                    for (i in 0 until foldersArr.length()) {
+                        val folderName = foldersArr.optString(i)
+                        if (folderName.equals(oldTrimmed, ignoreCase = true)) {
+                            updatedArr.put(newTrimmed)
+                            docModified = true
+                        } else {
+                            updatedArr.put(folderName)
+                        }
+                    }
+                    if (docModified) {
+                        docObj.put("folders", updatedArr)
                     }
                 }
-                if (docModified) {
-                    docObj.put("folders", updatedArr)
+
+                if (docObj.optString("category").equals(oldTrimmed, ignoreCase = true)) {
+                    docObj.put("category", newTrimmed)
+                    docModified = true
                 }
-            }
 
-            if (docObj.optString("category").equals(oldTrimmed, ignoreCase = true)) {
-                docObj.put("category", newTrimmed)
-                docModified = true
-            }
-
-            if (docModified) {
-                modified = true
+                if (docModified) {
+                    modified = true
+                }
             }
         }
         if (modified) {
             saveMetadataMap(metadataMap)
+        }
+
+        // Keep pinned folders list in sync with renamed category
+        val currentPinned = getPinnedFolders().toMutableList()
+        val pinnedIndex = currentPinned.indexOfFirst { it.equals(oldTrimmed, ignoreCase = true) }
+        if (pinnedIndex >= 0) {
+            currentPinned[pinnedIndex] = newTrimmed
+            savePinnedFoldersList(currentPinned)
         }
 
         true
@@ -135,40 +144,50 @@ class RecentPdfsRepository(
         val removed = current.removeAll { it.equals(category.trim(), ignoreCase = true) }
         if (removed) {
             saveCategoriesList(current)
+
+            // Remove from pinned folders if present
+            val currentPinned = getPinnedFolders().toMutableList()
+            if (currentPinned.removeAll { it.equals(category.trim(), ignoreCase = true) }) {
+                savePinnedFoldersList(currentPinned)
+            }
+
             val metadataMap = getMetadataMap()
             var modified = false
-            for (key in metadataMap.keys()) {
-                val docObj = metadataMap.getJSONObject(key)
-                var docModified = false
+            val keys = metadataMap.keys()
+            if (keys != null) {
+                for (key in keys) {
+                    val docObj = metadataMap.optJSONObject(key) ?: continue
+                    var docModified = false
 
-                val foldersArr = docObj.optJSONArray("folders")
-                if (foldersArr != null) {
-                    val updatedArr = JSONArray()
-                    for (i in 0 until foldersArr.length()) {
-                        val folderName = foldersArr.optString(i)
-                        if (!folderName.equals(category.trim(), ignoreCase = true)) {
-                            updatedArr.put(folderName)
-                        } else {
-                            docModified = true
+                    val foldersArr = docObj.optJSONArray("folders")
+                    if (foldersArr != null) {
+                        val updatedArr = JSONArray()
+                        for (i in 0 until foldersArr.length()) {
+                            val folderName = foldersArr.optString(i)
+                            if (!folderName.equals(category.trim(), ignoreCase = true)) {
+                                updatedArr.put(folderName)
+                            } else {
+                                docModified = true
+                            }
+                        }
+                        if (docModified) {
+                            docObj.put("folders", updatedArr)
                         }
                     }
+
+                    if (docObj.optString("category").equals(category.trim(), ignoreCase = true)) {
+                        val remainingFirst = docObj.optJSONArray("folders")?.optString(0)?.takeIf { it.isNotBlank() }
+                        if (remainingFirst != null) {
+                            docObj.put("category", remainingFirst)
+                        } else {
+                            docObj.remove("category")
+                        }
+                        docModified = true
+                    }
+
                     if (docModified) {
-                        docObj.put("folders", updatedArr)
+                        modified = true
                     }
-                }
-
-                if (docObj.optString("category").equals(category.trim(), ignoreCase = true)) {
-                    val remainingFirst = docObj.optJSONArray("folders")?.optString(0)?.takeIf { it.isNotBlank() }
-                    if (remainingFirst != null) {
-                        docObj.put("category", remainingFirst)
-                    } else {
-                        docObj.remove("category")
-                    }
-                    docModified = true
-                }
-
-                if (docModified) {
-                    modified = true
                 }
             }
             if (modified) {
@@ -176,6 +195,62 @@ class RecentPdfsRepository(
             }
         }
         removed
+    }
+
+    suspend fun getPinnedFolders(): List<String> = withContext(Dispatchers.IO) {
+        val raw = prefs.getString(KEY_PINNED_FOLDERS, null)
+        if (raw.isNullOrBlank()) {
+            savePinnedFoldersList(DEFAULT_PINNED_FOLDERS)
+            return@withContext DEFAULT_PINNED_FOLDERS
+        }
+        val items = deserializeStringList(raw)
+        val list = mutableListOf<String>()
+        for (item in items) {
+            val trimmed = item.trim()
+            if (trimmed.isNotEmpty() && !list.any { it.equals(trimmed, ignoreCase = true) }) {
+                list.add(trimmed)
+            }
+        }
+        val sanitized = list.take(MAX_PINNED_FOLDERS)
+        if (sanitized.isEmpty()) {
+            savePinnedFoldersList(DEFAULT_PINNED_FOLDERS)
+            DEFAULT_PINNED_FOLDERS
+        } else {
+            savePinnedFoldersList(sanitized)
+            sanitized
+        }
+    }
+
+    suspend fun setPinnedFolders(pinned: List<String>): Boolean = withContext(Dispatchers.IO) {
+        val sanitized = pinned.map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinctBy { it.lowercase() }
+            .take(MAX_PINNED_FOLDERS)
+        savePinnedFoldersList(sanitized)
+        true
+    }
+
+    suspend fun togglePinFolder(folder: String): Boolean = withContext(Dispatchers.IO) {
+        val trimmed = folder.trim()
+        if (trimmed.isEmpty()) return@withContext false
+        val current = getPinnedFolders().toMutableList()
+        val existingIndex = current.indexOfFirst { it.equals(trimmed, ignoreCase = true) }
+        if (existingIndex >= 0) {
+            current.removeAt(existingIndex)
+            savePinnedFoldersList(current)
+            true
+        } else {
+            if (current.size >= MAX_PINNED_FOLDERS) {
+                return@withContext false
+            }
+            current.add(trimmed)
+            savePinnedFoldersList(current)
+            true
+        }
+    }
+
+    private fun savePinnedFoldersList(list: List<String>) {
+        prefs.edit().putString(KEY_PINNED_FOLDERS, serializeStringList(list)).apply()
     }
 
     suspend fun getRecentPdfs(): List<RecentPdf> = withContext(Dispatchers.IO) {
@@ -316,8 +391,45 @@ class RecentPdfsRepository(
     }
 
     private fun saveCategoriesList(list: List<String>) {
-        val arr = JSONArray()
-        list.forEach { arr.put(it) }
-        prefs.edit().putString(KEY_CATEGORIES, arr.toString()).apply()
+        prefs.edit().putString(KEY_CATEGORIES, serializeStringList(list)).apply()
+    }
+
+    private fun serializeStringList(list: List<String>): String {
+        return list.joinToString(separator = ",", prefix = "[", postfix = "]") { "\"${it.replace("\"", "\\\"")}\"" }
+    }
+
+    private fun deserializeStringList(raw: String?): List<String> {
+        if (raw.isNullOrBlank()) return emptyList()
+        val trimmed = raw.trim()
+        if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) {
+            return trimmed.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
+        }
+        val content = trimmed.substring(1, trimmed.length - 1).trim()
+        if (content.isEmpty()) return emptyList()
+        val result = mutableListOf<String>()
+        var inQuotes = false
+        val sb = StringBuilder()
+        var i = 0
+        while (i < content.length) {
+            val c = content[i]
+            if (c == '\\' && i + 1 < content.length) {
+                sb.append(content[i + 1])
+                i += 2
+                continue
+            }
+            if (c == '"') {
+                inQuotes = !inQuotes
+            } else if (c == ',' && !inQuotes) {
+                val item = sb.toString().trim()
+                if (item.isNotEmpty()) result.add(item)
+                sb.clear()
+            } else {
+                sb.append(c)
+            }
+            i++
+        }
+        val lastItem = sb.toString().trim()
+        if (lastItem.isNotEmpty()) result.add(lastItem)
+        return result
     }
 }

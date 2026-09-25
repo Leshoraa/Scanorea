@@ -18,6 +18,8 @@ import com.leshoraa.scanorea.features.imagestopdf.domain.model.CompressionProfil
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ConversionProgress
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImageCropBounds
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImagePage
+import com.leshoraa.scanorea.features.editor.domain.DocumentCornerDetector
+import com.leshoraa.scanorea.features.editor.domain.model.DocumentQuad
 import com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfConversionOptions
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageOrientation
@@ -87,7 +89,8 @@ class ImagesToPdfViewModel(
         viewModelScope.launch {
             val recents = recentPdfsRepository.getRecentPdfs()
             val categories = recentPdfsRepository.getCategories()
-            _uiState.update { it.copy(recentPdfs = recents, categories = categories) }
+            val pinnedFolders = recentPdfsRepository.getPinnedFolders()
+            _uiState.update { it.copy(recentPdfs = recents, categories = categories, pinnedFolders = pinnedFolders) }
         }
     }
 
@@ -245,6 +248,22 @@ class ImagesToPdfViewModel(
         if (recentPdfsRepository == null) return
         viewModelScope.launch {
             recentPdfsRepository.deleteCategory(category)
+            loadRecentPdfs()
+        }
+    }
+
+    fun togglePinFolder(folder: String) {
+        if (recentPdfsRepository == null) return
+        viewModelScope.launch {
+            recentPdfsRepository.togglePinFolder(folder)
+            loadRecentPdfs()
+        }
+    }
+
+    fun setPinnedFolders(folders: List<String>) {
+        if (recentPdfsRepository == null) return
+        viewModelScope.launch {
+            recentPdfsRepository.setPinnedFolders(folders)
             loadRecentPdfs()
         }
     }
@@ -469,6 +488,27 @@ class ImagesToPdfViewModel(
 
     fun resetPageCrop(pageId: String) {
         updatePageCrop(pageId, ImageCropBounds.DEFAULT)
+    }
+
+    fun updatePagePerspectiveQuad(pageId: String, perspectiveQuad: DocumentQuad) {
+        _uiState.update { currentState ->
+            val updatedPages = currentState.pages.map { page ->
+                if (page.id == pageId) page.copy(perspectiveQuad = perspectiveQuad) else page
+            }
+            currentState.copy(pages = updatedPages)
+        }
+    }
+
+    fun resetPagePerspectiveQuad(pageId: String) {
+        updatePagePerspectiveQuad(pageId, DocumentQuad.DEFAULT)
+    }
+
+    fun autoDetectPagePerspective(pageId: String, contentResolver: ContentResolver) {
+        val targetPage = _uiState.value.pages.firstOrNull { it.id == pageId } ?: return
+        viewModelScope.launch {
+            val detectedQuad = DocumentCornerDetector.detectFromUri(targetPage.uri, contentResolver)
+            updatePagePerspectiveQuad(pageId, detectedQuad)
+        }
     }
 
     fun addPageAnnotation(pageId: String, annotation: PageAnnotation) {

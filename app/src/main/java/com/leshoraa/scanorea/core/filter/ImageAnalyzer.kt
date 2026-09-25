@@ -147,7 +147,7 @@ object ImageAnalyzer {
         )
     }
 
-    private fun decodeSampledBitmap(
+    internal fun decodeSampledBitmap(
         uri: Uri,
         contentResolver: ContentResolver,
         maxDimension: Int

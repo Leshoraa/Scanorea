@@ -69,6 +69,7 @@ import coil.size.Precision
 import com.leshoraa.scanorea.features.editor.domain.CropGestureCalculator
 import com.leshoraa.scanorea.features.editor.domain.model.AnnotationColors
 import com.leshoraa.scanorea.features.editor.domain.model.AnnotationTool
+import com.leshoraa.scanorea.features.editor.domain.model.DocumentQuad
 import com.leshoraa.scanorea.features.editor.domain.model.NormalizedPoint
 import com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation
 import com.leshoraa.scanorea.features.editor.domain.model.StrokeSize
@@ -96,8 +97,10 @@ fun EditorCanvasPager(
     movingTargetIndex: Int,
     liftProgress: Float,
     isCropMode: Boolean,
+    cropPanelMode: CropPanelMode = CropPanelMode.RECTANGLE,
     cropAspectRatio: CropAspectRatio = CropAspectRatio.FREE,
     onCropChange: (pageId: String, bounds: ImageCropBounds) -> Unit,
+    onPerspectiveQuadChange: (pageId: String, quad: DocumentQuad) -> Unit = { _, _ -> },
     isAnnotateMode: Boolean = false,
     activeAnnotationTool: AnnotationTool = AnnotationTool.PEN,
     selectedAnnotationColor: Long = AnnotationColors.YELLOW,
@@ -374,7 +377,7 @@ fun EditorCanvasPager(
 
                                     var handle = DragHandle.NONE
 
-                                    if (isCropMode) {
+                                    if (isCropMode && cropPanelMode != CropPanelMode.PERSPECTIVE) {
                                         val bounds = localCropBoundsState.value
                                         val screenLeft = centerX + (bounds.left - 0.5f) * fittedWPx * zoomScale + panOffset.x
                                         val screenRight = centerX + (bounds.right - 0.5f) * fittedWPx * zoomScale + panOffset.x
@@ -627,7 +630,12 @@ fun EditorCanvasPager(
                                 modifier = Modifier.size(fittedW, fittedH),
                                 contentAlignment = Alignment.Center
                             ) {
-                                val imageRequest = remember(context, page.uri, page.rotationDegrees, effectiveCropBounds) {
+                                val effectivePerspectiveQuad = if (isCropMode && cropPanelMode == CropPanelMode.PERSPECTIVE) {
+                                    DocumentQuad.DEFAULT
+                                } else {
+                                    page.perspectiveQuad
+                                }
+                                val imageRequest = remember(context, page.uri, page.rotationDegrees, effectiveCropBounds, effectivePerspectiveQuad) {
                                     ImageRequest.Builder(context)
                                         .data(page.uri)
                                         .size(1080, 1920)
@@ -636,7 +644,8 @@ fun EditorCanvasPager(
                                         .transformations(
                                             PagePreviewTransformation(
                                                 rotationDegrees = page.rotationDegrees,
-                                                cropBounds = effectiveCropBounds
+                                                cropBounds = effectiveCropBounds,
+                                                perspectiveQuad = effectivePerspectiveQuad
                                             )
                                         )
                                         .crossfade(false)
@@ -664,14 +673,24 @@ fun EditorCanvasPager(
                                 )
                             }
 
-                            // Interactive Crop Overlay Canvas when in Crop mode for current page
+                            // Interactive Crop or Perspective Overlay Canvas when in Crop mode for current page
                             if (isCropMode && isCurrentFocusedPage) {
-                                EditorCropOverlayCanvas(
-                                    cropBounds = localCropBoundsState.value,
-                                    activeHandle = activeCropHandle,
-                                    touchMargin = touchMargin,
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                                if (cropPanelMode == CropPanelMode.PERSPECTIVE) {
+                                    EditorPerspectiveOverlay(
+                                        documentQuad = page.perspectiveQuad,
+                                        onQuadChange = { updatedQuad -> onPerspectiveQuadChange(page.id, updatedQuad) },
+                                        onQuadCommit = { committedQuad -> onPerspectiveQuadChange(page.id, committedQuad) },
+                                        touchMargin = touchMargin,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    EditorCropOverlayCanvas(
+                                        cropBounds = localCropBoundsState.value,
+                                        activeHandle = activeCropHandle,
+                                        touchMargin = touchMargin,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
                             }
                         }
                     }

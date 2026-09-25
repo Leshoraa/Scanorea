@@ -1,9 +1,7 @@
 package com.leshoraa.scanorea.features.recentpdfs.ui
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,15 +14,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
@@ -34,11 +29,9 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.StarBorder
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -60,8 +53,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.features.recentpdfs.domain.model.RecentPdf
+import com.leshoraa.scanorea.features.recentpdfs.ui.components.AllFoldersBottomSheet
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.CreateFolderDialog
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.DeleteFolderConfirmationDialog
+import com.leshoraa.scanorea.features.recentpdfs.ui.components.FolderGridSection
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.OrganizeDocumentBottomSheet
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.RecentPdfItemCard
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.RenameFolderDialog
@@ -77,9 +72,10 @@ sealed interface DocumentFilter {
 }
 
 /**
- * Dedicated Results screen featuring instant search, folder filtering, and document management:
+ * Dedicated Results screen featuring instant search, 2x2 pinned folder grid,
+ * and document management:
  * - Top header with "Results" title, Search action, and options menu.
- * - Horizontal filter chips (All, Favorites, Folders, + New Folder).
+ * - 2x2 Google Photos style folder grid (up to 3 pinned folders + 1 Other card).
  * - Live search filter for generated PDF files.
  * - Full scrollable list of recent PDF items with favorite toggle and folder organization.
  */
@@ -88,6 +84,8 @@ sealed interface DocumentFilter {
 fun ResultsScreen(
     recentPdfs: List<RecentPdf>,
     categories: List<String>,
+    pinnedFolders: List<String> = listOf("Favorites", "Work", "Study"),
+    onTogglePinFolder: (String) -> Unit = {},
     onPdfClick: (File) -> Unit,
     onShareClick: (File) -> Unit,
     onDeleteClick: (File) -> Unit,
@@ -104,6 +102,7 @@ fun ResultsScreen(
     var isSearchActive by remember { mutableStateOf(false) }
     var showOptionsMenu by remember { mutableStateOf(false) }
     var sortDescending by remember { mutableStateOf(true) }
+    var isAllFoldersSheetVisible by remember { mutableStateOf(false) }
 
     var showCreateFolderDialog by remember { mutableStateOf(false) }
     var folderToRename by remember { mutableStateOf<String?>(null) }
@@ -218,61 +217,56 @@ fun ResultsScreen(
             )
         }
 
-        // Horizontal Folder & Filter Chips
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            item {
-                FilterChip(
-                    selected = currentFilter is DocumentFilter.All,
-                    onClick = { currentFilter = DocumentFilter.All },
-                    label = { Text("All") }
-                )
-            }
+        // 2x2 Google Photos Style Pinned Folders Grid & Other Card
+        FolderGridSection(
+            pinnedFolders = pinnedFolders,
+            recentPdfs = recentPdfs,
+            totalFoldersCount = categories.size,
+            currentFilter = currentFilter,
+            onSelectFilter = { currentFilter = it },
+            onOpenAllFolders = { isAllFoldersSheetVisible = true }
+        )
 
-            item {
-                FilterChip(
-                    selected = currentFilter is DocumentFilter.Favorites,
-                    onClick = { currentFilter = DocumentFilter.Favorites },
-                    leadingIcon = {
+        // Active Filter Banner (shown when filtered by Favorites or Category, with clear button)
+        if (currentFilter !is DocumentFilter.All) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    val filterLabel = when (val filter = currentFilter) {
+                        is DocumentFilter.Favorites -> "Filter: Favorites"
+                        is DocumentFilter.Category -> "Folder: ${filter.name}"
+                        is DocumentFilter.All -> ""
+                    }
+                    Text(
+                        text = "$filterLabel (${filteredPdfs.size} files)",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+
+                    IconButton(
+                        onClick = { currentFilter = DocumentFilter.All },
+                        modifier = Modifier.size(24.dp)
+                    ) {
                         Icon(
-                            imageVector = Icons.Filled.Star,
-                            contentDescription = null,
+                            imageVector = Icons.Outlined.Clear,
+                            contentDescription = "Clear filter",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
                         )
-                    },
-                    label = { Text("Favorites") }
-                )
-            }
-
-            items(categories, key = { it }) { category ->
-                val isSelected = currentFilter is DocumentFilter.Category &&
-                    (currentFilter as DocumentFilter.Category).name.equals(category, ignoreCase = true)
-
-                FolderFilterChip(
-                    category = category,
-                    isSelected = isSelected,
-                    onClick = { currentFilter = DocumentFilter.Category(category) },
-                    onRename = { folderToRename = category },
-                    onDelete = { folderToDelete = category }
-                )
-            }
-
-            item {
-                AssistChip(
-                    onClick = { showCreateFolderDialog = true },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Outlined.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    },
-                    label = { Text("New Folder") }
-                )
+                    }
+                }
             }
         }
 
@@ -428,104 +422,22 @@ fun ResultsScreen(
             onDismiss = { folderToDelete = null }
         )
     }
-}
 
-/**
- * Filter chip for document folders supporting single-tap to filter and
- * long-press to show a contextual menu with Rename and Delete options.
- */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun FolderFilterChip(
-    category: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    onRename: () -> Unit,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var showMenu by remember { mutableStateOf(false) }
-
-    Box(modifier = modifier) {
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-            contentColor = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-            border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-            modifier = Modifier
-                .height(32.dp)
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = { showMenu = true }
-                )
-        ) {
-            Row(
-                modifier = Modifier.padding(start = 10.dp, end = if (isSelected) 6.dp else 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Folder,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = if (isSelected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = category,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
-                )
-                if (isSelected) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = "Folder options",
-                        modifier = Modifier
-                            .size(18.dp)
-                            .clickable { showMenu = true },
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
-            }
-        }
-
-        DropdownMenu(
-            expanded = showMenu,
-            onDismissRequest = { showMenu = false }
-        ) {
-            DropdownMenuItem(
-                text = { Text("Rename") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Outlined.Edit,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                },
-                onClick = {
-                    showMenu = false
-                    onRename()
-                }
-            )
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        text = "Delete",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Outlined.Delete,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(20.dp)
-                    )
-                },
-                onClick = {
-                    showMenu = false
-                    onDelete()
-                }
-            )
-        }
+    if (isAllFoldersSheetVisible) {
+        AllFoldersBottomSheet(
+            categories = categories,
+            pinnedFolders = pinnedFolders,
+            recentPdfs = recentPdfs,
+            currentFilter = currentFilter,
+            onSelectFilter = { currentFilter = it },
+            onTogglePinFolder = onTogglePinFolder,
+            onCreateNewFolder = {
+                isAllFoldersSheetVisible = false
+                showCreateFolderDialog = true
+            },
+            onRenameFolder = { folderToRename = it },
+            onDeleteFolder = { folderToDelete = it },
+            onDismiss = { isAllFoldersSheetVisible = false }
+        )
     }
 }

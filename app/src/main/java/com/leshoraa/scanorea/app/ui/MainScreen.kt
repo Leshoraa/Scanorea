@@ -453,6 +453,8 @@ fun MainScreen(
                         ResultsScreen(
                             recentPdfs = uiState.recentPdfs,
                             categories = uiState.categories,
+                            pinnedFolders = uiState.pinnedFolders,
+                            onTogglePinFolder = { viewModel.togglePinFolder(it) },
                             onPdfClick = { viewModel.openPdfInViewer(it) },
                             onShareClick = { PdfDocumentSharer.share(context, it) },
                             onDeleteClick = { viewModel.deleteRecentPdf(it) },
@@ -503,6 +505,15 @@ fun MainScreen(
                     },
                     onCropChange = { pageId, bounds ->
                         viewModel.updatePageCrop(pageId, bounds)
+                    },
+                    onPerspectiveQuadChange = { pageId, quad ->
+                        viewModel.updatePagePerspectiveQuad(pageId, quad)
+                    },
+                    onAutoDetectPerspective = { pageId ->
+                        viewModel.autoDetectPagePerspective(pageId, context.contentResolver)
+                    },
+                    onResetPerspective = { pageId ->
+                        viewModel.resetPagePerspectiveQuad(pageId)
                     },
                     onRotatePage = { pageId ->
                         viewModel.rotatePage(pageId)

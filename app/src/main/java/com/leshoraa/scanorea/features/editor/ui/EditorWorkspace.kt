@@ -35,9 +35,11 @@ import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.core.filter.ImageFilterType
 import com.leshoraa.scanorea.features.editor.domain.model.AnnotationColors
 import com.leshoraa.scanorea.features.editor.domain.model.AnnotationTool
+import com.leshoraa.scanorea.features.editor.domain.model.DocumentQuad
 import com.leshoraa.scanorea.features.editor.domain.model.EditorCategory
 import com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation
 import com.leshoraa.scanorea.features.editor.domain.model.StrokeSize
+import com.leshoraa.scanorea.features.editor.ui.components.CropPanelMode
 import com.leshoraa.scanorea.features.editor.ui.components.EditorAdjustPanel
 import com.leshoraa.scanorea.features.editor.ui.components.EditorAnnotatePanel
 import com.leshoraa.scanorea.features.editor.ui.components.EditorBottomActionBar
@@ -69,6 +71,9 @@ fun EditorWorkspace(
     onAutoAdjustPage: (pageId: String, contentResolver: ContentResolver) -> Unit,
     onResetAdjustments: (pageId: String) -> Unit,
     onCropChange: (pageId: String, bounds: ImageCropBounds) -> Unit,
+    onPerspectiveQuadChange: (pageId: String, quad: DocumentQuad) -> Unit = { _, _ -> },
+    onAutoDetectPerspective: (pageId: String) -> Unit = {},
+    onResetPerspective: (pageId: String) -> Unit = {},
     onRotatePage: (pageId: String) -> Unit,
     onResetCrop: (pageId: String) -> Unit,
     canUndoAnnotation: Boolean = false,
@@ -102,19 +107,25 @@ fun EditorWorkspace(
     val liftAnim = remember { Animatable(0f) }
 
     var selectedCropRatio by remember(currentPage?.id) { mutableStateOf(CropAspectRatio.FREE) }
+    var cropPanelMode by remember { mutableStateOf(CropPanelMode.RECTANGLE) }
     var originalCropBoundsOnEnter by remember { mutableStateOf(ImageCropBounds.DEFAULT) }
+    var originalPerspectiveQuadOnEnter by remember { mutableStateOf(DocumentQuad.DEFAULT) }
 
     LaunchedEffect(activeCategory) {
         if (activeCategory == EditorCategory.CROP) {
             val curr = pages.getOrNull(pagerState.currentPage)
             originalCropBoundsOnEnter = curr?.cropBounds ?: ImageCropBounds.DEFAULT
+            originalPerspectiveQuadOnEnter = curr?.perspectiveQuad ?: DocumentQuad.DEFAULT
+            cropPanelMode = CropPanelMode.RECTANGLE
         } else {
             selectedCropRatio = CropAspectRatio.FREE
+            cropPanelMode = CropPanelMode.RECTANGLE
         }
     }
 
     val handleApplyCrop: () -> Unit = {
         selectedCropRatio = CropAspectRatio.FREE
+        cropPanelMode = CropPanelMode.RECTANGLE
         activeCategory = EditorCategory.FILTERS
     }
 
@@ -122,8 +133,10 @@ fun EditorWorkspace(
         val curr = pages.getOrNull(pagerState.currentPage)
         if (curr != null) {
             onCropChange(curr.id, originalCropBoundsOnEnter)
+            onPerspectiveQuadChange(curr.id, originalPerspectiveQuadOnEnter)
         }
         selectedCropRatio = CropAspectRatio.FREE
+        cropPanelMode = CropPanelMode.RECTANGLE
         activeCategory = EditorCategory.FILTERS
     }
 
@@ -180,8 +193,10 @@ fun EditorWorkspace(
             movingTargetIndex = movingTargetIndex,
             liftProgress = liftAnim.value,
             isCropMode = activeCategory == EditorCategory.CROP,
+            cropPanelMode = cropPanelMode,
             cropAspectRatio = selectedCropRatio,
             onCropChange = onCropChange,
+            onPerspectiveQuadChange = onPerspectiveQuadChange,
             isAnnotateMode = activeCategory == EditorCategory.MARKUP,
             activeAnnotationTool = selectedAnnotationTool,
             selectedAnnotationColor = selectedAnnotationColor,
@@ -234,11 +249,15 @@ fun EditorWorkspace(
                                 currentPageIndex = currentPageIndex,
                                 totalPages = pages.size,
                                 isReordering = isReordering,
+                                cropPanelMode = cropPanelMode,
+                                onCropPanelModeChange = { cropPanelMode = it },
                                 selectedRatio = selectedCropRatio,
                                 onRatioSelected = { selectedCropRatio = it },
                                 onCropBoundsChange = { newBounds -> onCropChange(currentPage.id, newBounds) },
                                 onRotatePage = { onRotatePage(currentPage.id) },
                                 onResetCrop = { onResetCrop(currentPage.id) },
+                                onAutoDetectPerspective = { onAutoDetectPerspective(currentPage.id) },
+                                onResetPerspective = { onResetPerspective(currentPage.id) },
                                 onApplyCrop = handleApplyCrop,
                                 onPreviousPage = {
                                     coroutineScope.launch {
