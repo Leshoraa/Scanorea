@@ -1,6 +1,6 @@
 package com.leshoraa.scanorea.features.pdfviewer
 
-import com.leshoraa.scanorea.features.pdfviewer.ui.util.PdfScrollCalculator
+import com.leshoraa.scanorea.features.pdfviewer.domain.PdfScrollCalculator
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

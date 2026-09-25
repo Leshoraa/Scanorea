@@ -40,8 +40,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.leshoraa.scanorea.core.util.DateTimeFormatter
-import com.leshoraa.scanorea.core.util.FileSizeFormatter
+import com.leshoraa.scanorea.core.format.DateTimeFormatter
+import com.leshoraa.scanorea.core.format.FileSizeFormatter
 import com.leshoraa.scanorea.features.recentpdfs.domain.model.RecentPdf
 import java.io.File
 
@@ -58,7 +58,7 @@ fun RecentPdfItemCard(
     onToggleFavorite: ((File) -> Unit)? = null,
     onMoveToFolderClick: ((File) -> Unit)? = null
 ) {
-    var showMenu by remember { mutableStateOf(false) }
+    var isOptionsMenuVisible by remember { mutableStateOf(false) }
 
     Card(
         modifier = modifier
@@ -167,7 +167,7 @@ fun RecentPdfItemCard(
 
             Box {
                 IconButton(
-                    onClick = { showMenu = true },
+                    onClick = { isOptionsMenuVisible = true },
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
@@ -179,8 +179,8 @@ fun RecentPdfItemCard(
                 }
 
                 DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
+                    expanded = isOptionsMenuVisible,
+                    onDismissRequest = { isOptionsMenuVisible = false }
                 ) {
                     DropdownMenuItem(
                         text = { Text("Open in Viewer") },
@@ -192,7 +192,7 @@ fun RecentPdfItemCard(
                             )
                         },
                         onClick = {
-                            showMenu = false
+                            isOptionsMenuVisible = false
                             onPdfClick(recent.file)
                         }
                     )
@@ -207,7 +207,7 @@ fun RecentPdfItemCard(
                             )
                         },
                         onClick = {
-                            showMenu = false
+                            isOptionsMenuVisible = false
                             onShareClick(recent.file)
                         }
                     )
@@ -223,7 +223,7 @@ fun RecentPdfItemCard(
                                 )
                             },
                             onClick = {
-                                showMenu = false
+                                isOptionsMenuVisible = false
                                 onMoveToFolderClick(recent.file)
                             }
                         )
@@ -240,7 +240,7 @@ fun RecentPdfItemCard(
                                 )
                             },
                             onClick = {
-                                showMenu = false
+                                isOptionsMenuVisible = false
                                 onToggleFavorite(recent.file)
                             }
                         )
@@ -262,7 +262,7 @@ fun RecentPdfItemCard(
                             )
                         },
                         onClick = {
-                            showMenu = false
+                            isOptionsMenuVisible = false
                             onDeleteClick(recent.file)
                         }
                     )

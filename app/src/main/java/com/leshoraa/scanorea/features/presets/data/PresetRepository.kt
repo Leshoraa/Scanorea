@@ -2,6 +2,8 @@ package com.leshoraa.scanorea.features.presets.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
+import androidx.core.content.edit
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.CompressionProfile
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageOrientation
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageSize
@@ -13,6 +15,12 @@ import org.json.JSONObject
  * Manages persistent storage and retrieval of conversion presets using [SharedPreferences].
  */
 class PresetRepository(context: Context) {
+
+    companion object {
+        private const val TAG = "PresetRepository"
+        private const val PREFS_NAME = "scanorea_presets"
+        private const val KEY_PRESETS = "saved_conversion_presets"
+    }
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -37,17 +45,20 @@ class PresetRepository(context: Context) {
                         fileNameTemplate = obj.getString("fileNameTemplate"),
                         pageSize = try {
                             PdfPageSize.valueOf(obj.getString("pageSize"))
-                        } catch (_: Exception) {
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to parse pageSize for preset, falling back to A4", e)
                             PdfPageSize.A4
                         },
                         orientation = try {
                             PdfPageOrientation.valueOf(obj.getString("orientation"))
-                        } catch (_: Exception) {
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to parse orientation for preset, falling back to PORTRAIT", e)
                             PdfPageOrientation.PORTRAIT
                         },
                         compressionProfile = try {
                             CompressionProfile.valueOf(obj.getString("compressionProfile"))
-                        } catch (_: Exception) {
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to parse compressionProfile for preset, falling back to AUTO_BALANCED", e)
                             CompressionProfile.AUTO_BALANCED
                         }
                     )
@@ -60,7 +71,8 @@ class PresetRepository(context: Context) {
             } else {
                 list
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to parse presets JSON", e)
             listOf(defaultAljabarPreset())
         }
     }
@@ -94,7 +106,7 @@ class PresetRepository(context: Context) {
             }
             jsonArray.put(obj)
         }
-        prefs.edit().putString(KEY_PRESETS, jsonArray.toString()).apply()
+        prefs.edit { putString(KEY_PRESETS, jsonArray.toString()) }
     }
 
     private fun defaultAljabarPreset(): ConversionPreset {
@@ -106,10 +118,5 @@ class PresetRepository(context: Context) {
             orientation = PdfPageOrientation.PORTRAIT,
             compressionProfile = CompressionProfile.AUTO_BALANCED
         )
-    }
-
-    companion object {
-        private const val PREFS_NAME = "scanorea_presets"
-        private const val KEY_PRESETS = "saved_conversion_presets"
     }
 }

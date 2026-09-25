@@ -75,7 +75,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
 import androidx.core.content.FileProvider
-import com.leshoraa.scanorea.core.util.FileSizeFormatter
+import com.leshoraa.scanorea.core.format.FileSizeFormatter
 import com.leshoraa.scanorea.features.pdfviewer.data.PdfRendererDataSource
 import com.leshoraa.scanorea.features.pdfviewer.ui.components.PdfFastScroller
 import kotlinx.coroutines.Dispatchers

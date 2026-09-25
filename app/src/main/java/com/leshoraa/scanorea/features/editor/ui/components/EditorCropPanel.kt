@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
@@ -43,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.leshoraa.scanorea.features.editor.domain.model.DocumentQuad
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.CropAspectRatio
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImageCropBounds
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImagePage
@@ -70,15 +72,17 @@ fun EditorCropPanel(
     onCropPanelModeChange: (CropPanelMode) -> Unit = {},
     selectedRatio: CropAspectRatio = CropAspectRatio.FREE,
     onRatioSelected: (CropAspectRatio) -> Unit = {},
+    stagedCropBounds: ImageCropBounds = ImageCropBounds.DEFAULT,
+    stagedPerspectiveQuad: DocumentQuad = DocumentQuad.DEFAULT,
     onCropBoundsChange: (ImageCropBounds) -> Unit,
     onRotatePage: () -> Unit,
     onResetCrop: () -> Unit,
-    onAutoDetectPerspective: () -> Unit = {},
     onResetPerspective: () -> Unit = {},
     onApplyCrop: () -> Unit = {},
     onPreviousPage: () -> Unit,
     onNextPage: () -> Unit,
     onMovePage: (sourceIndex: Int, targetIndex: Int) -> Unit,
+    isAutoDetecting: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var isPagePickerVisible by remember { mutableStateOf(false) }
@@ -136,11 +140,23 @@ fun EditorCropPanel(
                     )
                 },
                 leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Outlined.AutoAwesome,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    if (isAutoDetecting) {
+                        CircularProgressIndicator(
+                            strokeWidth = 2.dp,
+                            color = if (cropPanelMode == CropPanelMode.PERSPECTIVE) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
+                            modifier = Modifier.size(14.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.AutoAwesome,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 },
                 shape = RoundedCornerShape(10.dp),
                 colors = FilterChipDefaults.filterChipColors(
@@ -194,33 +210,8 @@ fun EditorCropPanel(
             } else {
                 FilterChip(
                     selected = false,
-                    onClick = onAutoDetectPerspective,
-                    label = {
-                        Text(
-                            text = "Auto Detect Paper",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Outlined.AutoAwesome,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    },
-                    shape = RoundedCornerShape(10.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        labelColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    elevation = FilterChipDefaults.filterChipElevation(0.dp),
-                    border = null
-                )
-
-                FilterChip(
-                    selected = false,
                     onClick = onResetPerspective,
+                    enabled = !stagedPerspectiveQuad.isDefault,
                     label = {
                         Text(
                             text = "Reset Corners",
@@ -238,7 +229,10 @@ fun EditorCropPanel(
                     shape = RoundedCornerShape(10.dp),
                     colors = FilterChipDefaults.filterChipColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        labelColor = MaterialTheme.colorScheme.onSurface
+                        labelColor = MaterialTheme.colorScheme.onSurface,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                        disabledLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     ),
                     elevation = FilterChipDefaults.filterChipElevation(0.dp),
                     border = null
@@ -292,6 +286,12 @@ fun EditorCropPanel(
                 )
             }
 
+            val isResetEnabled = if (cropPanelMode == CropPanelMode.PERSPECTIVE) {
+                !stagedPerspectiveQuad.isDefault
+            } else {
+                !stagedCropBounds.isDefault
+            }
+
             FilledTonalButton(
                 onClick = {
                     if (cropPanelMode == CropPanelMode.PERSPECTIVE) {
@@ -301,7 +301,7 @@ fun EditorCropPanel(
                         onResetCrop()
                     }
                 },
-                enabled = if (cropPanelMode == CropPanelMode.PERSPECTIVE) !page.perspectiveQuad.isDefault else !page.cropBounds.isDefault,
+                enabled = isResetEnabled,
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.filledTonalButtonColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -314,9 +314,7 @@ fun EditorCropPanel(
                     imageVector = Icons.Outlined.RestartAlt,
                     contentDescription = "Reset Crop",
                     modifier = Modifier.size(18.dp),
-                    tint = if ((cropPanelMode == CropPanelMode.PERSPECTIVE && !page.perspectiveQuad.isDefault) ||
-                        (cropPanelMode == CropPanelMode.RECTANGLE && !page.cropBounds.isDefault)
-                    ) {
+                    tint = if (isResetEnabled) {
                         MaterialTheme.colorScheme.primary
                     } else {
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
@@ -327,9 +325,7 @@ fun EditorCropPanel(
                     text = "Reset",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = if ((cropPanelMode == CropPanelMode.PERSPECTIVE && !page.perspectiveQuad.isDefault) ||
-                        (cropPanelMode == CropPanelMode.RECTANGLE && !page.cropBounds.isDefault)
-                    ) {
+                    color = if (isResetEnabled) {
                         MaterialTheme.colorScheme.onSurface
                     } else {
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)

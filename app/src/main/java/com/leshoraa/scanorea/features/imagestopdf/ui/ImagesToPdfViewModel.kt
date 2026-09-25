@@ -28,7 +28,6 @@ import com.leshoraa.scanorea.features.imagestopdf.domain.repository.PdfConversio
 import com.leshoraa.scanorea.features.presets.data.PresetRepository
 import com.leshoraa.scanorea.features.presets.domain.TemplateDateEvaluator
 import com.leshoraa.scanorea.features.presets.domain.model.ConversionPreset
-import com.leshoraa.scanorea.features.recentpdfs.data.PdfThumbnailLoader
 import com.leshoraa.scanorea.features.recentpdfs.data.RecentPdfsRepository
 import com.leshoraa.scanorea.features.settings.data.SettingsRepository
 import kotlinx.coroutines.Dispatchers
@@ -193,79 +192,6 @@ class ImagesToPdfViewModel(
 
     fun closePdfViewer() {
         _uiState.update { it.copy(activePdfViewerFile = null) }
-    }
-
-    fun deleteRecentPdf(file: File) {
-        if (recentPdfsRepository == null) return
-        PdfThumbnailLoader.evict(file)
-        viewModelScope.launch {
-            recentPdfsRepository.deletePdf(file)
-            loadRecentPdfs()
-        }
-    }
-
-    fun toggleFavorite(file: File) {
-        if (recentPdfsRepository == null) return
-        viewModelScope.launch {
-            recentPdfsRepository.toggleFavorite(file)
-            loadRecentPdfs()
-        }
-    }
-
-    fun updatePdfFolders(file: File, folders: List<String>) {
-        if (recentPdfsRepository == null) return
-        viewModelScope.launch {
-            recentPdfsRepository.updatePdfFolders(file, folders)
-            loadRecentPdfs()
-        }
-    }
-
-    fun updatePdfCategory(file: File, category: String?) {
-        if (recentPdfsRepository == null) return
-        viewModelScope.launch {
-            recentPdfsRepository.updatePdfCategory(file, category)
-            loadRecentPdfs()
-        }
-    }
-
-    fun addCategory(category: String) {
-        if (recentPdfsRepository == null) return
-        viewModelScope.launch {
-            recentPdfsRepository.addCategory(category)
-            loadRecentPdfs()
-        }
-    }
-
-    fun renameCategory(oldCategory: String, newCategory: String) {
-        if (recentPdfsRepository == null) return
-        viewModelScope.launch {
-            recentPdfsRepository.renameCategory(oldCategory, newCategory)
-            loadRecentPdfs()
-        }
-    }
-
-    fun deleteCategory(category: String) {
-        if (recentPdfsRepository == null) return
-        viewModelScope.launch {
-            recentPdfsRepository.deleteCategory(category)
-            loadRecentPdfs()
-        }
-    }
-
-    fun togglePinFolder(folder: String) {
-        if (recentPdfsRepository == null) return
-        viewModelScope.launch {
-            recentPdfsRepository.togglePinFolder(folder)
-            loadRecentPdfs()
-        }
-    }
-
-    fun setPinnedFolders(folders: List<String>) {
-        if (recentPdfsRepository == null) return
-        viewModelScope.launch {
-            recentPdfsRepository.setPinnedFolders(folders)
-            loadRecentPdfs()
-        }
     }
 
     fun toggleSelectedFolder(folder: String) {

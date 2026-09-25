@@ -1,4 +1,4 @@
-package com.leshoraa.scanorea.core.util
+package com.leshoraa.scanorea.core.format
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

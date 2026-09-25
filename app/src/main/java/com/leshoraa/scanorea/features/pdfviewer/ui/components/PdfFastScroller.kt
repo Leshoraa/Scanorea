@@ -32,7 +32,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.leshoraa.scanorea.features.pdfviewer.ui.util.PdfScrollCalculator
+import com.leshoraa.scanorea.features.pdfviewer.domain.PdfScrollCalculator
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 

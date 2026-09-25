@@ -2,6 +2,8 @@ package com.leshoraa.scanorea.features.recentpdfs.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
+import androidx.core.content.edit
 import com.leshoraa.scanorea.features.recentpdfs.domain.model.RecentPdf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -19,6 +21,7 @@ class RecentPdfsRepository(
 ) {
 
     companion object {
+        private const val TAG = "RecentPdfsRepository"
         private const val PREFS_NAME = "scanorea_document_metadata"
         private const val KEY_CATEGORIES = "document_categories"
         private const val KEY_PINNED_FOLDERS = "document_pinned_folders"
@@ -31,7 +34,7 @@ class RecentPdfsRepository(
 
     suspend fun getCategories(): List<String> = withContext(Dispatchers.IO) {
         val raw = prefs.getString(KEY_CATEGORIES, null)
-        if (raw.isNullOrBlank()) {
+        if (raw == null) {
             saveCategoriesList(DEFAULT_CATEGORIES)
             return@withContext DEFAULT_CATEGORIES
         }
@@ -43,13 +46,7 @@ class RecentPdfsRepository(
                 list.add(trimmed)
             }
         }
-        if (list.isEmpty()) {
-            saveCategoriesList(DEFAULT_CATEGORIES)
-            DEFAULT_CATEGORIES
-        } else {
-            saveCategoriesList(list)
-            list
-        }
+        list
     }
 
     suspend fun addCategory(category: String): Boolean = withContext(Dispatchers.IO) {
@@ -140,66 +137,73 @@ class RecentPdfsRepository(
     }
 
     suspend fun deleteCategory(category: String): Boolean = withContext(Dispatchers.IO) {
+        val trimmed = category.trim()
+        if (trimmed.isEmpty() || trimmed.equals("All", ignoreCase = true) || trimmed.equals("Favorites", ignoreCase = true)) {
+            return@withContext false
+        }
+
         val current = getCategories().toMutableList()
-        val removed = current.removeAll { it.equals(category.trim(), ignoreCase = true) }
-        if (removed) {
+        val removedFromCategories = current.removeAll { it.equals(trimmed, ignoreCase = true) }
+        if (removedFromCategories) {
             saveCategoriesList(current)
+        }
 
-            // Remove from pinned folders if present
-            val currentPinned = getPinnedFolders().toMutableList()
-            if (currentPinned.removeAll { it.equals(category.trim(), ignoreCase = true) }) {
-                savePinnedFoldersList(currentPinned)
-            }
+        // Always remove from pinned folders if present, independent of whether it was in categories
+        val currentPinned = getPinnedFolders().toMutableList()
+        val removedFromPinned = currentPinned.removeAll { it.equals(trimmed, ignoreCase = true) }
+        if (removedFromPinned) {
+            savePinnedFoldersList(currentPinned)
+        }
 
-            val metadataMap = getMetadataMap()
-            var modified = false
-            val keys = metadataMap.keys()
-            if (keys != null) {
-                for (key in keys) {
-                    val docObj = metadataMap.optJSONObject(key) ?: continue
-                    var docModified = false
+        val metadataMap = getMetadataMap()
+        var modified = false
+        val keys = metadataMap.keys()
+        if (keys != null) {
+            for (key in keys) {
+                val docObj = metadataMap.optJSONObject(key) ?: continue
+                var docModified = false
 
-                    val foldersArr = docObj.optJSONArray("folders")
-                    if (foldersArr != null) {
-                        val updatedArr = JSONArray()
-                        for (i in 0 until foldersArr.length()) {
-                            val folderName = foldersArr.optString(i)
-                            if (!folderName.equals(category.trim(), ignoreCase = true)) {
-                                updatedArr.put(folderName)
-                            } else {
-                                docModified = true
-                            }
-                        }
-                        if (docModified) {
-                            docObj.put("folders", updatedArr)
-                        }
-                    }
-
-                    if (docObj.optString("category").equals(category.trim(), ignoreCase = true)) {
-                        val remainingFirst = docObj.optJSONArray("folders")?.optString(0)?.takeIf { it.isNotBlank() }
-                        if (remainingFirst != null) {
-                            docObj.put("category", remainingFirst)
+                val foldersArr = docObj.optJSONArray("folders")
+                if (foldersArr != null) {
+                    val updatedArr = JSONArray()
+                    for (i in 0 until foldersArr.length()) {
+                        val folderName = foldersArr.optString(i)
+                        if (!folderName.equals(trimmed, ignoreCase = true)) {
+                            updatedArr.put(folderName)
                         } else {
-                            docObj.remove("category")
+                            docModified = true
                         }
-                        docModified = true
                     }
-
                     if (docModified) {
-                        modified = true
+                        docObj.put("folders", updatedArr)
                     }
                 }
-            }
-            if (modified) {
-                saveMetadataMap(metadataMap)
+
+                if (docObj.optString("category").equals(trimmed, ignoreCase = true)) {
+                    val remainingFirst = docObj.optJSONArray("folders")?.optString(0)?.takeIf { it.isNotBlank() }
+                    if (remainingFirst != null) {
+                        docObj.put("category", remainingFirst)
+                    } else {
+                        docObj.remove("category")
+                    }
+                    docModified = true
+                }
+
+                if (docModified) {
+                    modified = true
+                }
             }
         }
-        removed
+        if (modified) {
+            saveMetadataMap(metadataMap)
+        }
+
+        removedFromCategories || removedFromPinned || modified
     }
 
     suspend fun getPinnedFolders(): List<String> = withContext(Dispatchers.IO) {
         val raw = prefs.getString(KEY_PINNED_FOLDERS, null)
-        if (raw.isNullOrBlank()) {
+        if (raw == null) {
             savePinnedFoldersList(DEFAULT_PINNED_FOLDERS)
             return@withContext DEFAULT_PINNED_FOLDERS
         }
@@ -211,14 +215,7 @@ class RecentPdfsRepository(
                 list.add(trimmed)
             }
         }
-        val sanitized = list.take(MAX_PINNED_FOLDERS)
-        if (sanitized.isEmpty()) {
-            savePinnedFoldersList(DEFAULT_PINNED_FOLDERS)
-            DEFAULT_PINNED_FOLDERS
-        } else {
-            savePinnedFoldersList(sanitized)
-            sanitized
-        }
+        list.take(MAX_PINNED_FOLDERS)
     }
 
     suspend fun setPinnedFolders(pinned: List<String>): Boolean = withContext(Dispatchers.IO) {
@@ -250,7 +247,7 @@ class RecentPdfsRepository(
     }
 
     private fun savePinnedFoldersList(list: List<String>) {
-        prefs.edit().putString(KEY_PINNED_FOLDERS, serializeStringList(list)).apply()
+        prefs.edit { putString(KEY_PINNED_FOLDERS, serializeStringList(list)) }
     }
 
     suspend fun getRecentPdfs(): List<RecentPdf> = withContext(Dispatchers.IO) {
@@ -381,17 +378,18 @@ class RecentPdfsRepository(
         val raw = prefs.getString(KEY_METADATA_MAP, null) ?: return JSONObject()
         return try {
             JSONObject(raw)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to parse document metadata map JSON", e)
             JSONObject()
         }
     }
 
     private fun saveMetadataMap(json: JSONObject) {
-        prefs.edit().putString(KEY_METADATA_MAP, json.toString()).apply()
+        prefs.edit { putString(KEY_METADATA_MAP, json.toString()) }
     }
 
     private fun saveCategoriesList(list: List<String>) {
-        prefs.edit().putString(KEY_CATEGORIES, serializeStringList(list)).apply()
+        prefs.edit { putString(KEY_CATEGORIES, serializeStringList(list)) }
     }
 
     private fun serializeStringList(list: List<String>): String {

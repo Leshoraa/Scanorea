@@ -40,7 +40,7 @@ Scanorea strictly adheres to the **Deep Module**, **Feature Boundary**, and **Cl
 - **Presentation Layer (UI)**: Pure Jetpack Compose components organized by feature boundaries (`app/ui/`, `features/home/ui/`, `features/editor/ui/`, `features/pdfviewer/ui/`, `features/recentpdfs/ui/`, `features/tools/ui/`, `features/settings/ui/`).
 - **Domain Layer**: Clean, pure Kotlin business models and repository contracts (`features/*/domain/`).
 - **Data Layer**: Concrete data sources, repositories, and platform integrations (`features/*/data/`).
-- **Core Layer**: Shared cross-cutting concerns (`core/common/`, `core/designsystem/`, `core/filter/`, `core/util/`).
+- **Core Layer**: Shared cross-cutting concerns (`core/common/`, `core/designsystem/`, `core/filter/`, `core/format/`, `core/share/`).
 
 ## Project Structure
 ```
@@ -64,9 +64,10 @@ Scanorea/
 │   │   │   │   │   ├── filter/
 │   │   │   │   │   │   ├── ImageAnalyzer.kt
 │   │   │   │   │   │   └── ImageFilterType.kt
-│   │   │   │   │   └── util/
-│   │   │   │   │       ├── DateTimeFormatter.kt
-│   │   │   │   │       ├── FileSizeFormatter.kt
+│   │   │   │   │   ├── format/
+│   │   │   │   │   │   ├── DateTimeFormatter.kt
+│   │   │   │   │   │   └── FileSizeFormatter.kt
+│   │   │   │   │   └── share/
 │   │   │   │   │       └── PdfDocumentSharer.kt
 │   │   │   │   ├── features/
 │   │   │   │   │   ├── editor/
@@ -82,6 +83,7 @@ Scanorea/
 │   │   │   │   │   │   │       └── PageAnnotation.kt
 │   │   │   │   │   │   └── ui/
 │   │   │   │   │   │       ├── components/
+│   │   │   │   │   │       │   ├── DiscardChangesDialog.kt
 │   │   │   │   │   │       │   ├── EditorAdjustPanel.kt
 │   │   │   │   │   │       │   ├── EditorAnnotatePanel.kt
 │   │   │   │   │   │       │   ├── EditorBottomActionBar.kt
@@ -92,11 +94,9 @@ Scanorea/
 │   │   │   │   │   │       │   ├── EditorCropOverlay.kt
 │   │   │   │   │   │       │   ├── EditorCropPanel.kt
 │   │   │   │   │   │       │   ├── EditorFiltersPanel.kt
+│   │   │   │   │   │       │   ├── EditorPagesGridDialog.kt
 │   │   │   │   │   │       │   ├── EditorPerspectiveOverlay.kt
 │   │   │   │   │   │       │   ├── EditorReorderLiftedCard.kt
-│   │   │   │   │   │       │   ├── EditorRulerSlider.kt
-│   │   │   │   │   │       │   ├── EditorSuggestionsPanel.kt
-│   │   │   │   │   │       │   ├── EditorTextAnnotationDialog.kt
 │   │   │   │   │   │       │   ├── PagePreviewTransformation.kt
 │   │   │   │   │   │       │   └── RenameDocumentDialog.kt
 │   │   │   │   │   │       └── EditorWorkspace.kt
@@ -116,16 +116,17 @@ Scanorea/
 │   │   │   │   │   │   │   ├── model/
 │   │   │   │   │   │   │   │   ├── CompressionProfile.kt
 │   │   │   │   │   │   │   │   ├── ConversionProgress.kt
+│   │   │   │   │   │   │   │   ├── ImageCropBounds.kt
 │   │   │   │   │   │   │   │   ├── ImagePage.kt
 │   │   │   │   │   │   │   │   ├── PdfConversionOptions.kt
 │   │   │   │   │   │   │   │   ├── PdfConversionResult.kt
 │   │   │   │   │   │   │   │   ├── PdfPageOrientation.kt
-│   │   │   │   │   │   │   │   ├── PdfPageSize.kt
-│   │   │   │   │   │   │   │   └── PdfQuality.kt
+│   │   │   │   │   │   │   │   └── PdfPageSize.kt
 │   │   │   │   │   │   │   └── repository/
 │   │   │   │   │   │   │       └── PdfConversionRepository.kt
 │   │   │   │   │   │   └── ui/
 │   │   │   │   │   │       ├── components/
+│   │   │   │   │   │       │   ├── CaptureSourceBottomSheet.kt
 │   │   │   │   │   │       │   ├── ConversionOptionsBottomSheet.kt
 │   │   │   │   │   │       │   ├── ConversionProgressDialog.kt
 │   │   │   │   │   │       │   └── ConversionSuccessDialog.kt
@@ -134,32 +135,42 @@ Scanorea/
 │   │   │   │   │   ├── pdfviewer/
 │   │   │   │   │   │   ├── data/
 │   │   │   │   │   │   │   └── PdfRendererDataSource.kt
+│   │   │   │   │   │   ├── domain/
+│   │   │   │   │   │   │   └── PdfScrollCalculator.kt
 │   │   │   │   │   │   └── ui/
 │   │   │   │   │   │       ├── components/
 │   │   │   │   │   │       │   └── PdfFastScroller.kt
-│   │   │   │   │   │       ├── util/
-│   │   │   │   │   │       │   └── PdfScrollCalculator.kt
 │   │   │   │   │   │       └── PdfViewerScreen.kt
 │   │   │   │   │   ├── presets/
 │   │   │   │   │   │   ├── data/
 │   │   │   │   │   │   │   └── PresetRepository.kt
-│   │   │   │   │   │   └── domain/
-│   │   │   │   │   │       ├── TemplateDateEvaluator.kt
-│   │   │   │   │   │       └── model/
-│   │   │   │   │   │           └── ConversionPreset.kt
+│   │   │   │   │   │   ├── domain/
+│   │   │   │   │   │   │   ├── TemplateDateEvaluator.kt
+│   │   │   │   │   │   │   └── model/
+│   │   │   │   │   │   │       └── ConversionPreset.kt
+│   │   │   │   │   │   └── ui/
+│   │   │   │   │   │       └── PresetManagementScreen.kt
 │   │   │   │   │   ├── recentpdfs/
 │   │   │   │   │   │   ├── data/
+│   │   │   │   │   │   │   ├── PdfThumbnailLoader.kt
 │   │   │   │   │   │   │   └── RecentPdfsRepository.kt
 │   │   │   │   │   │   ├── domain/model/
 │   │   │   │   │   │   │   └── RecentPdf.kt
 │   │   │   │   │   │   └── ui/
 │   │   │   │   │   │       ├── components/
 │   │   │   │   │   │       │   ├── AllFoldersBottomSheet.kt
+│   │   │   │   │   │       │   ├── CreateFolderDialog.kt
+│   │   │   │   │   │       │   ├── DeleteFolderConfirmationDialog.kt
 │   │   │   │   │   │       │   ├── FolderGridSection.kt
-│   │   │   │   │   │       │   └── RecentPdfItemCard.kt
+│   │   │   │   │   │       │   ├── OrganizeDocumentBottomSheet.kt
+│   │   │   │   │   │       │   ├── RecentPdfItemCard.kt
+│   │   │   │   │   │       │   └── RenameFolderDialog.kt
 │   │   │   │   │   │       ├── RecentPdfsSection.kt
+│   │   │   │   │   │       ├── RecentPdfsViewModel.kt
 │   │   │   │   │   │       └── ResultsScreen.kt
 │   │   │   │   │   ├── settings/
+│   │   │   │   │   │   ├── data/
+│   │   │   │   │   │   │   └── SettingsRepository.kt
 │   │   │   │   │   │   └── ui/
 │   │   │   │   │   │       └── SettingsScreen.kt
 │   │   │   │   │   └── tools/
@@ -175,7 +186,10 @@ Scanorea/
 │   └── build.gradle.kts
 ├── docs/
 │   └── adr/
-│       └── 0001-images-to-pdf-architecture.md
+│       ├── 0001-images-to-pdf-architecture.md
+│       ├── 0002-perspective-correction-and-corner-detection.md
+│       ├── 0003-pinned-folders-grid-navigation.md
+│       └── 0004-folder-lifecycle-and-viewmodel-boundary-refactor.md
 ├── gradle/
 │   └── libs.versions.toml
 ├── AI_RULES.md

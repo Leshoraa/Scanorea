@@ -1,4 +1,4 @@
-package com.leshoraa.scanorea.core.util
+package com.leshoraa.scanorea.core.format
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -30,6 +30,6 @@ class DateTimeFormatterTest {
     fun testDaysAgo() {
         val now = 1000000000L
         assertEquals("1 day ago", DateTimeFormatter.formatRelativeTime(now - TimeUnit.DAYS.toMillis(1), now))
-        assertEquals("2 days ago", DateTimeFormatter.formatRelativeTime(now - TimeUnit.DAYS.toMillis(2), now))
+        assertEquals("3 days ago", DateTimeFormatter.formatRelativeTime(now - TimeUnit.DAYS.toMillis(3), now))
     }
 }

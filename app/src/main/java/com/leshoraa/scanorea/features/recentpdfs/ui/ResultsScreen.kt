@@ -94,22 +94,23 @@ fun ResultsScreen(
     onAddCategory: (String) -> Unit,
     onRenameCategory: (String, String) -> Unit,
     onDeleteCategory: (String) -> Unit,
+    onReorderPinnedFolders: (List<String>) -> Unit = {},
     modifier: Modifier = Modifier,
     onAssignCategory: ((File, String?) -> Unit)? = null
 ) {
     var currentFilter by remember { mutableStateOf<DocumentFilter>(DocumentFilter.All) }
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
-    var showOptionsMenu by remember { mutableStateOf(false) }
-    var sortDescending by remember { mutableStateOf(true) }
+    var isOptionsMenuVisible by remember { mutableStateOf(false) }
+    var isSortDescending by remember { mutableStateOf(true) }
     var isAllFoldersSheetVisible by remember { mutableStateOf(false) }
 
-    var showCreateFolderDialog by remember { mutableStateOf(false) }
+    var isCreateFolderDialogVisible by remember { mutableStateOf(false) }
     var folderToRename by remember { mutableStateOf<String?>(null) }
     var documentToMove by remember { mutableStateOf<RecentPdf?>(null) }
     var folderToDelete by remember { mutableStateOf<String?>(null) }
 
-    val filteredPdfs = remember(recentPdfs, searchQuery, sortDescending, currentFilter) {
+    val filteredPdfs = remember(recentPdfs, searchQuery, isSortDescending, currentFilter) {
         var list = when (val filter = currentFilter) {
             is DocumentFilter.All -> recentPdfs
             is DocumentFilter.Favorites -> recentPdfs.filter { it.isFavorite }
@@ -120,7 +121,7 @@ fun ResultsScreen(
         if (searchQuery.isNotBlank()) {
             list = list.filter { it.name.contains(searchQuery.trim(), ignoreCase = true) }
         }
-        if (sortDescending) {
+        if (isSortDescending) {
             list.sortedByDescending { it.lastModifiedMillis }
         } else {
             list.sortedBy { it.name.lowercase() }
@@ -148,7 +149,7 @@ fun ResultsScreen(
                 }
 
                 Box {
-                    IconButton(onClick = { showOptionsMenu = true }) {
+                    IconButton(onClick = { isOptionsMenuVisible = true }) {
                         Icon(
                             imageVector = Icons.Outlined.MoreVert,
                             contentDescription = "More options"
@@ -156,11 +157,11 @@ fun ResultsScreen(
                     }
 
                     DropdownMenu(
-                        expanded = showOptionsMenu,
-                        onDismissRequest = { showOptionsMenu = false }
+                        expanded = isOptionsMenuVisible,
+                        onDismissRequest = { isOptionsMenuVisible = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text(if (sortDescending) "Sort by Name (A-Z)" else "Sort by Newest First") },
+                            text = { Text(if (isSortDescending) "Sort by Name (A-Z)" else "Sort by Newest First") },
                             leadingIcon = {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Outlined.Sort,
@@ -169,8 +170,8 @@ fun ResultsScreen(
                                 )
                             },
                             onClick = {
-                                showOptionsMenu = false
-                                sortDescending = !sortDescending
+                                isOptionsMenuVisible = false
+                                isSortDescending = !isSortDescending
                             }
                         )
                     }
@@ -224,7 +225,10 @@ fun ResultsScreen(
             totalFoldersCount = categories.size,
             currentFilter = currentFilter,
             onSelectFilter = { currentFilter = it },
-            onOpenAllFolders = { isAllFoldersSheetVisible = true }
+            onOpenAllFolders = { isAllFoldersSheetVisible = true },
+            onRenameFolder = { folderToRename = it },
+            onDeleteFolder = { folderToDelete = it },
+            onReorderPinnedFolders = onReorderPinnedFolders
         )
 
         // Active Filter Banner (shown when filtered by Favorites or Category, with clear button)
@@ -357,12 +361,12 @@ fun ResultsScreen(
         }
     }
 
-    if (showCreateFolderDialog) {
+    if (isCreateFolderDialogVisible) {
         CreateFolderDialog(
             existingCategories = categories,
             onConfirm = { name ->
                 onAddCategory(name)
-                showCreateFolderDialog = false
+                isCreateFolderDialogVisible = false
                 documentToMove?.let { doc ->
                     val updatedFolders = (doc.folders + name).distinct()
                     documentToMove = doc.copy(folders = updatedFolders)
@@ -370,7 +374,7 @@ fun ResultsScreen(
                     currentFilter = DocumentFilter.Category(name)
                 }
             },
-            onDismiss = { showCreateFolderDialog = false }
+            onDismiss = { isCreateFolderDialogVisible = false }
         )
     }
 
@@ -385,7 +389,7 @@ fun ResultsScreen(
             },
             onDismiss = { documentToMove = null },
             onCreateNewFolder = {
-                showCreateFolderDialog = true
+                isCreateFolderDialogVisible = true
             }
         )
     }
@@ -433,10 +437,16 @@ fun ResultsScreen(
             onTogglePinFolder = onTogglePinFolder,
             onCreateNewFolder = {
                 isAllFoldersSheetVisible = false
-                showCreateFolderDialog = true
+                isCreateFolderDialogVisible = true
             },
-            onRenameFolder = { folderToRename = it },
-            onDeleteFolder = { folderToDelete = it },
+            onRenameFolder = {
+                isAllFoldersSheetVisible = false
+                folderToRename = it
+            },
+            onDeleteFolder = {
+                isAllFoldersSheetVisible = false
+                folderToDelete = it
+            },
             onDismiss = { isAllFoldersSheetVisible = false }
         )
     }

@@ -1,4 +1,4 @@
-package com.leshoraa.scanorea.features.pdfviewer.ui.util
+package com.leshoraa.scanorea.features.pdfviewer.domain
 
 /**
  * Pure calculation engine for PDF viewer fast scrolling and active page detection.

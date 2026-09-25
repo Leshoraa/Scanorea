@@ -57,7 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.R
-import com.leshoraa.scanorea.core.util.FileSizeFormatter
+import com.leshoraa.scanorea.core.format.FileSizeFormatter
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.CompressionProfile
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImagePage
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfConversionOptions
@@ -95,9 +95,9 @@ fun ConversionOptionsBottomSheet(
     onToggleFolder: (String) -> Unit = {},
     onCreateNewFolder: (String) -> Unit = {}
 ) {
-    var presetsDropdownExpanded by remember { mutableStateOf(false) }
-    var showSavePresetDialog by remember { mutableStateOf(false) }
-    var showCreateFolderDialog by remember { mutableStateOf(false) }
+    var isPresetsDropdownExpanded by remember { mutableStateOf(false) }
+    var isSavePresetDialogVisible by remember { mutableStateOf(false) }
+    var isCreateFolderDialogVisible by remember { mutableStateOf(false) }
     var newPresetName by remember { mutableStateOf("") }
 
     ModalBottomSheet(
@@ -136,7 +136,7 @@ fun ConversionOptionsBottomSheet(
                     placeholder = { Text("e.g., Scanned_Document or template") },
                     singleLine = true,
                     trailingIcon = {
-                        IconButton(onClick = { presetsDropdownExpanded = true }) {
+                        IconButton(onClick = { isPresetsDropdownExpanded = true }) {
                             Icon(
                                 imageVector = Icons.Default.ArrowDropDown,
                                 contentDescription = "Select or manage presets"
@@ -148,8 +148,8 @@ fun ConversionOptionsBottomSheet(
                 )
 
                 DropdownMenu(
-                    expanded = presetsDropdownExpanded,
-                    onDismissRequest = { presetsDropdownExpanded = false },
+                    expanded = isPresetsDropdownExpanded,
+                    onDismissRequest = { isPresetsDropdownExpanded = false },
                     modifier = Modifier.fillMaxWidth(0.85f)
                 ) {
                     Text(
@@ -192,7 +192,7 @@ fun ConversionOptionsBottomSheet(
                             },
                             onClick = {
                                 onPresetSelected(preset)
-                                presetsDropdownExpanded = false
+                                isPresetsDropdownExpanded = false
                             }
                         )
                     }
@@ -215,8 +215,8 @@ fun ConversionOptionsBottomSheet(
                             )
                         },
                         onClick = {
-                            presetsDropdownExpanded = false
-                            showSavePresetDialog = true
+                            isPresetsDropdownExpanded = false
+                            isSavePresetDialogVisible = true
                         }
                     )
                 }
@@ -317,7 +317,7 @@ fun ConversionOptionsBottomSheet(
                     )
                 }
                 TextButton(
-                    onClick = { showCreateFolderDialog = true }
+                    onClick = { isCreateFolderDialogVisible = true }
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.CreateNewFolder,
@@ -513,9 +513,9 @@ fun ConversionOptionsBottomSheet(
     }
 
     // Save Preset Dialog
-    if (showSavePresetDialog) {
+    if (isSavePresetDialogVisible) {
         AlertDialog(
-            onDismissRequest = { showSavePresetDialog = false },
+            onDismissRequest = { isSavePresetDialogVisible = false },
             title = { Text("Save as Preset") },
             text = {
                 Column {
@@ -541,7 +541,7 @@ fun ConversionOptionsBottomSheet(
                             val template = options.fileName.ifBlank { "Document_{DD:MM:YYYY}" }
                             onSaveNewPreset(newPresetName.trim(), template)
                             newPresetName = ""
-                            showSavePresetDialog = false
+                            isSavePresetDialogVisible = false
                         }
                     }
                 ) {
@@ -549,20 +549,20 @@ fun ConversionOptionsBottomSheet(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showSavePresetDialog = false }) {
+                TextButton(onClick = { isSavePresetDialogVisible = false }) {
                     Text("Cancel")
                 }
             }
         )
     }
 
-    if (showCreateFolderDialog) {
+    if (isCreateFolderDialogVisible) {
         CreateFolderDialog(
             onConfirm = { folderName ->
                 onCreateNewFolder(folderName)
-                showCreateFolderDialog = false
+                isCreateFolderDialogVisible = false
             },
-            onDismiss = { showCreateFolderDialog = false },
+            onDismiss = { isCreateFolderDialogVisible = false },
             existingCategories = categories
         )
     }

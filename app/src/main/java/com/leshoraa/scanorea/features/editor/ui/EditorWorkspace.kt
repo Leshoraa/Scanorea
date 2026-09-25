@@ -1,6 +1,7 @@
 package com.leshoraa.scanorea.features.editor.ui
 
 import android.content.ContentResolver
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -33,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.core.filter.ImageFilterType
+import com.leshoraa.scanorea.features.editor.domain.DocumentCornerDetector
 import com.leshoraa.scanorea.features.editor.domain.model.AnnotationColors
 import com.leshoraa.scanorea.features.editor.domain.model.AnnotationTool
 import com.leshoraa.scanorea.features.editor.domain.model.DocumentQuad
@@ -108,14 +110,19 @@ fun EditorWorkspace(
 
     var selectedCropRatio by remember(currentPage?.id) { mutableStateOf(CropAspectRatio.FREE) }
     var cropPanelMode by remember { mutableStateOf(CropPanelMode.RECTANGLE) }
+    var stagedCropBounds by remember(currentPage?.id) { mutableStateOf(currentPage?.cropBounds ?: ImageCropBounds.DEFAULT) }
+    var stagedPerspectiveQuad by remember(currentPage?.id) { mutableStateOf(currentPage?.perspectiveQuad ?: DocumentQuad.DEFAULT) }
     var originalCropBoundsOnEnter by remember { mutableStateOf(ImageCropBounds.DEFAULT) }
     var originalPerspectiveQuadOnEnter by remember { mutableStateOf(DocumentQuad.DEFAULT) }
+    var isAutoDetectingPerspective by remember { mutableStateOf(false) }
 
-    LaunchedEffect(activeCategory) {
+    LaunchedEffect(activeCategory, pagerState.currentPage) {
         if (activeCategory == EditorCategory.CROP) {
             val curr = pages.getOrNull(pagerState.currentPage)
             originalCropBoundsOnEnter = curr?.cropBounds ?: ImageCropBounds.DEFAULT
             originalPerspectiveQuadOnEnter = curr?.perspectiveQuad ?: DocumentQuad.DEFAULT
+            stagedCropBounds = originalCropBoundsOnEnter
+            stagedPerspectiveQuad = originalPerspectiveQuadOnEnter
             cropPanelMode = CropPanelMode.RECTANGLE
         } else {
             selectedCropRatio = CropAspectRatio.FREE
@@ -123,7 +130,27 @@ fun EditorWorkspace(
         }
     }
 
+    val triggerAutoDetectPerspective: () -> Unit = {
+        val targetPage = currentPage
+        if (targetPage != null) {
+            coroutineScope.launch {
+                isAutoDetectingPerspective = true
+                try {
+                    val detected = DocumentCornerDetector.detectFromUri(targetPage.uri, context.contentResolver)
+                    stagedPerspectiveQuad = detected
+                } finally {
+                    isAutoDetectingPerspective = false
+                }
+            }
+        }
+    }
+
     val handleApplyCrop: () -> Unit = {
+        val curr = pages.getOrNull(pagerState.currentPage)
+        if (curr != null) {
+            onCropChange(curr.id, stagedCropBounds)
+            onPerspectiveQuadChange(curr.id, stagedPerspectiveQuad)
+        }
         selectedCropRatio = CropAspectRatio.FREE
         cropPanelMode = CropPanelMode.RECTANGLE
         activeCategory = EditorCategory.FILTERS
@@ -134,10 +161,16 @@ fun EditorWorkspace(
         if (curr != null) {
             onCropChange(curr.id, originalCropBoundsOnEnter)
             onPerspectiveQuadChange(curr.id, originalPerspectiveQuadOnEnter)
+            stagedCropBounds = originalCropBoundsOnEnter
+            stagedPerspectiveQuad = originalPerspectiveQuadOnEnter
         }
         selectedCropRatio = CropAspectRatio.FREE
         cropPanelMode = CropPanelMode.RECTANGLE
         activeCategory = EditorCategory.FILTERS
+    }
+
+    BackHandler(enabled = activeCategory == EditorCategory.CROP) {
+        handleCancelCrop()
     }
 
     fun startMoveAnimation(sourceIndex: Int, targetIndex: Int) {
@@ -195,6 +228,10 @@ fun EditorWorkspace(
             isCropMode = activeCategory == EditorCategory.CROP,
             cropPanelMode = cropPanelMode,
             cropAspectRatio = selectedCropRatio,
+            stagedCropBounds = stagedCropBounds,
+            stagedPerspectiveQuad = stagedPerspectiveQuad,
+            onStagedCropBoundsChange = { stagedCropBounds = it },
+            onStagedPerspectiveQuadChange = { stagedPerspectiveQuad = it },
             onCropChange = onCropChange,
             onPerspectiveQuadChange = onPerspectiveQuadChange,
             isAnnotateMode = activeCategory == EditorCategory.MARKUP,
@@ -250,14 +287,25 @@ fun EditorWorkspace(
                                 totalPages = pages.size,
                                 isReordering = isReordering,
                                 cropPanelMode = cropPanelMode,
-                                onCropPanelModeChange = { cropPanelMode = it },
+                                onCropPanelModeChange = { newMode ->
+                                    cropPanelMode = newMode
+                                    if (newMode == CropPanelMode.PERSPECTIVE) {
+                                        triggerAutoDetectPerspective()
+                                    }
+                                },
                                 selectedRatio = selectedCropRatio,
                                 onRatioSelected = { selectedCropRatio = it },
-                                onCropBoundsChange = { newBounds -> onCropChange(currentPage.id, newBounds) },
+                                stagedCropBounds = stagedCropBounds,
+                                stagedPerspectiveQuad = stagedPerspectiveQuad,
+                                onCropBoundsChange = { newBounds -> stagedCropBounds = newBounds },
                                 onRotatePage = { onRotatePage(currentPage.id) },
-                                onResetCrop = { onResetCrop(currentPage.id) },
-                                onAutoDetectPerspective = { onAutoDetectPerspective(currentPage.id) },
-                                onResetPerspective = { onResetPerspective(currentPage.id) },
+                                onResetCrop = {
+                                    selectedCropRatio = CropAspectRatio.FREE
+                                    stagedCropBounds = ImageCropBounds.DEFAULT
+                                },
+                                onResetPerspective = {
+                                    stagedPerspectiveQuad = DocumentQuad.DEFAULT
+                                },
                                 onApplyCrop = handleApplyCrop,
                                 onPreviousPage = {
                                     coroutineScope.launch {
@@ -273,7 +321,8 @@ fun EditorWorkspace(
                                         }
                                     }
                                 },
-                                onMovePage = { src, tgt -> startMoveAnimation(src, tgt) }
+                                onMovePage = { src, tgt -> startMoveAnimation(src, tgt) },
+                                isAutoDetecting = isAutoDetectingPerspective
                             )
                         }
                         EditorCategory.MARKUP -> {
@@ -296,7 +345,12 @@ fun EditorWorkspace(
         // Category Tab Bar
         EditorCategoryTabBar(
             selectedCategory = activeCategory,
-            onCategorySelected = { activeCategory = it }
+            onCategorySelected = { targetCategory ->
+                if (activeCategory == EditorCategory.CROP && targetCategory != EditorCategory.CROP) {
+                    handleCancelCrop()
+                }
+                activeCategory = targetCategory
+            }
         )
 
         // Bottom Action Bar

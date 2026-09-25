@@ -34,7 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.leshoraa.scanorea.core.util.FileSizeFormatter
+import com.leshoraa.scanorea.core.format.FileSizeFormatter
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfConversionResult
 
 /**

@@ -54,8 +54,8 @@ fun RenameDocumentDialog(
         mutableStateOf(currentFileName.ifBlank { "Scanorea Document" })
     }
     var selectedPreset by remember { mutableStateOf<ConversionPreset?>(null) }
-    var presetsDropdownExpanded by remember { mutableStateOf(false) }
-    var showSavePresetDialog by remember { mutableStateOf(false) }
+    var isPresetsDropdownExpanded by remember { mutableStateOf(false) }
+    var isSavePresetDialogVisible by remember { mutableStateOf(false) }
     var newPresetName by remember { mutableStateOf("") }
 
     AlertDialog(
@@ -99,7 +99,7 @@ fun RenameDocumentDialog(
                         placeholder = { Text("e.g. Scanned_Doc_{DD:MM:YYYY}", maxLines = 1) },
                         singleLine = true,
                         trailingIcon = {
-                            IconButton(onClick = { presetsDropdownExpanded = !presetsDropdownExpanded }) {
+                            IconButton(onClick = { isPresetsDropdownExpanded = !isPresetsDropdownExpanded }) {
                                 Icon(
                                     imageVector = Icons.Default.ArrowDropDown,
                                     contentDescription = "Presets",
@@ -112,8 +112,8 @@ fun RenameDocumentDialog(
                     )
 
                     DropdownMenu(
-                        expanded = presetsDropdownExpanded,
-                        onDismissRequest = { presetsDropdownExpanded = false },
+                        expanded = isPresetsDropdownExpanded,
+                        onDismissRequest = { isPresetsDropdownExpanded = false },
                         modifier = Modifier.fillMaxWidth(0.85f)
                     ) {
                         Text(
@@ -157,7 +157,7 @@ fun RenameDocumentDialog(
                                 onClick = {
                                     selectedPreset = preset
                                     tempFileName = TemplateDateEvaluator.evaluate(preset.fileNameTemplate)
-                                    presetsDropdownExpanded = false
+                                    isPresetsDropdownExpanded = false
                                 }
                             )
                         }
@@ -180,8 +180,8 @@ fun RenameDocumentDialog(
                                 )
                             },
                             onClick = {
-                                presetsDropdownExpanded = false
-                                showSavePresetDialog = true
+                                isPresetsDropdownExpanded = false
+                                isSavePresetDialogVisible = true
                             }
                         )
                     }
@@ -207,9 +207,9 @@ fun RenameDocumentDialog(
         }
     )
 
-    if (showSavePresetDialog) {
+    if (isSavePresetDialogVisible) {
         AlertDialog(
-            onDismissRequest = { showSavePresetDialog = false },
+            onDismissRequest = { isSavePresetDialogVisible = false },
             title = { Text("Save as Preset") },
             text = {
                 Column {
@@ -235,7 +235,7 @@ fun RenameDocumentDialog(
                             val template = tempFileName.ifBlank { "Document_{DD:MM:YYYY}" }
                             onSaveNewPreset(newPresetName.trim(), template)
                             newPresetName = ""
-                            showSavePresetDialog = false
+                            isSavePresetDialogVisible = false
                         }
                     }
                 ) {
@@ -243,7 +243,7 @@ fun RenameDocumentDialog(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showSavePresetDialog = false }) {
+                TextButton(onClick = { isSavePresetDialogVisible = false }) {
                     Text("Cancel")
                 }
             }

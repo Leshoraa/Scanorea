@@ -1,9 +1,9 @@
-package com.leshoraa.scanorea.core.util
+package com.leshoraa.scanorea.core.format
 
 import java.util.Locale
 
 /**
- * Utility for converting byte counts into human-readable strings.
+ * Converts byte counts into human-readable formatted strings.
  */
 object FileSizeFormatter {
 

@@ -99,7 +99,11 @@ fun EditorCanvasPager(
     isCropMode: Boolean,
     cropPanelMode: CropPanelMode = CropPanelMode.RECTANGLE,
     cropAspectRatio: CropAspectRatio = CropAspectRatio.FREE,
-    onCropChange: (pageId: String, bounds: ImageCropBounds) -> Unit,
+    stagedCropBounds: ImageCropBounds = ImageCropBounds.DEFAULT,
+    stagedPerspectiveQuad: DocumentQuad = DocumentQuad.DEFAULT,
+    onStagedCropBoundsChange: (ImageCropBounds) -> Unit = {},
+    onStagedPerspectiveQuadChange: (DocumentQuad) -> Unit = {},
+    onCropChange: (pageId: String, bounds: ImageCropBounds) -> Unit = { _, _ -> },
     onPerspectiveQuadChange: (pageId: String, quad: DocumentQuad) -> Unit = { _, _ -> },
     isAnnotateMode: Boolean = false,
     activeAnnotationTool: AnnotationTool = AnnotationTool.PEN,
@@ -245,14 +249,19 @@ fun EditorCanvasPager(
                     val fittedHPx = with(density) { fittedH.toPx() }
 
                     val haptic = LocalHapticFeedback.current
-                    val localCropBoundsState = remember(page.id) { mutableStateOf(page.cropBounds) }
+                    val localCropBoundsState = remember(page.id) {
+                        mutableStateOf(if (isCropMode && isCurrentFocusedPage) stagedCropBounds else page.cropBounds)
+                    }
                     var activeCropHandle by remember { mutableStateOf(DragHandle.NONE) }
                     val currentCropAspectRatio by rememberUpdatedState(cropAspectRatio)
                     val currentEffectiveAspectRatio by rememberUpdatedState(page.effectiveAspectRatio)
 
-                    LaunchedEffect(page.cropBounds) {
-                        if (activeCropHandle == DragHandle.NONE && localCropBoundsState.value != page.cropBounds) {
-                            localCropBoundsState.value = page.cropBounds
+                    LaunchedEffect(page.cropBounds, stagedCropBounds, isCropMode, isCurrentFocusedPage) {
+                        if (activeCropHandle == DragHandle.NONE) {
+                            val target = if (isCropMode && isCurrentFocusedPage) stagedCropBounds else page.cropBounds
+                            if (localCropBoundsState.value != target) {
+                                localCropBoundsState.value = target
+                            }
                         }
                     }
 
@@ -478,9 +487,7 @@ fun EditorCanvasPager(
                                             }
 
                                             if (activeCropHandle != DragHandle.NONE) {
-                                                if (localCropBoundsState.value != page.cropBounds) {
-                                                    currentOnCropChange(page.id, localCropBoundsState.value)
-                                                }
+                                                onStagedCropBoundsChange(localCropBoundsState.value)
                                             }
                                             activeCropHandle = DragHandle.NONE
                                             break
@@ -589,7 +596,7 @@ fun EditorCanvasPager(
                                                 val deltaX = dragAmount.x / (fittedWPx * zoomScale)
                                                 val deltaY = dragAmount.y / (fittedHPx * zoomScale)
                                                 val minSize = 0.08f
-                                                localCropBoundsState.value = CropGestureCalculator.updateBounds(
+                                                val newBounds = CropGestureCalculator.updateBounds(
                                                     currentBounds = localCropBoundsState.value,
                                                     activeHandle = activeCropHandle,
                                                     deltaX = deltaX,
@@ -598,6 +605,8 @@ fun EditorCanvasPager(
                                                     effectiveAspectRatio = currentEffectiveAspectRatio,
                                                     minSize = minSize
                                                 )
+                                                localCropBoundsState.value = newBounds
+                                                onStagedCropBoundsChange(newBounds)
                                             } else if (zoomScale > 1.05f) {
                                                 change.consume()
                                                 val maxPanX = ((fittedWPx * (zoomScale - 1f)) / 2f).coerceAtLeast(0f)
@@ -677,9 +686,9 @@ fun EditorCanvasPager(
                             if (isCropMode && isCurrentFocusedPage) {
                                 if (cropPanelMode == CropPanelMode.PERSPECTIVE) {
                                     EditorPerspectiveOverlay(
-                                        documentQuad = page.perspectiveQuad,
-                                        onQuadChange = { updatedQuad -> onPerspectiveQuadChange(page.id, updatedQuad) },
-                                        onQuadCommit = { committedQuad -> onPerspectiveQuadChange(page.id, committedQuad) },
+                                        documentQuad = stagedPerspectiveQuad,
+                                        onQuadChange = onStagedPerspectiveQuadChange,
+                                        onQuadCommit = onStagedPerspectiveQuadChange,
                                         touchMargin = touchMargin,
                                         modifier = Modifier.fillMaxSize()
                                     )

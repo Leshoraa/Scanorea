@@ -37,7 +37,13 @@ class MainActivity : ComponentActivity() {
                 val viewModel: ImagesToPdfViewModel = viewModel(
                     factory = ImagesToPdfViewModel.provideFactory(this)
                 )
-                MainScreen(viewModel = viewModel)
+                val recentPdfsViewModel: com.leshoraa.scanorea.features.recentpdfs.ui.RecentPdfsViewModel = viewModel(
+                    factory = com.leshoraa.scanorea.features.recentpdfs.ui.RecentPdfsViewModel.provideFactory(this)
+                )
+                MainScreen(
+                    viewModel = viewModel,
+                    recentPdfsViewModel = recentPdfsViewModel
+                )
             }
         }
     }

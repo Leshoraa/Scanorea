@@ -75,8 +75,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import com.leshoraa.scanorea.app.navigation.MainNavTab
-import com.leshoraa.scanorea.core.util.FileSizeFormatter
-import com.leshoraa.scanorea.core.util.PdfDocumentSharer
+import com.leshoraa.scanorea.core.format.FileSizeFormatter
+import com.leshoraa.scanorea.core.share.PdfDocumentSharer
 import com.leshoraa.scanorea.features.editor.ui.EditorWorkspace
 import com.leshoraa.scanorea.features.editor.ui.components.DiscardChangesDialog
 import com.leshoraa.scanorea.features.editor.ui.components.EditorPagesGridDialog
@@ -87,10 +87,12 @@ import com.leshoraa.scanorea.features.imagestopdf.ui.components.CaptureSourceBot
 import com.leshoraa.scanorea.features.imagestopdf.ui.components.ConversionOptionsBottomSheet
 import com.leshoraa.scanorea.features.imagestopdf.ui.components.ConversionProgressDialog
 import com.leshoraa.scanorea.features.imagestopdf.ui.components.ConversionSuccessDialog
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.leshoraa.scanorea.features.pdfviewer.ui.PdfViewerScreen
 import com.leshoraa.scanorea.features.presets.domain.TemplateDateEvaluator
 import com.leshoraa.scanorea.features.presets.domain.model.ConversionPreset
 import com.leshoraa.scanorea.features.presets.ui.PresetManagementScreen
+import com.leshoraa.scanorea.features.recentpdfs.ui.RecentPdfsViewModel
 import com.leshoraa.scanorea.features.recentpdfs.ui.ResultsScreen
 import com.leshoraa.scanorea.features.settings.ui.SettingsScreen
 import com.leshoraa.scanorea.features.tools.ui.ToolsScreen
@@ -103,20 +105,30 @@ import java.io.File
 @Composable
 fun MainScreen(
     viewModel: ImagesToPdfViewModel,
+    recentPdfsViewModel: RecentPdfsViewModel = viewModel(
+        factory = RecentPdfsViewModel.provideFactory(LocalContext.current)
+    ),
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
+    val recentPdfsUiState by recentPdfsViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
     var currentTab by remember { mutableStateOf(MainNavTab.HOME) }
     var isRenameDialogOpen by remember { mutableStateOf(false) }
     var isPagesGridVisible by remember { mutableStateOf(false) }
-    var showEditorMenu by remember { mutableStateOf(false) }
+    var isEditorMenuVisible by remember { mutableStateOf(false) }
     var isPresetManagerVisible by remember { mutableStateOf(false) }
-    var showDiscardDialog by remember { mutableStateOf(false) }
+    var isDiscardDialogVisible by remember { mutableStateOf(false) }
     var captureSourceSheetTitle by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(currentTab) {
+        if (currentTab == MainNavTab.RESULTS || currentTab == MainNavTab.HOME) {
+            recentPdfsViewModel.loadRecentPdfs()
+        }
+    }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia()
@@ -218,7 +230,7 @@ fun MainScreen(
 
     // Back button handling: Intercept unsaved changes with Discard confirmation dialog
     if (uiState.hasPages) {
-        BackHandler { showDiscardDialog = true }
+        BackHandler { isDiscardDialogVisible = true }
     } else if (currentTab != MainNavTab.HOME) {
         BackHandler { currentTab = MainNavTab.HOME }
     }
@@ -233,7 +245,7 @@ fun MainScreen(
 
                 TopAppBar(
                     navigationIcon = {
-                        IconButton(onClick = { showDiscardDialog = true }) {
+                        IconButton(onClick = { isDiscardDialogVisible = true }) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                                 contentDescription = "Back to Home",
@@ -290,7 +302,7 @@ fun MainScreen(
 
                         // 3-dots Overflow Menu
                         Box {
-                            IconButton(onClick = { showEditorMenu = true }) {
+                            IconButton(onClick = { isEditorMenuVisible = true }) {
                                 Icon(
                                     imageVector = Icons.Outlined.MoreVert,
                                     contentDescription = "More Options",
@@ -299,8 +311,8 @@ fun MainScreen(
                             }
 
                             DropdownMenu(
-                                expanded = showEditorMenu,
-                                onDismissRequest = { showEditorMenu = false }
+                                expanded = isEditorMenuVisible,
+                                onDismissRequest = { isEditorMenuVisible = false }
                             ) {
                                 DropdownMenuItem(
                                     text = { Text("Rename Document") },
@@ -308,7 +320,7 @@ fun MainScreen(
                                         Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(20.dp))
                                     },
                                     onClick = {
-                                        showEditorMenu = false
+                                        isEditorMenuVisible = false
                                         isRenameDialogOpen = true
                                     }
                                 )
@@ -319,7 +331,7 @@ fun MainScreen(
                                             Icon(Icons.AutoMirrored.Outlined.RotateRight, contentDescription = null, modifier = Modifier.size(20.dp))
                                         },
                                         onClick = {
-                                            showEditorMenu = false
+                                            isEditorMenuVisible = false
                                             viewModel.rotatePage(currentPage.id)
                                         }
                                     )
@@ -330,7 +342,7 @@ fun MainScreen(
                                         Icon(Icons.Outlined.ScreenRotation, contentDescription = null, modifier = Modifier.size(20.dp))
                                     },
                                     onClick = {
-                                        showEditorMenu = false
+                                        isEditorMenuVisible = false
                                         viewModel.rotateAllPages()
                                     }
                                 )
@@ -340,7 +352,7 @@ fun MainScreen(
                                         Icon(Icons.Outlined.Tune, contentDescription = null, modifier = Modifier.size(20.dp))
                                     },
                                     onClick = {
-                                        showEditorMenu = false
+                                        isEditorMenuVisible = false
                                         viewModel.showOptionsBottomSheet(true)
                                     }
                                 )
@@ -354,7 +366,7 @@ fun MainScreen(
                                             Icon(Icons.Outlined.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
                                         },
                                         onClick = {
-                                            showEditorMenu = false
+                                            isEditorMenuVisible = false
                                             viewModel.removePage(currentPage.id)
                                         }
                                     )
@@ -425,7 +437,7 @@ fun MainScreen(
                 when (currentTab) {
                     MainNavTab.HOME -> {
                         HomeScreen(
-                            recentPdfs = uiState.recentPdfs,
+                            recentPdfs = recentPdfsUiState.recentPdfs,
                             onScanConvertClick = { captureSourceSheetTitle = "Scan & Convert to PDF" },
                             onGalleryClick = {
                                 photoPickerLauncher.launch(
@@ -437,8 +449,8 @@ fun MainScreen(
                             onSeeAllResultsClick = { currentTab = MainNavTab.RESULTS },
                             onPdfClick = { viewModel.openPdfInViewer(it) },
                             onShareClick = { PdfDocumentSharer.share(context, it) },
-                            onDeleteClick = { viewModel.deleteRecentPdf(it) },
-                            onToggleFavorite = { viewModel.toggleFavorite(it) }
+                            onDeleteClick = { recentPdfsViewModel.deletePdf(it) },
+                            onToggleFavorite = { recentPdfsViewModel.toggleFavorite(it) }
                         )
                     }
 
@@ -451,18 +463,19 @@ fun MainScreen(
 
                     MainNavTab.RESULTS -> {
                         ResultsScreen(
-                            recentPdfs = uiState.recentPdfs,
-                            categories = uiState.categories,
-                            pinnedFolders = uiState.pinnedFolders,
-                            onTogglePinFolder = { viewModel.togglePinFolder(it) },
+                            recentPdfs = recentPdfsUiState.recentPdfs,
+                            categories = recentPdfsUiState.categories,
+                            pinnedFolders = recentPdfsUiState.pinnedFolders,
+                            onTogglePinFolder = { recentPdfsViewModel.togglePinFolder(it) },
                             onPdfClick = { viewModel.openPdfInViewer(it) },
                             onShareClick = { PdfDocumentSharer.share(context, it) },
-                            onDeleteClick = { viewModel.deleteRecentPdf(it) },
-                            onToggleFavorite = { viewModel.toggleFavorite(it) },
-                            onAssignFolders = { file, folders -> viewModel.updatePdfFolders(file, folders) },
-                            onAddCategory = { viewModel.addCategory(it) },
-                            onRenameCategory = { oldName, newName -> viewModel.renameCategory(oldName, newName) },
-                            onDeleteCategory = { viewModel.deleteCategory(it) }
+                            onDeleteClick = { recentPdfsViewModel.deletePdf(it) },
+                            onToggleFavorite = { recentPdfsViewModel.toggleFavorite(it) },
+                            onAssignFolders = { file, folders -> recentPdfsViewModel.updatePdfFolders(file, folders) },
+                            onAddCategory = { recentPdfsViewModel.addCategory(it) },
+                            onRenameCategory = { oldName, newName -> recentPdfsViewModel.renameCategory(oldName, newName) },
+                            onDeleteCategory = { recentPdfsViewModel.deleteCategory(it) },
+                            onReorderPinnedFolders = { recentPdfsViewModel.setPinnedFolders(it) }
                         )
                     }
 
@@ -611,10 +624,13 @@ fun MainScreen(
                 viewModel.showOptionsBottomSheet(false)
                 viewModel.convertImagesToPdf()
             },
-            categories = uiState.categories,
+            categories = recentPdfsUiState.categories,
             selectedFolders = uiState.selectedFolders,
             onToggleFolder = { viewModel.toggleSelectedFolder(it) },
-            onCreateNewFolder = { viewModel.createNewFolder(it) }
+            onCreateNewFolder = {
+                recentPdfsViewModel.addCategory(it)
+                viewModel.createNewFolder(it)
+            }
         )
     }
 
@@ -626,7 +642,7 @@ fun MainScreen(
     // Success Dialog on conversion completion
     val successResult = uiState.conversionResult
     if (successResult != null) {
-        val assignedFolders = uiState.recentPdfs.find { it.name == successResult.file.name }?.folders ?: uiState.selectedFolders
+        val assignedFolders = recentPdfsUiState.recentPdfs.find { it.name == successResult.file.name }?.folders ?: uiState.selectedFolders
         ConversionSuccessDialog(
             result = successResult,
             assignedFolders = assignedFolders,
@@ -635,6 +651,7 @@ fun MainScreen(
                 viewModel.dismissResultDialog()
                 viewModel.clearAllPages()
                 currentTab = MainNavTab.RESULTS
+                recentPdfsViewModel.loadRecentPdfs()
                 viewModel.openPdfInViewer(file)
             },
             onSharePdf = {
@@ -642,23 +659,25 @@ fun MainScreen(
             },
             onKeepInEditor = {
                 viewModel.dismissResultDialog()
+                recentPdfsViewModel.loadRecentPdfs()
             },
             onDismiss = {
                 viewModel.dismissResultDialog()
                 viewModel.clearAllPages()
                 currentTab = MainNavTab.RESULTS
+                recentPdfsViewModel.loadRecentPdfs()
             }
         )
     }
 
     // Confirmation dialog before discarding unsaved edits/scans
-    if (showDiscardDialog) {
+    if (isDiscardDialogVisible) {
         DiscardChangesDialog(
             onConfirmDiscard = {
-                showDiscardDialog = false
+                isDiscardDialogVisible = false
                 viewModel.clearAllPages()
             },
-            onDismiss = { showDiscardDialog = false }
+            onDismiss = { isDiscardDialogVisible = false }
         )
     }
 

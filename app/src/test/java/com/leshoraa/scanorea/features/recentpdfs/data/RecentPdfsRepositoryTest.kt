@@ -116,6 +116,18 @@ class RecentPdfsRepositoryTest {
         assertFalse(pinnedAfter.contains("TempFolder"))
     }
 
+    @Test
+    fun deleteCategory_whenDeletingWork_removesWorkFromCategoriesAndPinned() = runBlocking {
+        val deleteResult = repository.deleteCategory("Work")
+        assertTrue(deleteResult)
+
+        val categories = repository.getCategories()
+        assertFalse(categories.contains("Work"))
+
+        val pinned = repository.getPinnedFolders()
+        assertFalse(pinned.contains("Work"))
+    }
+
     /**
      * In-memory test double for Android [SharedPreferences].
      */

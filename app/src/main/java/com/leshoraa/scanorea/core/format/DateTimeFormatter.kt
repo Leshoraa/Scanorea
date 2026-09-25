@@ -1,4 +1,4 @@
-package com.leshoraa.scanorea.core.util
+package com.leshoraa.scanorea.core.format
 
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -6,7 +6,7 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /**
- * Utility for formatting timestamps into human-readable relative time strings
+ * Formats timestamps into human-readable relative time strings
  * such as "2 minutes ago", "1 hour ago", "3 hours ago", "1 day ago".
  */
 object DateTimeFormatter {
