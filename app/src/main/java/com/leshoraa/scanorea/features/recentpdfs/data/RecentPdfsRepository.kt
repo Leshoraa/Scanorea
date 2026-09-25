@@ -27,9 +27,9 @@ class RecentPdfsRepository(
         private const val KEY_PINNED_FOLDERS = "document_pinned_folders"
         private const val KEY_METADATA_MAP = "document_metadata_map"
 
-        const val MAX_PINNED_FOLDERS = 3
-        val DEFAULT_CATEGORIES = listOf("Work", "Study", "Personal")
-        val DEFAULT_PINNED_FOLDERS = listOf("Favorites", "Work", "Study")
+        const val MAX_PINNED_FOLDERS = 5
+        val DEFAULT_CATEGORIES = listOf("Work", "Study", "Personal", "Projects")
+        val DEFAULT_PINNED_FOLDERS = listOf("Favorites", "Work", "Study", "Personal", "Projects")
     }
 
     suspend fun getCategories(): List<String> = withContext(Dispatchers.IO) {

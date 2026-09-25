@@ -159,12 +159,11 @@ Scanorea/
 │   │   │   │   │   │   └── ui/
 │   │   │   │   │   │       ├── components/
 │   │   │   │   │   │       │   ├── AllFoldersBottomSheet.kt
-│   │   │   │   │   │       │   ├── CreateFolderDialog.kt
-│   │   │   │   │   │       │   ├── DeleteFolderConfirmationDialog.kt
+│   │   │   │   │   │       │   ├── DocumentFolderDialogs.kt
+│   │   │   │   │   │       │   ├── FolderGridDragCalculator.kt
 │   │   │   │   │   │       │   ├── FolderGridSection.kt
-│   │   │   │   │   │       │   ├── OrganizeDocumentBottomSheet.kt
-│   │   │   │   │   │       │   ├── RecentPdfItemCard.kt
-│   │   │   │   │   │       │   └── RenameFolderDialog.kt
+│   │   │   │   │   │       │   ├── PdfThumbnailPreview.kt
+│   │   │   │   │   │       │   └── RecentPdfItemCard.kt
 │   │   │   │   │   │       ├── RecentPdfsSection.kt
 │   │   │   │   │   │       ├── RecentPdfsViewModel.kt
 │   │   │   │   │   │       └── ResultsScreen.kt

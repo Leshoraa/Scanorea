@@ -32,36 +32,38 @@ class RecentPdfsRepositoryTest {
     fun getPinnedFolders_whenUninitialized_returnsDefaults() = runBlocking {
         val pinned = repository.getPinnedFolders()
         assertEquals(RecentPdfsRepository.DEFAULT_PINNED_FOLDERS, pinned)
-        assertEquals(3, pinned.size)
+        assertEquals(5, pinned.size)
         assertTrue(pinned.contains("Favorites"))
         assertTrue(pinned.contains("Work"))
         assertTrue(pinned.contains("Study"))
+        assertTrue(pinned.contains("Personal"))
+        assertTrue(pinned.contains("Projects"))
     }
 
     @Test
-    fun setPinnedFolders_sanitizesAndEnforcesMaxThree() = runBlocking {
-        val input = listOf("Work", "Study", "Personal", "Projects", "Archive")
+    fun setPinnedFolders_sanitizesAndEnforcesMaxFive() = runBlocking {
+        val input = listOf("Work", "Study", "Personal", "Projects", "Archive", "Taxes")
         val result = repository.setPinnedFolders(input)
         assertTrue(result)
 
         val pinned = repository.getPinnedFolders()
-        assertEquals(3, pinned.size)
-        assertEquals(listOf("Work", "Study", "Personal"), pinned)
+        assertEquals(5, pinned.size)
+        assertEquals(listOf("Work", "Study", "Personal", "Projects", "Archive"), pinned)
     }
 
     @Test
     fun togglePinFolder_whenNotPinnedAndUnderLimit_pinsFolder() = runBlocking {
-        // Start with 2 pinned
-        repository.setPinnedFolders(listOf("Favorites", "Work"))
+        // Start with 4 pinned
+        repository.setPinnedFolders(listOf("Favorites", "Work", "Study", "Personal"))
         val pinnedInitial = repository.getPinnedFolders()
-        assertEquals(2, pinnedInitial.size)
+        assertEquals(4, pinnedInitial.size)
 
-        val result = repository.togglePinFolder("Study")
+        val result = repository.togglePinFolder("Projects")
         assertTrue(result)
 
         val pinnedAfter = repository.getPinnedFolders()
-        assertEquals(3, pinnedAfter.size)
-        assertTrue(pinnedAfter.contains("Study"))
+        assertEquals(5, pinnedAfter.size)
+        assertTrue(pinnedAfter.contains("Projects"))
     }
 
     @Test
@@ -80,14 +82,14 @@ class RecentPdfsRepositoryTest {
 
     @Test
     fun togglePinFolder_whenAtMaxLimit_rejectsNewPin() = runBlocking {
-        repository.setPinnedFolders(listOf("Favorites", "Work", "Study"))
+        repository.setPinnedFolders(listOf("Favorites", "Work", "Study", "Personal", "Projects"))
 
-        val result = repository.togglePinFolder("Personal")
+        val result = repository.togglePinFolder("Archive")
         assertFalse(result)
 
         val pinnedAfter = repository.getPinnedFolders()
-        assertEquals(3, pinnedAfter.size)
-        assertFalse(pinnedAfter.contains("Personal"))
+        assertEquals(5, pinnedAfter.size)
+        assertFalse(pinnedAfter.contains("Archive"))
     }
 
     @Test

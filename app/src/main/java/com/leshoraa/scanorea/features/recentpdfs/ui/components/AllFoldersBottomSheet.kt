@@ -99,7 +99,7 @@ fun AllFoldersBottomSheet(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Max 3 pinned to quick-access grid",
+                        text = "Max 5 pinned to quick-access grid",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

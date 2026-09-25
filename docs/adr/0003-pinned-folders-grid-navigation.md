@@ -40,11 +40,20 @@ In the previous design, document categories and folders were rendered in a singl
    - Remove redundant PDF/document icons from `EditorBottomActionBar` and `ConversionOptionsBottomSheet`.
    - The primary button focuses cleanly on the text label "Convert to PDF" for maximum legibility and reduced cognitive noise.
 
+5. **Drag-and-Drop Animated Reordering (`FolderGridDragCalculator`)**:
+   - Long-press to initiate folder reordering across the 2x2 grid.
+   - Decouple spatial math into pure deep module `FolderGridDragCalculator` (slot centers, hit testing, bounds tolerance, prospective slot resolution, and 2D shift vectors).
+   - Non-dragged cards smoothly animate via spring physics (`Spring.DampingRatioMediumBouncy`) to vacate their slots and preview prospective layout changes.
+   - Out-of-bounds drags and drops over the fixed "Other" card automatically revert prospective targets and smoothly return cards to their original slots without committing unintended reorders.
+   - Optimistic local state eliminates UI flicker and delay during asynchronous repository persistence.
+
 ## Consequences
 - **Positive**:
   - Eliminates endless horizontal scrolling for folder discovery.
   - Gives users instant 1-tap access to their 3 most frequent categories directly on the main screen.
+  - Fluid, physics-driven drag-and-drop with live preview and safe abort behavior ("pas gajadi balik ke posisi semula").
   - Maintains a clean Material 3 Flat Design with `0.dp` elevation across all cards and bottom sheets.
   - Fully decoupled architecture with comprehensive unit tests for pinned folder manipulation and synchronization.
 - **Trade-offs**:
   - Pinned folders are capped at 3 to preserve the clean 2x2 visual layout. Additional folders are accessed via the "Other" card.
+
