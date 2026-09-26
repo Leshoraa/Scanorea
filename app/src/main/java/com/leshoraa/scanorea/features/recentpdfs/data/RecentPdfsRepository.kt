@@ -247,7 +247,7 @@ class RecentPdfsRepository(
     }
 
     private fun savePinnedFoldersList(list: List<String>) {
-        prefs.edit { putString(KEY_PINNED_FOLDERS, serializeStringList(list)) }
+        prefs.edit(commit = true) { putString(KEY_PINNED_FOLDERS, serializeStringList(list)) }
     }
 
     suspend fun getRecentPdfs(): List<RecentPdf> = withContext(Dispatchers.IO) {

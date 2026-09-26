@@ -294,24 +294,26 @@ class ImagesToPdfViewModel(
     fun addImages(uris: List<Uri>, contentResolver: ContentResolver) {
         if (uris.isEmpty()) return
 
-        val defaultFilter = _uiState.value.defaultFilter
-        val newPages = uris.map { uri ->
-            val metadata = queryUriMetadata(uri, contentResolver)
-            ImagePage(
-                id = UUID.randomUUID().toString(),
-                uri = uri,
-                displayName = metadata.displayName,
-                sizeInBytes = metadata.sizeInBytes,
-                width = metadata.width,
-                height = metadata.height,
-                filter = defaultFilter,
-                contrast = 1.0f,
-                brightness = 0.0f
-            )
-        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val defaultFilter = _uiState.value.defaultFilter
+            val newPages = uris.map { uri ->
+                val metadata = queryUriMetadata(uri, contentResolver)
+                ImagePage(
+                    id = UUID.randomUUID().toString(),
+                    uri = uri,
+                    displayName = metadata.displayName,
+                    sizeInBytes = metadata.sizeInBytes,
+                    width = metadata.width,
+                    height = metadata.height,
+                    filter = defaultFilter,
+                    contrast = 1.0f,
+                    brightness = 0.0f
+                )
+            }
 
-        _uiState.update { currentState ->
-            currentState.copy(pages = currentState.pages + newPages)
+            _uiState.update { currentState ->
+                currentState.copy(pages = currentState.pages + newPages)
+            }
         }
     }
 

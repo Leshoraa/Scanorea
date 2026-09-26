@@ -54,6 +54,15 @@ class FolderGridDragCalculatorTest {
     }
 
     @Test
+    fun isOutsideDropZone_withExpandedTolerance_allowsGenerousSlop() {
+        // Point slightly beyond grid edge (-50f < 0, but > -120f tolerance)
+        assertFalse(FolderGridDragCalculator.isOutsideDropZone(Offset(-50f, 50f), cardWidth, cardHeight, spacing, itemCount = 3))
+
+        // Point vertically below bottom edge (200f > 130f, but < 238f tolerance)
+        assertFalse(FolderGridDragCalculator.isOutsideDropZone(Offset(50f, 200f), cardWidth, cardHeight, spacing, itemCount = 3))
+    }
+
+    @Test
     fun isOutsideDropZone_whenFarOutside_returnsTrue() {
         val farLeft = Offset(-150f, 50f)
         assertTrue(FolderGridDragCalculator.isOutsideDropZone(farLeft, cardWidth, cardHeight, spacing, itemCount = 3))

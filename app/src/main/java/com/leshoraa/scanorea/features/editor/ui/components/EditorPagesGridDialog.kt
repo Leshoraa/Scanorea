@@ -98,6 +98,8 @@ fun EditorPagesGridDialog(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val gridState = rememberLazyGridState()
 
+    var localPages by remember(pages) { mutableStateOf(pages) }
+
     var draggedKey by remember { mutableStateOf<String?>(null) }
     var draggedIndex by remember { mutableStateOf<Int?>(null) }
     var hoveredIndex by remember { mutableStateOf<Int?>(null) }
@@ -126,7 +128,7 @@ fun EditorPagesGridDialog(
             ) {
                 Column {
                     Text(
-                        text = "Document Pages (${pages.size})",
+                        text = "Document Pages (${localPages.size})",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -163,14 +165,31 @@ fun EditorPagesGridDialog(
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height((pages.size.coerceAtLeast(3) * 60).coerceIn(240, 420).dp)
+                        .height((localPages.size.coerceAtLeast(3) * 60).coerceIn(240, 420).dp)
                 ) {
-                    itemsIndexed(pages, key = { _, page -> page.id }) { index, page ->
-                        val currentIndex = pages.indexOfFirst { it.id == page.id }.takeIf { it != -1 } ?: index
+                    itemsIndexed(localPages, key = { _, page -> page.id }) { index, page ->
+                        val currentIndex = localPages.indexOfFirst { it.id == page.id }.takeIf { it != -1 } ?: index
                         val isDragging = draggedKey == page.id
-                        val isCurrent = page.id == pages.getOrNull(currentPageIndex)?.id
-                        val colorMatrix = page.filter.createColorMatrix(page.contrast, page.brightness)
-                        val colorFilter = colorMatrix?.let { ColorFilter.colorMatrix(ColorMatrix(it.array)) }
+                        val isCurrent = page.id == localPages.getOrNull(currentPageIndex)?.id
+                        val colorFilter = remember(page.filter, page.contrast, page.brightness) {
+                            val matrix = page.filter.createColorMatrix(page.contrast, page.brightness)
+                            matrix?.let { ColorFilter.colorMatrix(ColorMatrix(it.array)) }
+                        }
+                        val imageRequest = remember(page.uri, page.rotationDegrees, page.cropBounds) {
+                            ImageRequest.Builder(context)
+                                .data(page.uri)
+                                .size(240, 320)
+                                .precision(Precision.INEXACT)
+                                .allowRgb565(true)
+                                .transformations(
+                                    PagePreviewTransformation(
+                                        rotationDegrees = page.rotationDegrees,
+                                        cropBounds = page.cropBounds
+                                    )
+                                )
+                                .crossfade(false)
+                                .build()
+                        }
 
                         // Dynamic slot measurements
                         val visibleItems = gridState.layoutInfo.visibleItemsInfo
@@ -231,11 +250,11 @@ fun EditorPagesGridDialog(
                                     translationX = if (isDragging) 0f else animatedShiftX
                                     translationY = if (isDragging) 0f else animatedShiftY
                                 }
-                                .pointerInput(page.id, pages) {
+                                .pointerInput(page.id) {
                                     detectDragGesturesAfterLongPress(
                                         onDragStart = {
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            val liveIndex = pages.indexOfFirst { it.id == page.id }.takeIf { it != -1 } ?: currentIndex
+                                            val liveIndex = localPages.indexOfFirst { it.id == page.id }.takeIf { it != -1 } ?: currentIndex
                                             val itemInfo = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == page.id }
                                             if (itemInfo != null) {
                                                 dragStartOffset = Offset(itemInfo.offset.x.toFloat(), itemInfo.offset.y.toFloat())
@@ -252,9 +271,9 @@ fun EditorPagesGridDialog(
 
                                             val anchor = gridState.layoutInfo.visibleItemsInfo.firstOrNull()
                                             val draggedItem = gridState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == draggedKey }
-                                            val liveIndex = pages.indexOfFirst { it.id == page.id }.takeIf { it != -1 } ?: currentIndex
+                                            val liveIndex = localPages.indexOfFirst { it.id == page.id }.takeIf { it != -1 } ?: currentIndex
 
-                                            if (draggedItem != null && anchor != null && pages.isNotEmpty()) {
+                                            if (draggedItem != null && anchor != null && localPages.isNotEmpty()) {
                                                 val itemW = anchor.size.width.toFloat()
                                                 val itemH = anchor.size.height.toFloat()
                                                 val sWidth = itemW + spacingPx
@@ -263,14 +282,14 @@ fun EditorPagesGridDialog(
                                                 val currentCenterX = draggedItem.offset.x + draggedItem.size.width / 2f + dragOffset.x
                                                 val currentCenterY = draggedItem.offset.y + draggedItem.size.height / 2f + dragOffset.y
 
-                                                val totalRows = (pages.size + 2) / 3
+                                                val totalRows = (localPages.size + 2) / 3
                                                 val isFarOutside = currentCenterY < (anchor.offset.y - itemH) ||
                                                         currentCenterY > (anchor.offset.y + totalRows * sHeight + itemH)
 
                                                 val newHoveredIndex = if (isFarOutside) {
                                                     liveIndex
                                                 } else {
-                                                    pages.indices.minByOrNull { i ->
+                                                    localPages.indices.minByOrNull { i ->
                                                         val dCol = (i % 3) - (anchor.index % 3)
                                                         val dRow = (i / 3) - (anchor.index / 3)
                                                         val slotCx = anchor.offset.x + dCol * sWidth + itemW / 2f
@@ -290,17 +309,20 @@ fun EditorPagesGridDialog(
                                         onDragEnd = {
                                             val from = draggedIndex
                                             val to = hoveredIndex
+                                            if (from != null && to != null && from != to && from in localPages.indices && to in localPages.indices) {
+                                                val updated = localPages.toMutableList()
+                                                val item = updated.removeAt(from)
+                                                updated.add(to, item)
+                                                localPages = updated
+                                                onMovePage(from, to)
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            }
                                             draggedKey = null
                                             draggedIndex = null
                                             hoveredIndex = null
                                             dragOffset = Offset.Zero
                                             dragStartOffset = Offset.Zero
                                             draggedItemSize = Size.Zero
-
-                                            if (from != null && to != null && from != to) {
-                                                onMovePage(from, to)
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            }
                                         },
                                         onDragCancel = {
                                             draggedKey = null
@@ -313,7 +335,7 @@ fun EditorPagesGridDialog(
                                     )
                                 }
                                 .clickable(enabled = draggedKey == null) {
-                                    val selIndex = pages.indexOfFirst { it.id == page.id }.takeIf { it != -1 } ?: currentIndex
+                                    val selIndex = localPages.indexOfFirst { it.id == page.id }.takeIf { it != -1 } ?: currentIndex
                                     onPageSelected(selIndex)
                                     onDismissRequest()
                                 },
@@ -330,19 +352,7 @@ fun EditorPagesGridDialog(
                             Box(modifier = Modifier.fillMaxSize()) {
                                 // Page Thumbnail Image
                                 AsyncImage(
-                                    model = ImageRequest.Builder(context)
-                                        .data(page.uri)
-                                        .size(360, 480)
-                                        .precision(Precision.INEXACT)
-                                        .allowRgb565(true)
-                                        .transformations(
-                                            PagePreviewTransformation(
-                                                rotationDegrees = page.rotationDegrees,
-                                                cropBounds = page.cropBounds
-                                            )
-                                        )
-                                        .crossfade(false)
-                                        .build(),
+                                    model = imageRequest,
                                     contentDescription = page.displayName ?: "Page ${index + 1}",
                                     contentScale = ContentScale.Crop,
                                     colorFilter = colorFilter,
@@ -367,7 +377,7 @@ fun EditorPagesGridDialog(
                                 }
 
                                 // Delete Page Button (Top-Right)
-                                if (pages.size > 1 && draggedKey == null) {
+                                if (localPages.size > 1 && draggedKey == null) {
                                     FilledTonalIconButton(
                                         onClick = { onRemovePage(page.id) },
                                         colors = IconButtonDefaults.filledTonalIconButtonColors(
@@ -438,12 +448,29 @@ fun EditorPagesGridDialog(
 
                 // Unconstrained Floating Dragged Card (Immune to LazyVerticalGrid clipping)
                 if (draggedKey != null) {
-                    val draggedPage = pages.firstOrNull { it.id == draggedKey }
+                    val draggedPage = localPages.firstOrNull { it.id == draggedKey }
                     if (draggedPage != null && draggedItemSize.width > 0f) {
                         val draggedW = with(density) { draggedItemSize.width.toDp() }
                         val draggedH = with(density) { draggedItemSize.height.toDp() }
-                        val colorMatrix = draggedPage.filter.createColorMatrix(draggedPage.contrast, draggedPage.brightness)
-                        val colorFilter = colorMatrix?.let { ColorFilter.colorMatrix(ColorMatrix(it.array)) }
+                        val floatingColorFilter = remember(draggedPage.filter, draggedPage.contrast, draggedPage.brightness) {
+                            val matrix = draggedPage.filter.createColorMatrix(draggedPage.contrast, draggedPage.brightness)
+                            matrix?.let { ColorFilter.colorMatrix(ColorMatrix(it.array)) }
+                        }
+                        val floatingImageRequest = remember(draggedPage.uri, draggedPage.rotationDegrees, draggedPage.cropBounds) {
+                            ImageRequest.Builder(context)
+                                .data(draggedPage.uri)
+                                .size(240, 320)
+                                .precision(Precision.INEXACT)
+                                .allowRgb565(true)
+                                .transformations(
+                                    PagePreviewTransformation(
+                                        rotationDegrees = draggedPage.rotationDegrees,
+                                        cropBounds = draggedPage.cropBounds
+                                    )
+                                )
+                                .crossfade(false)
+                                .build()
+                        }
                         val displayPageNumber = (hoveredIndex ?: draggedIndex ?: 0) + 1
 
                         Card(
@@ -463,22 +490,10 @@ fun EditorPagesGridDialog(
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 AsyncImage(
-                                    model = ImageRequest.Builder(context)
-                                        .data(draggedPage.uri)
-                                        .size(360, 480)
-                                        .precision(Precision.INEXACT)
-                                        .allowRgb565(true)
-                                        .transformations(
-                                            PagePreviewTransformation(
-                                                rotationDegrees = draggedPage.rotationDegrees,
-                                                cropBounds = draggedPage.cropBounds
-                                            )
-                                        )
-                                        .crossfade(false)
-                                        .build(),
+                                    model = floatingImageRequest,
                                     contentDescription = draggedPage.displayName ?: "Dragged Page",
                                     contentScale = ContentScale.Crop,
-                                    colorFilter = colorFilter,
+                                    colorFilter = floatingColorFilter,
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .clip(RoundedCornerShape(12.dp))

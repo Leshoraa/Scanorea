@@ -41,7 +41,9 @@ class RecentPdfsViewModel(
 
     fun loadRecentPdfs() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            if (_uiState.value.recentPdfs.isEmpty()) {
+                _uiState.update { it.copy(isLoading = true) }
+            }
             val recents = recentPdfsRepository.getRecentPdfs()
             val categories = recentPdfsRepository.getCategories()
             val pinnedFolders = recentPdfsRepository.getPinnedFolders()
@@ -107,9 +109,9 @@ class RecentPdfsViewModel(
     }
 
     fun setPinnedFolders(folders: List<String>) {
+        _uiState.update { it.copy(pinnedFolders = folders) }
         viewModelScope.launch {
             recentPdfsRepository.setPinnedFolders(folders)
-            loadRecentPdfs()
         }
     }
 

@@ -11,8 +11,12 @@ import androidx.compose.ui.geometry.Offset
  */
 object FolderGridDragCalculator {
 
-    private const val HORIZONTAL_TOLERANCE_FRACTION = 1.0f
-    private const val VERTICAL_TOLERANCE_FRACTION = 1.5f
+    const val GRID_COLUMNS = 2
+    const val MAX_PINNED_CAPACITY = 5
+    const val MAX_GRID_ROWS = 3
+
+    private const val HORIZONTAL_TOLERANCE_FRACTION = 1.2f
+    private const val VERTICAL_TOLERANCE_FRACTION = 1.8f
 
     /**
      * Calculates the center coordinates [Offset] of a slot index in the 2-column grid.
@@ -29,8 +33,8 @@ object FolderGridDragCalculator {
         cardHeightPx: Float,
         spacingPx: Float
     ): Offset {
-        val col = slotIndex % 2
-        val row = slotIndex / 2
+        val col = slotIndex % GRID_COLUMNS
+        val row = slotIndex / GRID_COLUMNS
         val cx = col * (cardWidthPx + spacingPx) + (cardWidthPx / 2f)
         val cy = row * (cardHeightPx + spacingPx) + (cardHeightPx / 2f)
         return Offset(cx, cy)
@@ -52,9 +56,9 @@ object FolderGridDragCalculator {
         val toleranceX = cardWidthPx * HORIZONTAL_TOLERANCE_FRACTION
         val toleranceY = cardHeightPx * VERTICAL_TOLERANCE_FRACTION
 
-        val gridWidth = 2 * cardWidthPx + spacingPx
+        val gridWidth = GRID_COLUMNS * cardWidthPx + spacingPx
         val totalRows = when {
-            itemCount >= 4 -> 3
+            itemCount >= 4 -> MAX_GRID_ROWS
             itemCount >= 2 -> 2
             else -> 1
         }
@@ -95,7 +99,7 @@ object FolderGridDragCalculator {
         // Special handling for rows with a single pinned item alongside "Other":
         // In 5-item grid: Row 2 has Slot 4 (pinned) and Slot 5 (Other).
         // Any drag hovering in Row 2 targets Slot 4 (the last pinned folder).
-        if (itemCount == 5) {
+        if (itemCount == MAX_PINNED_CAPACITY) {
             val row2Top = 2 * (cardHeightPx + spacingPx) - (spacingPx / 2f)
             if (draggedCenter.y >= row2Top) {
                 return 4
@@ -127,7 +131,7 @@ object FolderGridDragCalculator {
         }
 
         // Find the nearest valid pinned folder slot
-        val validSlots = 0 until itemCount.coerceAtMost(5)
+        val validSlots = 0 until itemCount.coerceAtMost(MAX_PINNED_CAPACITY)
         return validSlots.minByOrNull { slot ->
             val slotCenter = calculateSlotCenter(slot, cardWidthPx, cardHeightPx, spacingPx)
             val dx = draggedCenter.x - slotCenter.x
@@ -175,8 +179,8 @@ object FolderGridDragCalculator {
         cardHeightPx: Float,
         spacingPx: Float
     ): Offset {
-        val deltaCol = (toSlot % 2) - (fromSlot % 2)
-        val deltaRow = (toSlot / 2) - (fromSlot / 2)
+        val deltaCol = (toSlot % GRID_COLUMNS) - (fromSlot % GRID_COLUMNS)
+        val deltaRow = (toSlot / GRID_COLUMNS) - (fromSlot / GRID_COLUMNS)
         val shiftX = deltaCol * (cardWidthPx + spacingPx)
         val shiftY = deltaRow * (cardHeightPx + spacingPx)
         return Offset(shiftX, shiftY)
