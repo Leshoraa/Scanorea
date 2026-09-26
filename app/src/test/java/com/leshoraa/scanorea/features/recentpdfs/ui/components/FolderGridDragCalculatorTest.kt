@@ -55,16 +55,16 @@ class FolderGridDragCalculatorTest {
 
     @Test
     fun isOutsideDropZone_whenFarOutside_returnsTrue() {
-        val farLeft = Offset(-100f, 50f)
+        val farLeft = Offset(-150f, 50f)
         assertTrue(FolderGridDragCalculator.isOutsideDropZone(farLeft, cardWidth, cardHeight, spacing, itemCount = 3))
 
         val farBottom = Offset(100f, 350f)
         assertTrue(FolderGridDragCalculator.isOutsideDropZone(farBottom, cardWidth, cardHeight, spacing, itemCount = 5))
 
-        val farRight = Offset(300f, 50f)
+        val farRight = Offset(400f, 50f)
         assertTrue(FolderGridDragCalculator.isOutsideDropZone(farRight, cardWidth, cardHeight, spacing, itemCount = 3))
 
-        val farTop = Offset(100f, -100f)
+        val farTop = Offset(100f, -150f)
         assertTrue(FolderGridDragCalculator.isOutsideDropZone(farTop, cardWidth, cardHeight, spacing, itemCount = 3))
     }
 
@@ -125,8 +125,9 @@ class FolderGridDragCalculatorTest {
     }
 
     @Test
-    fun determineTargetDropIndex_whenHoveringOverOtherCard_revertsToDraggedIndex() {
-        // For 3 items: Slot 3 center is (160, 100). Drag item 0 from (50, 30) with delta (110, 70) to land squarely in slot 3
+    fun determineTargetDropIndex_whenHoveringInRowWithOtherCard_routesToRowPinnedSlot() {
+        // For 3 items: Slot 3 center is (160, 100). Drag item 0 from (50, 30) with delta (110, 70) to land in slot 3 (Row 1 Col 1)
+        // Row 1's single pinned item is Slot 2, so it routes to Slot 2
         val target = FolderGridDragCalculator.determineTargetDropIndex(
             draggedIndex = 0,
             dragOffset = Offset(110f, 70f),
@@ -135,9 +136,10 @@ class FolderGridDragCalculatorTest {
             spacingPx = spacing,
             itemCount = 3
         )
-        assertEquals(0, target)
+        assertEquals(2, target)
 
-        // For 5 items: Slot 5 ("Other") center is (160, 170). Drag item 0 from (50, 30) with delta (110, 140) to land in slot 5
+        // For 5 items: Slot 5 ("Other") center is (160, 170). Drag item 0 from (50, 30) with delta (110, 140) to land in slot 5 (Row 2 Col 1)
+        // Row 2's single pinned item is Slot 4, so it routes to Slot 4
         val target5 = FolderGridDragCalculator.determineTargetDropIndex(
             draggedIndex = 0,
             dragOffset = Offset(110f, 140f),
@@ -146,7 +148,18 @@ class FolderGridDragCalculatorTest {
             spacingPx = spacing,
             itemCount = 5
         )
-        assertEquals(0, target5)
+        assertEquals(4, target5)
+
+        // For 4 items: Row 2 has only "Other" and no pinned items. Dragging into Row 2 reverts to draggedIndex
+        val target4 = FolderGridDragCalculator.determineTargetDropIndex(
+            draggedIndex = 0,
+            dragOffset = Offset(110f, 140f),
+            cardWidthPx = cardWidth,
+            cardHeightPx = cardHeight,
+            spacingPx = spacing,
+            itemCount = 4
+        )
+        assertEquals(0, target4)
     }
 
     @Test

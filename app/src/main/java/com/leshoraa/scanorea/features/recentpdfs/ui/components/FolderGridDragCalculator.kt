@@ -11,8 +11,8 @@ import androidx.compose.ui.geometry.Offset
  */
 object FolderGridDragCalculator {
 
-    private const val HORIZONTAL_TOLERANCE_FRACTION = 0.40f
-    private const val VERTICAL_TOLERANCE_FRACTION = 0.45f
+    private const val HORIZONTAL_TOLERANCE_FRACTION = 1.0f
+    private const val VERTICAL_TOLERANCE_FRACTION = 1.5f
 
     /**
      * Calculates the center coordinates [Offset] of a slot index in the 2-column grid.
@@ -71,7 +71,6 @@ object FolderGridDragCalculator {
      *
      * Returns [draggedIndex] (no change) if:
      * - The drag is outside the drop zone bounds.
-     * - The drag is hovering over the fixed "Other" card (Slot 5 when itemCount >= 4, Slot 3 when itemCount in 2..3).
      * - The drag is moved into an unallocated row.
      */
     fun determineTargetDropIndex(
@@ -93,30 +92,34 @@ object FolderGridDragCalculator {
             return draggedIndex
         }
 
-        // Fixed "Other" card detection: cannot swap with the Other action card
-        if (itemCount >= 4) {
-            // "Other" is at Row 2, Col 1 (Slot 5)
-            val otherLeft = cardWidthPx + (spacingPx / 2f)
-            val otherTop = 2 * (cardHeightPx + spacingPx) - (spacingPx / 2f)
-            if (draggedCenter.x >= otherLeft && draggedCenter.y >= otherTop) {
-                return draggedIndex
+        // Special handling for rows with a single pinned item alongside "Other":
+        // In 5-item grid: Row 2 has Slot 4 (pinned) and Slot 5 (Other).
+        // Any drag hovering in Row 2 targets Slot 4 (the last pinned folder).
+        if (itemCount == 5) {
+            val row2Top = 2 * (cardHeightPx + spacingPx) - (spacingPx / 2f)
+            if (draggedCenter.y >= row2Top) {
+                return 4
             }
-        } else if (itemCount in 2..3) {
-            // "Other" is at Row 1, Col 1 (Slot 3)
-            val otherLeft = cardWidthPx + (spacingPx / 2f)
-            val otherTop = cardHeightPx + (spacingPx / 2f)
-            if (draggedCenter.x >= otherLeft && draggedCenter.y >= otherTop) {
-                return draggedIndex
-            }
-            // Dragging down into non-existent Row 2 is invalid
+        } else if (itemCount == 4) {
+            // In 4-item grid: Row 0 has Slots 0, 1; Row 1 has Slots 2, 3; Row 2 has only "Other".
+            // Dragging down into Row 2 (where only Other sits) is invalid.
             val row2Top = 2 * (cardHeightPx + spacingPx) - (spacingPx / 2f)
             if (draggedCenter.y >= row2Top) {
                 return draggedIndex
             }
-        }
-
-        // If only 2 pinned items exist (both in Row 0), dragging down into Row 1 is invalid
-        if (itemCount == 2) {
+        } else if (itemCount == 3) {
+            // In 3-item grid: Row 1 has Slot 2 (pinned) and Slot 3 (Other).
+            // Any drag hovering in Row 1 targets Slot 2.
+            val row1Top = cardHeightPx + (spacingPx / 2f)
+            val row2Top = 2 * (cardHeightPx + spacingPx) - (spacingPx / 2f)
+            if (draggedCenter.y >= row1Top && draggedCenter.y < row2Top) {
+                return 2
+            }
+            if (draggedCenter.y >= row2Top) {
+                return draggedIndex
+            }
+        } else if (itemCount == 2) {
+            // If only 2 pinned items exist (both in Row 0), dragging down into Row 1 is invalid
             val row1Top = cardHeightPx + (spacingPx / 2f)
             if (draggedCenter.y >= row1Top) {
                 return draggedIndex

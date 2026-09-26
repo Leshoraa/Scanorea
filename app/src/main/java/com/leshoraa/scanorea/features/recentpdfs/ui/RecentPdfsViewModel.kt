@@ -20,7 +20,7 @@ import java.io.File
 data class RecentPdfsUiState(
     val recentPdfs: List<RecentPdf> = emptyList(),
     val categories: List<String> = emptyList(),
-    val pinnedFolders: List<String> = listOf("Favorites", "Work", "Study"),
+    val pinnedFolders: List<String> = RecentPdfsRepository.DEFAULT_PINNED_FOLDERS,
     val isLoading: Boolean = false
 )
 

@@ -38,6 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import com.leshoraa.scanorea.features.recentpdfs.data.RecentPdfsRepository
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -84,7 +85,7 @@ sealed interface DocumentFilter {
 fun ResultsScreen(
     recentPdfs: List<RecentPdf>,
     categories: List<String>,
-    pinnedFolders: List<String> = listOf("Favorites", "Work", "Study"),
+    pinnedFolders: List<String> = RecentPdfsRepository.DEFAULT_PINNED_FOLDERS,
     onTogglePinFolder: (String) -> Unit = {},
     onPdfClick: (File) -> Unit,
     onShareClick: (File) -> Unit,

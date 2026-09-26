@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,11 +37,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -48,7 +50,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -88,146 +89,115 @@ fun FolderGridSection(
     val density = LocalDensity.current
 
     var draggedIndex by remember { mutableIntStateOf(-1) }
+    var targetDropIndex by remember { mutableIntStateOf(-1) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
-    var cardWidthPx by remember { mutableFloatStateOf(0f) }
-    var cardHeightPx by remember { mutableFloatStateOf(0f) }
-    val spacingPx = with(density) { 10.dp.toPx() }
+    var isReorderCommitted by remember { mutableStateOf(false) }
 
-    val targetDropIndex = remember(draggedIndex, dragOffset, cardWidthPx, cardHeightPx, activePinned.size) {
-        FolderGridDragCalculator.determineTargetDropIndex(
-            draggedIndex = draggedIndex,
-            dragOffset = dragOffset,
-            cardWidthPx = cardWidthPx,
-            cardHeightPx = cardHeightPx,
-            spacingPx = spacingPx,
-            itemCount = activePinned.size
-        )
-    }
-
-    var previousTargetIndex by remember { mutableIntStateOf(-1) }
-    LaunchedEffect(targetDropIndex) {
-        if (targetDropIndex != -1 && targetDropIndex != previousTargetIndex && draggedIndex != -1 && targetDropIndex != draggedIndex) {
-            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+    LaunchedEffect(isReorderCommitted) {
+        if (isReorderCommitted) {
+            delay(400)
+            isReorderCommitted = false
         }
-        previousTargetIndex = targetDropIndex
     }
 
-    val handleEndDrag: () -> Unit = {
-        if (draggedIndex in activePinned.indices && targetDropIndex in activePinned.indices && targetDropIndex != draggedIndex) {
-            val reordered = FolderGridDragCalculator.reorderList(activePinned, draggedIndex, targetDropIndex)
-            val fullList = reordered + localPinnedFolders.drop(activePinned.size)
-            localPinnedFolders = fullList
-            onReorderPinnedFolders(fullList)
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        }
-        draggedIndex = -1
-        dragOffset = Offset.Zero
-        previousTargetIndex = -1
-    }
+    val currentActivePinned by rememberUpdatedState(activePinned)
+    val currentLocalPinnedFolders by rememberUpdatedState(localPinnedFolders)
+    val currentOnReorderPinnedFolders by rememberUpdatedState(onReorderPinnedFolders)
 
-    val handleCancelDrag: () -> Unit = {
-        draggedIndex = -1
-        dragOffset = Offset.Zero
-        previousTargetIndex = -1
-    }
-
-    val isAnyDragging = draggedIndex != -1
-
-    Column(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
-        // Row 1: Slots 0 & 1 (or Slot 0 + Other if only 1 item, or Other + Spacer if 0 items)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            val firstFolder = activePinned.getOrNull(0)
-            if (firstFolder != null) {
-                PinnedFolderGridCard(
-                    slotIndex = 0,
-                    folderName = firstFolder,
-                    favoriteCount = favoriteCount,
-                    recentPdfs = recentPdfs,
-                    currentFilter = currentFilter,
-                    onSelectFilter = onSelectFilter,
-                    onRenameFolder = onRenameFolder,
-                    onDeleteFolder = onDeleteFolder,
-                    activePinnedSize = activePinned.size,
-                    draggedIndex = draggedIndex,
-                    targetDropIndex = targetDropIndex,
-                    dragOffset = dragOffset,
-                    cardWidthPx = cardWidthPx,
-                    cardHeightPx = cardHeightPx,
-                    spacingPx = spacingPx,
-                    isAnyItemDragging = isAnyDragging,
-                    onStartDrag = { idx -> draggedIndex = idx; dragOffset = Offset.Zero },
-                    onDragDelta = { delta -> dragOffset += delta },
-                    onEndDrag = handleEndDrag,
-                    onCancelDrag = handleCancelDrag,
-                    onCardPositioned = { w, h -> cardWidthPx = w; cardHeightPx = h },
-                    modifier = Modifier.weight(1f)
-                )
-            } else {
-                OtherFolderCard(
-                    totalFoldersCount = totalFoldersCount,
-                    isAnyItemDragging = isAnyDragging,
-                    onClick = onOpenAllFolders,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+        val spacingPx = with(density) { 10.dp.toPx() }
+        val cardHeightPx = with(density) { 64.dp.toPx() }
+        val totalWidthPx = constraints.maxWidth.toFloat()
+        val cardWidthPx = ((totalWidthPx - spacingPx) / 2f).coerceAtLeast(1f)
 
-            val secondFolder = activePinned.getOrNull(1)
-            if (secondFolder != null) {
-                PinnedFolderGridCard(
-                    slotIndex = 1,
-                    folderName = secondFolder,
-                    favoriteCount = favoriteCount,
-                    recentPdfs = recentPdfs,
-                    currentFilter = currentFilter,
-                    onSelectFilter = onSelectFilter,
-                    onRenameFolder = onRenameFolder,
-                    onDeleteFolder = onDeleteFolder,
-                    activePinnedSize = activePinned.size,
-                    draggedIndex = draggedIndex,
-                    targetDropIndex = targetDropIndex,
-                    dragOffset = dragOffset,
-                    cardWidthPx = cardWidthPx,
-                    cardHeightPx = cardHeightPx,
-                    spacingPx = spacingPx,
-                    isAnyItemDragging = isAnyDragging,
-                    onStartDrag = { idx -> draggedIndex = idx; dragOffset = Offset.Zero },
-                    onDragDelta = { delta -> dragOffset += delta },
-                    onEndDrag = handleEndDrag,
-                    onCancelDrag = handleCancelDrag,
-                    onCardPositioned = { w, h -> cardWidthPx = w; cardHeightPx = h },
-                    modifier = Modifier.weight(1f)
-                )
-            } else if (firstFolder != null) {
-                OtherFolderCard(
-                    totalFoldersCount = totalFoldersCount,
-                    isAnyItemDragging = isAnyDragging,
-                    onClick = onOpenAllFolders,
-                    modifier = Modifier.weight(1f)
-                )
-            } else {
-                Spacer(modifier = Modifier.weight(1f))
+        val handleStartDrag: (Int) -> Unit = remember {
+            { index ->
+                isReorderCommitted = false
+                draggedIndex = index
+                targetDropIndex = index
+                dragOffset = Offset.Zero
             }
         }
 
-        // When 2 or 3 items: 2 rows layout
-        if (activePinned.size in 2..3) {
+        val handleDragDelta: (Offset) -> Unit = remember(cardWidthPx, cardHeightPx, spacingPx) {
+            { delta ->
+                dragOffset += delta
+                val newTarget = FolderGridDragCalculator.determineTargetDropIndex(
+                    draggedIndex = draggedIndex,
+                    dragOffset = dragOffset,
+                    cardWidthPx = cardWidthPx,
+                    cardHeightPx = cardHeightPx,
+                    spacingPx = spacingPx,
+                    itemCount = currentActivePinned.size
+                )
+                if (newTarget != targetDropIndex && newTarget in currentActivePinned.indices) {
+                    targetDropIndex = newTarget
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                }
+            }
+        }
+
+        val handleEndDrag: () -> Unit = remember(cardWidthPx, cardHeightPx, spacingPx) {
+            {
+                val currentDragged = draggedIndex
+                val finalTarget = FolderGridDragCalculator.determineTargetDropIndex(
+                    draggedIndex = currentDragged,
+                    dragOffset = dragOffset,
+                    cardWidthPx = cardWidthPx,
+                    cardHeightPx = cardHeightPx,
+                    spacingPx = spacingPx,
+                    itemCount = currentActivePinned.size
+                )
+
+                if (currentDragged in currentActivePinned.indices &&
+                    finalTarget in currentActivePinned.indices &&
+                    finalTarget != currentDragged
+                ) {
+                    val reordered = FolderGridDragCalculator.reorderList(currentActivePinned, currentDragged, finalTarget)
+                    val fullList = reordered + currentLocalPinnedFolders.drop(currentActivePinned.size)
+                    isReorderCommitted = true
+                    localPinnedFolders = fullList
+                    currentOnReorderPinnedFolders(fullList)
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                } else {
+                    isReorderCommitted = false
+                }
+                draggedIndex = -1
+                targetDropIndex = -1
+                dragOffset = Offset.Zero
+            }
+        }
+
+        val handleCancelDrag: () -> Unit = remember {
+            {
+                isReorderCommitted = false
+                draggedIndex = -1
+                targetDropIndex = -1
+                dragOffset = Offset.Zero
+            }
+        }
+
+        val isAnyDragging = draggedIndex != -1
+        val dragOffsetProvider = remember { { dragOffset } }
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // Row 1: Slots 0 & 1 (or Slot 0 + Other if only 1 item, or Other + Spacer if 0 items)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                val thirdFolder = activePinned.getOrNull(2)
-                if (thirdFolder != null) {
+                val firstFolder = activePinned.getOrNull(0)
+                if (firstFolder != null) {
                     PinnedFolderGridCard(
-                        slotIndex = 2,
-                        folderName = thirdFolder,
+                        slotIndex = 0,
+                        folderName = firstFolder,
                         favoriteCount = favoriteCount,
                         recentPdfs = recentPdfs,
                         currentFilter = currentFilter,
@@ -237,133 +207,213 @@ fun FolderGridSection(
                         activePinnedSize = activePinned.size,
                         draggedIndex = draggedIndex,
                         targetDropIndex = targetDropIndex,
-                        dragOffset = dragOffset,
+                        dragOffsetProvider = dragOffsetProvider,
                         cardWidthPx = cardWidthPx,
                         cardHeightPx = cardHeightPx,
                         spacingPx = spacingPx,
                         isAnyItemDragging = isAnyDragging,
-                        onStartDrag = { idx -> draggedIndex = idx; dragOffset = Offset.Zero },
-                        onDragDelta = { delta -> dragOffset += delta },
+                        isReorderCommitted = isReorderCommitted,
+                        onStartDrag = handleStartDrag,
+                        onDragDelta = handleDragDelta,
                         onEndDrag = handleEndDrag,
                         onCancelDrag = handleCancelDrag,
-                        onCardPositioned = { w, h -> cardWidthPx = w; cardHeightPx = h },
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    OtherFolderCard(
+                        totalFoldersCount = totalFoldersCount,
+                        isAnyItemDragging = isAnyDragging,
+                        onClick = onOpenAllFolders,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                val secondFolder = activePinned.getOrNull(1)
+                if (secondFolder != null) {
+                    PinnedFolderGridCard(
+                        slotIndex = 1,
+                        folderName = secondFolder,
+                        favoriteCount = favoriteCount,
+                        recentPdfs = recentPdfs,
+                        currentFilter = currentFilter,
+                        onSelectFilter = onSelectFilter,
+                        onRenameFolder = onRenameFolder,
+                        onDeleteFolder = onDeleteFolder,
+                        activePinnedSize = activePinned.size,
+                        draggedIndex = draggedIndex,
+                        targetDropIndex = targetDropIndex,
+                        dragOffsetProvider = dragOffsetProvider,
+                        cardWidthPx = cardWidthPx,
+                        cardHeightPx = cardHeightPx,
+                        spacingPx = spacingPx,
+                        isAnyItemDragging = isAnyDragging,
+                        isReorderCommitted = isReorderCommitted,
+                        onStartDrag = handleStartDrag,
+                        onDragDelta = handleDragDelta,
+                        onEndDrag = handleEndDrag,
+                        onCancelDrag = handleCancelDrag,
+                        modifier = Modifier.weight(1f)
+                    )
+                } else if (firstFolder != null) {
+                    OtherFolderCard(
+                        totalFoldersCount = totalFoldersCount,
+                        isAnyItemDragging = isAnyDragging,
+                        onClick = onOpenAllFolders,
                         modifier = Modifier.weight(1f)
                     )
                 } else {
                     Spacer(modifier = Modifier.weight(1f))
                 }
-
-                OtherFolderCard(
-                    totalFoldersCount = totalFoldersCount,
-                    isAnyItemDragging = isAnyDragging,
-                    onClick = onOpenAllFolders,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-        } else if (activePinned.size >= 4) {
-            // Row 2: Slots 2 & 3
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                val thirdFolder = activePinned.getOrNull(2)
-                if (thirdFolder != null) {
-                    PinnedFolderGridCard(
-                        slotIndex = 2,
-                        folderName = thirdFolder,
-                        favoriteCount = favoriteCount,
-                        recentPdfs = recentPdfs,
-                        currentFilter = currentFilter,
-                        onSelectFilter = onSelectFilter,
-                        onRenameFolder = onRenameFolder,
-                        onDeleteFolder = onDeleteFolder,
-                        activePinnedSize = activePinned.size,
-                        draggedIndex = draggedIndex,
-                        targetDropIndex = targetDropIndex,
-                        dragOffset = dragOffset,
-                        cardWidthPx = cardWidthPx,
-                        cardHeightPx = cardHeightPx,
-                        spacingPx = spacingPx,
-                        isAnyItemDragging = isAnyDragging,
-                        onStartDrag = { idx -> draggedIndex = idx; dragOffset = Offset.Zero },
-                        onDragDelta = { delta -> dragOffset += delta },
-                        onEndDrag = handleEndDrag,
-                        onCancelDrag = handleCancelDrag,
-                        onCardPositioned = { w, h -> cardWidthPx = w; cardHeightPx = h },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                val fourthFolder = activePinned.getOrNull(3)
-                if (fourthFolder != null) {
-                    PinnedFolderGridCard(
-                        slotIndex = 3,
-                        folderName = fourthFolder,
-                        favoriteCount = favoriteCount,
-                        recentPdfs = recentPdfs,
-                        currentFilter = currentFilter,
-                        onSelectFilter = onSelectFilter,
-                        onRenameFolder = onRenameFolder,
-                        onDeleteFolder = onDeleteFolder,
-                        activePinnedSize = activePinned.size,
-                        draggedIndex = draggedIndex,
-                        targetDropIndex = targetDropIndex,
-                        dragOffset = dragOffset,
-                        cardWidthPx = cardWidthPx,
-                        cardHeightPx = cardHeightPx,
-                        spacingPx = spacingPx,
-                        isAnyItemDragging = isAnyDragging,
-                        onStartDrag = { idx -> draggedIndex = idx; dragOffset = Offset.Zero },
-                        onDragDelta = { delta -> dragOffset += delta },
-                        onEndDrag = handleEndDrag,
-                        onCancelDrag = handleCancelDrag,
-                        onCardPositioned = { w, h -> cardWidthPx = w; cardHeightPx = h },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
             }
 
-            // Row 3: Slot 4 & Other (Slot 5)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                val fifthFolder = activePinned.getOrNull(4)
-                if (fifthFolder != null) {
-                    PinnedFolderGridCard(
-                        slotIndex = 4,
-                        folderName = fifthFolder,
-                        favoriteCount = favoriteCount,
-                        recentPdfs = recentPdfs,
-                        currentFilter = currentFilter,
-                        onSelectFilter = onSelectFilter,
-                        onRenameFolder = onRenameFolder,
-                        onDeleteFolder = onDeleteFolder,
-                        activePinnedSize = activePinned.size,
-                        draggedIndex = draggedIndex,
-                        targetDropIndex = targetDropIndex,
-                        dragOffset = dragOffset,
-                        cardWidthPx = cardWidthPx,
-                        cardHeightPx = cardHeightPx,
-                        spacingPx = spacingPx,
+            // When 2 or 3 items: 2 rows layout
+            if (activePinned.size in 2..3) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val thirdFolder = activePinned.getOrNull(2)
+                    if (thirdFolder != null) {
+                        PinnedFolderGridCard(
+                            slotIndex = 2,
+                            folderName = thirdFolder,
+                            favoriteCount = favoriteCount,
+                            recentPdfs = recentPdfs,
+                            currentFilter = currentFilter,
+                            onSelectFilter = onSelectFilter,
+                            onRenameFolder = onRenameFolder,
+                            onDeleteFolder = onDeleteFolder,
+                            activePinnedSize = activePinned.size,
+                            draggedIndex = draggedIndex,
+                            targetDropIndex = targetDropIndex,
+                            dragOffsetProvider = dragOffsetProvider,
+                            cardWidthPx = cardWidthPx,
+                            cardHeightPx = cardHeightPx,
+                            spacingPx = spacingPx,
+                            isAnyItemDragging = isAnyDragging,
+                            isReorderCommitted = isReorderCommitted,
+                            onStartDrag = handleStartDrag,
+                            onDragDelta = handleDragDelta,
+                            onEndDrag = handleEndDrag,
+                            onCancelDrag = handleCancelDrag,
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+
+                    OtherFolderCard(
+                        totalFoldersCount = totalFoldersCount,
                         isAnyItemDragging = isAnyDragging,
-                        onStartDrag = { idx -> draggedIndex = idx; dragOffset = Offset.Zero },
-                        onDragDelta = { delta -> dragOffset += delta },
-                        onEndDrag = handleEndDrag,
-                        onCancelDrag = handleCancelDrag,
-                        onCardPositioned = { w, h -> cardWidthPx = w; cardHeightPx = h },
+                        onClick = onOpenAllFolders,
                         modifier = Modifier.weight(1f)
                     )
-                } else {
-                    Spacer(modifier = Modifier.weight(1f))
+                }
+            } else if (activePinned.size >= 4) {
+                // Row 2: Slots 2 & 3
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val thirdFolder = activePinned.getOrNull(2)
+                    if (thirdFolder != null) {
+                        PinnedFolderGridCard(
+                            slotIndex = 2,
+                            folderName = thirdFolder,
+                            favoriteCount = favoriteCount,
+                            recentPdfs = recentPdfs,
+                            currentFilter = currentFilter,
+                            onSelectFilter = onSelectFilter,
+                            onRenameFolder = onRenameFolder,
+                            onDeleteFolder = onDeleteFolder,
+                            activePinnedSize = activePinned.size,
+                            draggedIndex = draggedIndex,
+                            targetDropIndex = targetDropIndex,
+                            dragOffsetProvider = dragOffsetProvider,
+                            cardWidthPx = cardWidthPx,
+                            cardHeightPx = cardHeightPx,
+                            spacingPx = spacingPx,
+                            isAnyItemDragging = isAnyDragging,
+                            isReorderCommitted = isReorderCommitted,
+                            onStartDrag = handleStartDrag,
+                            onDragDelta = handleDragDelta,
+                            onEndDrag = handleEndDrag,
+                            onCancelDrag = handleCancelDrag,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    val fourthFolder = activePinned.getOrNull(3)
+                    if (fourthFolder != null) {
+                        PinnedFolderGridCard(
+                            slotIndex = 3,
+                            folderName = fourthFolder,
+                            favoriteCount = favoriteCount,
+                            recentPdfs = recentPdfs,
+                            currentFilter = currentFilter,
+                            onSelectFilter = onSelectFilter,
+                            onRenameFolder = onRenameFolder,
+                            onDeleteFolder = onDeleteFolder,
+                            activePinnedSize = activePinned.size,
+                            draggedIndex = draggedIndex,
+                            targetDropIndex = targetDropIndex,
+                            dragOffsetProvider = dragOffsetProvider,
+                            cardWidthPx = cardWidthPx,
+                            cardHeightPx = cardHeightPx,
+                            spacingPx = spacingPx,
+                            isAnyItemDragging = isAnyDragging,
+                            isReorderCommitted = isReorderCommitted,
+                            onStartDrag = handleStartDrag,
+                            onDragDelta = handleDragDelta,
+                            onEndDrag = handleEndDrag,
+                            onCancelDrag = handleCancelDrag,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
 
-                OtherFolderCard(
-                    totalFoldersCount = totalFoldersCount,
-                    isAnyItemDragging = isAnyDragging,
-                    onClick = onOpenAllFolders,
-                    modifier = Modifier.weight(1f)
-                )
+                // Row 3: Slot 4 & Other (Slot 5)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val fifthFolder = activePinned.getOrNull(4)
+                    if (fifthFolder != null) {
+                        PinnedFolderGridCard(
+                            slotIndex = 4,
+                            folderName = fifthFolder,
+                            favoriteCount = favoriteCount,
+                            recentPdfs = recentPdfs,
+                            currentFilter = currentFilter,
+                            onSelectFilter = onSelectFilter,
+                            onRenameFolder = onRenameFolder,
+                            onDeleteFolder = onDeleteFolder,
+                            activePinnedSize = activePinned.size,
+                            draggedIndex = draggedIndex,
+                            targetDropIndex = targetDropIndex,
+                            dragOffsetProvider = dragOffsetProvider,
+                            cardWidthPx = cardWidthPx,
+                            cardHeightPx = cardHeightPx,
+                            spacingPx = spacingPx,
+                            isAnyItemDragging = isAnyDragging,
+                            isReorderCommitted = isReorderCommitted,
+                            onStartDrag = handleStartDrag,
+                            onDragDelta = handleDragDelta,
+                            onEndDrag = handleEndDrag,
+                            onCancelDrag = handleCancelDrag,
+                            modifier = Modifier.weight(1f)
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+
+                    OtherFolderCard(
+                        totalFoldersCount = totalFoldersCount,
+                        isAnyItemDragging = isAnyDragging,
+                        onClick = onOpenAllFolders,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }
@@ -386,16 +436,16 @@ private fun PinnedFolderGridCard(
     activePinnedSize: Int,
     draggedIndex: Int,
     targetDropIndex: Int,
-    dragOffset: Offset,
+    dragOffsetProvider: () -> Offset,
     cardWidthPx: Float,
     cardHeightPx: Float,
     spacingPx: Float,
     isAnyItemDragging: Boolean,
+    isReorderCommitted: Boolean = false,
     onStartDrag: (Int) -> Unit,
     onDragDelta: (Offset) -> Unit,
     onEndDrag: () -> Unit,
     onCancelDrag: () -> Unit,
-    onCardPositioned: (Float, Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val targetSlot = FolderGridDragCalculator.calculateTargetSlot(slotIndex, draggedIndex, targetDropIndex)
@@ -403,17 +453,17 @@ private fun PinnedFolderGridCard(
     val isCurrentDragging = draggedIndex == slotIndex
 
     val animatedShiftX by animateFloatAsState(
-        targetValue = if (isCurrentDragging) 0f else shift.x,
+        targetValue = if (isCurrentDragging || isReorderCommitted) 0f else shift.x,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
+            dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMediumLow
         ),
         label = "folderShiftX_$slotIndex"
     )
     val animatedShiftY by animateFloatAsState(
-        targetValue = if (isCurrentDragging) 0f else shift.y,
+        targetValue = if (isCurrentDragging || isReorderCommitted) 0f else shift.y,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
+            dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMediumLow
         ),
         label = "folderShiftY_$slotIndex"
@@ -430,14 +480,14 @@ private fun PinnedFolderGridCard(
         onDelete = { onDeleteFolder(folderName) },
         isDraggable = activePinnedSize > 1,
         isDragging = isCurrentDragging,
-        dragOffset = if (isCurrentDragging) dragOffset else Offset.Zero,
+        dragOffsetProvider = dragOffsetProvider,
         animatedShift = Offset(animatedShiftX, animatedShiftY),
         isAnyItemDragging = isAnyItemDragging,
+        isReorderCommitted = isReorderCommitted,
         onStartDrag = { onStartDrag(slotIndex) },
         onDragDelta = onDragDelta,
         onEndDrag = onEndDrag,
         onCancelDrag = onCancelDrag,
-        onCardPositioned = onCardPositioned,
         modifier = modifier
     )
 }
@@ -480,15 +530,20 @@ private fun FolderGridCard(
     onDelete: (() -> Unit)? = null,
     isDraggable: Boolean = false,
     isDragging: Boolean = false,
-    dragOffset: Offset = Offset.Zero,
+    dragOffsetProvider: () -> Offset = { Offset.Zero },
     animatedShift: Offset = Offset.Zero,
     isAnyItemDragging: Boolean = false,
+    isReorderCommitted: Boolean = false,
     onStartDrag: () -> Unit = {},
     onDragDelta: (Offset) -> Unit = {},
     onEndDrag: () -> Unit = {},
-    onCancelDrag: () -> Unit = {},
-    onCardPositioned: (width: Float, height: Float) -> Unit = { _, _ -> }
+    onCancelDrag: () -> Unit = {}
 ) {
+    val currentOnStartDrag by rememberUpdatedState(onStartDrag)
+    val currentOnDragDelta by rememberUpdatedState(onDragDelta)
+    val currentOnEndDrag by rememberUpdatedState(onEndDrag)
+    val currentOnCancelDrag by rememberUpdatedState(onCancelDrag)
+
     val containerColor = when {
         isDragging -> MaterialTheme.colorScheme.primaryContainer
         isSelected -> MaterialTheme.colorScheme.primary
@@ -501,7 +556,7 @@ private fun FolderGridCard(
         else -> MaterialTheme.colorScheme.onSurface
     }
 
-    val isShifted = animatedShift.x != 0f || animatedShift.y != 0f
+    val isShifted = !isReorderCommitted && (animatedShift.x != 0f || animatedShift.y != 0f)
     val borderStroke = when {
         isDragging -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
         else -> null
@@ -518,9 +573,6 @@ private fun FolderGridCard(
         tonalElevation = 0.dp,
         modifier = modifier
             .height(64.dp)
-            .onGloballyPositioned { coordinates ->
-                onCardPositioned(coordinates.size.width.toFloat(), coordinates.size.height.toFloat())
-            }
             .zIndex(
                 when {
                     isDragging -> 30f
@@ -530,32 +582,42 @@ private fun FolderGridCard(
             )
             .graphicsLayer {
                 if (isDragging) {
-                    translationX = dragOffset.x
-                    translationY = dragOffset.y
+                    val offset = dragOffsetProvider()
+                    translationX = offset.x
+                    translationY = offset.y
                     scaleX = 1.04f
                     scaleY = 1.04f
                     shadowElevation = 8.dp.toPx()
-                } else {
+                } else if (!isReorderCommitted) {
                     translationX = animatedShift.x
                     translationY = animatedShift.y
+                    scaleX = 1f
+                    scaleY = 1f
+                } else {
+                    translationX = 0f
+                    translationY = 0f
                     scaleX = 1f
                     scaleY = 1f
                 }
             }
             .then(
                 if (isDraggable) {
-                    Modifier.pointerInput(title) {
+                    Modifier.pointerInput(Unit) {
                         detectDragGesturesAfterLongPress(
                             onDragStart = {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onStartDrag()
+                                currentOnStartDrag()
                             },
                             onDrag = { change, dragAmount ->
                                 change.consume()
-                                onDragDelta(dragAmount)
+                                currentOnDragDelta(dragAmount)
                             },
-                            onDragEnd = { onEndDrag() },
-                            onDragCancel = { onCancelDrag() }
+                            onDragEnd = {
+                                currentOnEndDrag()
+                            },
+                            onDragCancel = {
+                                currentOnCancelDrag()
+                            }
                         )
                     }
                 } else {
