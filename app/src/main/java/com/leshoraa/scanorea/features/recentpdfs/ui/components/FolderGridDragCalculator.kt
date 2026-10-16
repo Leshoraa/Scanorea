@@ -91,53 +91,28 @@ object FolderGridDragCalculator {
 
         val draggedCenter = calculateSlotCenter(draggedIndex, cardWidthPx, cardHeightPx, spacingPx) + dragOffset
 
-        // If outside overall bounding box, abort reorder preview
+        // If outside overall bounding box, abort reorder preview and revert to original slot
         if (isOutsideDropZone(draggedCenter, cardWidthPx, cardHeightPx, spacingPx, itemCount)) {
             return draggedIndex
         }
 
-        // Special handling for rows with a single pinned item alongside "Other":
-        // In 5-item grid: Row 2 has Slot 4 (pinned) and Slot 5 (Other).
-        // Any drag hovering in Row 2 targets Slot 4 (the last pinned folder).
-        if (itemCount == MAX_PINNED_CAPACITY) {
-            val row2Top = 2 * (cardHeightPx + spacingPx) - (spacingPx / 2f)
-            if (draggedCenter.y >= row2Top) {
-                return 4
-            }
-        } else if (itemCount == 4) {
-            // In 4-item grid: Row 0 has Slots 0, 1; Row 1 has Slots 2, 3; Row 2 has only "Other".
-            // Dragging down into Row 2 (where only Other sits) is invalid.
-            val row2Top = 2 * (cardHeightPx + spacingPx) - (spacingPx / 2f)
-            if (draggedCenter.y >= row2Top) {
-                return draggedIndex
-            }
-        } else if (itemCount == 3) {
-            // In 3-item grid: Row 1 has Slot 2 (pinned) and Slot 3 (Other).
-            // Any drag hovering in Row 1 targets Slot 2.
-            val row1Top = cardHeightPx + (spacingPx / 2f)
-            val row2Top = 2 * (cardHeightPx + spacingPx) - (spacingPx / 2f)
-            if (draggedCenter.y >= row1Top && draggedCenter.y < row2Top) {
-                return 2
-            }
-            if (draggedCenter.y >= row2Top) {
-                return draggedIndex
-            }
-        } else if (itemCount == 2) {
-            // If only 2 pinned items exist (both in Row 0), dragging down into Row 1 is invalid
-            val row1Top = cardHeightPx + (spacingPx / 2f)
-            if (draggedCenter.y >= row1Top) {
-                return draggedIndex
-            }
+        // Determine target column based on horizontal midpoint between columns
+        val colMidpoint = cardWidthPx + (spacingPx / 2f)
+        val col = if (draggedCenter.x < colMidpoint) 0 else 1
+
+        // Determine target row based on vertical midpoints between rows
+        val row01Midpoint = cardHeightPx + (spacingPx / 2f)
+        val row12Midpoint = 2 * (cardHeightPx + spacingPx) - (spacingPx / 2f)
+        val row = when {
+            draggedCenter.y < row01Midpoint -> 0
+            draggedCenter.y < row12Midpoint -> 1
+            else -> 2
         }
 
-        // Find the nearest valid pinned folder slot
-        val validSlots = 0 until itemCount.coerceAtMost(MAX_PINNED_CAPACITY)
-        return validSlots.minByOrNull { slot ->
-            val slotCenter = calculateSlotCenter(slot, cardWidthPx, cardHeightPx, spacingPx)
-            val dx = draggedCenter.x - slotCenter.x
-            val dy = draggedCenter.y - slotCenter.y
-            dx * dx + dy * dy
-        } ?: draggedIndex
+        // Map 2D cell coordinate to linear prospective slot and clamp to valid pinned item range
+        val prospectiveSlot = row * GRID_COLUMNS + col
+        val maxSlot = (itemCount - 1).coerceAtLeast(0)
+        return prospectiveSlot.coerceIn(0, maxSlot)
     }
 
     /**

@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -96,7 +96,7 @@ fun BoxScope.EditorCanvasBadges(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Icon(
-                    imageVector = Icons.Outlined.Close,
+                    imageVector = Icons.Filled.Close,
                     contentDescription = "Reset Zoom",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(13.dp)

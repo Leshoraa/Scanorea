@@ -28,6 +28,7 @@ import com.leshoraa.scanorea.features.imagestopdf.domain.repository.PdfConversio
 import com.leshoraa.scanorea.features.presets.data.PresetRepository
 import com.leshoraa.scanorea.features.presets.domain.TemplateDateEvaluator
 import com.leshoraa.scanorea.features.presets.domain.model.ConversionPreset
+import com.leshoraa.scanorea.features.recentpdfs.data.PdfThumbnailLoader
 import com.leshoraa.scanorea.features.recentpdfs.data.RecentPdfsRepository
 import com.leshoraa.scanorea.features.settings.data.SettingsRepository
 import kotlinx.coroutines.Dispatchers
@@ -587,6 +588,7 @@ class ImagesToPdfViewModel(
                         if (chosenFolders.isNotEmpty() && recentPdfsRepository != null) {
                             recentPdfsRepository.updatePdfFolders(result.data.file, chosenFolders)
                         }
+                        PdfThumbnailLoader.pregenerateThumbnail(result.data.file)
                         _uiState.update {
                             it.copy(
                                 isConverting = false,

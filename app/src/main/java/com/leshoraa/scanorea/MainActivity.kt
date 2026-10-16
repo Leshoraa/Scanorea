@@ -31,6 +31,7 @@ class MainActivity : ComponentActivity() {
 
         lastThemePalette = getSystemThemePalette()
         registerThemeObserver()
+        com.leshoraa.scanorea.features.recentpdfs.data.PdfThumbnailLoader.initCacheDir(cacheDir)
 
         setContent {
             ScanoreaTheme {

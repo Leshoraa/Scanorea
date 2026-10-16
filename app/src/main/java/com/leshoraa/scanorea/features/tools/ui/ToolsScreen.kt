@@ -16,9 +16,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
-import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.FileOpen
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -77,14 +77,14 @@ fun ToolsScreen(
             ToolCard(
                 title = "Preset Templates Manager",
                 description = "Configure naming formulas with dynamic date tokens like {DD:MM:YYYY}, paper size, and orientation.",
-                icon = Icons.Outlined.BookmarkBorder,
+                icon = Icons.Filled.Bookmark,
                 onClick = onPresetsClick
             )
 
             ToolCard(
                 title = "Open Any PDF Document",
                 description = "Pick and view any PDF from your device in Scanorea's full-screen native reader with print and sharing.",
-                icon = Icons.Outlined.FileOpen,
+                icon = Icons.Filled.FileOpen,
                 onClick = onOpenPdfClick
             )
         }
@@ -148,7 +148,7 @@ private fun ToolCard(
             Spacer(modifier = Modifier.width(8.dp))
 
             Icon(
-                imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.size(16.dp)

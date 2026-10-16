@@ -159,7 +159,7 @@ class FolderGridDragCalculatorTest {
         )
         assertEquals(4, target5)
 
-        // For 4 items: Row 2 has only "Other" and no pinned items. Dragging into Row 2 reverts to draggedIndex
+        // For 4 items: Row 2 has "Other" and empty space. Dragging down towards Row 2 routes cleanly to the last pinned slot (Slot 3)
         val target4 = FolderGridDragCalculator.determineTargetDropIndex(
             draggedIndex = 0,
             dragOffset = Offset(110f, 140f),
@@ -168,12 +168,12 @@ class FolderGridDragCalculatorTest {
             spacingPx = spacing,
             itemCount = 4
         )
-        assertEquals(0, target4)
+        assertEquals(3, target4)
     }
 
     @Test
-    fun determineTargetDropIndex_withTwoItems_whenDraggedToRowTwo_revertsToDraggedIndex() {
-        // Only 2 items exist (row 0). Dragging down into row 1 should not swap
+    fun determineTargetDropIndex_withTwoItems_whenDraggedDownwards_routesToLastSlot() {
+        // Only 2 items exist (row 0). Dragging down into row 1 routes cleanly to slot 1
         val target = FolderGridDragCalculator.determineTargetDropIndex(
             draggedIndex = 0,
             dragOffset = Offset(0f, 70f),
@@ -182,7 +182,7 @@ class FolderGridDragCalculatorTest {
             spacingPx = spacing,
             itemCount = 2
         )
-        assertEquals(0, target)
+        assertEquals(1, target)
     }
 
     @Test

@@ -27,10 +27,9 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AddPhotoAlternate
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.automirrored.outlined.RotateRight
+import androidx.compose.material.icons.automirrored.filled.RotateRight
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -142,7 +141,7 @@ fun EditorPagesGridDialog(
 
                 IconButton(onClick = onDismissRequest) {
                     Icon(
-                        imageVector = Icons.Outlined.Close,
+                        imageVector = Icons.Filled.Close,
                         contentDescription = "Close",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -390,7 +389,7 @@ fun EditorPagesGridDialog(
                                             .size(26.dp)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Outlined.Close,
+                                            imageVector = Icons.Filled.Close,
                                             contentDescription = "Delete Page",
                                             modifier = Modifier.size(14.dp)
                                         )
@@ -427,7 +426,7 @@ fun EditorPagesGridDialog(
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
-                                            imageVector = Icons.Outlined.AddPhotoAlternate,
+                                            imageVector = Icons.Filled.AddPhotoAlternate,
                                             contentDescription = "Add page",
                                             tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(20.dp)
@@ -534,7 +533,7 @@ fun EditorPagesGridDialog(
                     )
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.RotateRight,
+                        imageVector = Icons.AutoMirrored.Filled.RotateRight,
                         contentDescription = "Rotate All",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)

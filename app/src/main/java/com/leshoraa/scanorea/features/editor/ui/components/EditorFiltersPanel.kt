@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -59,7 +59,7 @@ fun EditorFiltersPanel(
                 label = { Text("To All") },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.Check,
+                        imageVector = Icons.Filled.Check,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )

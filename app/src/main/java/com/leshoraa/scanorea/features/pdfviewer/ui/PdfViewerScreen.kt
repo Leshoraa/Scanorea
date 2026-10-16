@@ -25,8 +25,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -69,8 +69,8 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.outlined.ViewAgenda
-import androidx.compose.material.icons.outlined.ViewCarousel
+import androidx.compose.material.icons.filled.ViewAgenda
+import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
@@ -200,9 +200,9 @@ fun PdfViewerScreen(
                         ) {
                             Icon(
                                 imageVector = if (viewMode == PdfViewMode.PAGED) {
-                                    Icons.Outlined.ViewAgenda
+                                    Icons.Filled.ViewAgenda
                                 } else {
-                                    Icons.Outlined.ViewCarousel
+                                    Icons.Filled.ViewCarousel
                                 },
                                 contentDescription = if (viewMode == PdfViewMode.PAGED) {
                                     "Switch to Continuous Scroll"
@@ -219,7 +219,7 @@ fun PdfViewerScreen(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Download,
+                            imageVector = Icons.Filled.Download,
                             contentDescription = "Save to custom folder"
                         )
                     }
@@ -230,7 +230,7 @@ fun PdfViewerScreen(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Share,
+                            imageVector = Icons.Filled.Share,
                             contentDescription = "Share PDF"
                         )
                     }

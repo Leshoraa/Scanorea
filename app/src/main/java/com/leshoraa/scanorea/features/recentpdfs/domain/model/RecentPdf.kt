@@ -1,5 +1,6 @@
 package com.leshoraa.scanorea.features.recentpdfs.domain.model
 
+import androidx.compose.runtime.Immutable
 import java.io.File
 
 /**
@@ -7,6 +8,7 @@ import java.io.File
  * enriched with organization metadata (folders, favorite status, tags).
  * A document can belong to multiple folders simultaneously.
  */
+@Immutable
 data class RecentPdf(
     val file: File,
     val name: String,

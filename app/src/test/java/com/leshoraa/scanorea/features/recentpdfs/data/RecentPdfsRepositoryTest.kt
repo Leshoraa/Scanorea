@@ -25,7 +25,7 @@ class RecentPdfsRepositoryTest {
         val dummyContext = object : ContextWrapper(null) {
             override fun getFilesDir(): File = File("/tmp")
         }
-        repository = RecentPdfsRepository(dummyContext, fakePrefs)
+        repository = RecentPdfsRepository(dummyContext, fakePrefs, database = null)
     }
 
     @Test

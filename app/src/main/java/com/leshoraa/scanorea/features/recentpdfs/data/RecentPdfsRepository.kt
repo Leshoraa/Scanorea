@@ -4,20 +4,31 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
+import com.leshoraa.scanorea.features.recentpdfs.data.db.CategoryEntity
+import com.leshoraa.scanorea.features.recentpdfs.data.db.PinnedFolderEntity
+import com.leshoraa.scanorea.features.recentpdfs.data.db.RecentPdfEntity
+import com.leshoraa.scanorea.features.recentpdfs.data.db.ScanoreaDatabase
 import com.leshoraa.scanorea.features.recentpdfs.domain.model.RecentPdf
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Deep repository responsible for discovering, managing, and organizing
  * generated PDF documents with categories/folders, favorites, and tags.
+ *
+ * Backed by a high-performance indexed Room Database with fallback to
+ * SharedPreferences for environment resilience.
  */
 class RecentPdfsRepository(
     private val context: Context,
-    private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE),
+    private val database: ScanoreaDatabase? = runCatching { ScanoreaDatabase.getInstance(context) }.getOrNull()
 ) {
 
     companion object {
@@ -32,12 +43,70 @@ class RecentPdfsRepository(
         val DEFAULT_PINNED_FOLDERS = listOf("Favorites", "Work", "Study", "Personal", "Projects")
     }
 
-    suspend fun getCategories(): List<String> = withContext(Dispatchers.IO) {
-        val raw = prefs.getString(KEY_CATEGORIES, null)
-        if (raw == null) {
-            saveCategoriesList(DEFAULT_CATEGORIES)
-            return@withContext DEFAULT_CATEGORIES
+    private val dao = database?.recentPdfsDao()
+
+    // In-memory caches for instant UI responsiveness and zero allocation spikes
+    private var cachedCategories: MutableList<String>? = null
+    private var cachedPinnedFolders: MutableList<String>? = null
+    private var cachedMetadataMap: JSONObject? = null
+    private val cachedPdfsByPath = ConcurrentHashMap<String, RecentPdf>()
+
+    init {
+        // Asynchronously check and migrate any legacy SharedPreferences data to Room
+        if (dao != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                migrateLegacyPrefsToRoomIfNecessary()
+            }
         }
+    }
+
+    private suspend fun migrateLegacyPrefsToRoomIfNecessary() {
+        val currentDao = dao ?: return
+        try {
+            val existingCategories = currentDao.getCategories()
+            if (existingCategories.isEmpty()) {
+                val legacyCats = getLegacyCategories()
+                val catsToSave = legacyCats.ifEmpty { DEFAULT_CATEGORIES }
+                currentDao.upsertCategories(catsToSave.mapIndexed { idx, name -> CategoryEntity(name, idx) })
+            }
+
+            val existingPinned = currentDao.getPinnedFolders()
+            if (existingPinned.isEmpty()) {
+                val legacyPinned = getLegacyPinnedFolders()
+                val pinnedToSave = legacyPinned.ifEmpty { DEFAULT_PINNED_FOLDERS }
+                currentDao.upsertPinnedFolders(pinnedToSave.mapIndexed { idx, name -> PinnedFolderEntity(name, idx) })
+            }
+        } catch (e: Throwable) {
+            Log.w(TAG, "Legacy migration check caught exception", e)
+        }
+    }
+
+    suspend fun getCategories(): List<String> = withContext(Dispatchers.IO) {
+        cachedCategories?.let { return@withContext it.toList() }
+
+        val currentDao = dao
+        if (currentDao != null) {
+            val fromDb = try { currentDao.getCategories() } catch (_: Throwable) { null }
+            if (!fromDb.isNullOrEmpty()) {
+                val list = fromDb.map { it.name }.toMutableList()
+                cachedCategories = list
+                return@withContext list.toList()
+            }
+        }
+
+        val list = getLegacyCategories().toMutableList()
+        if (list.isEmpty()) {
+            val defaults = DEFAULT_CATEGORIES.toMutableList()
+            cachedCategories = defaults
+            saveCategoriesList(defaults)
+            return@withContext defaults.toList()
+        }
+        cachedCategories = list
+        list.toList()
+    }
+
+    private fun getLegacyCategories(): List<String> {
+        val raw = prefs.getString(KEY_CATEGORIES, null) ?: return emptyList()
         val items = deserializeStringList(raw)
         val list = mutableListOf<String>()
         for (item in items) {
@@ -46,7 +115,7 @@ class RecentPdfsRepository(
                 list.add(trimmed)
             }
         }
-        list
+        return list
     }
 
     suspend fun addCategory(category: String): Boolean = withContext(Dispatchers.IO) {
@@ -59,6 +128,7 @@ class RecentPdfsRepository(
             return@withContext false
         }
         current.add(trimmed)
+        cachedCategories = current
         saveCategoriesList(current)
         true
     }
@@ -82,9 +152,27 @@ class RecentPdfsRepository(
         if (conflict) return@withContext false
 
         current[index] = newTrimmed
+        cachedCategories = current
         saveCategoriesList(current)
 
-        // Update all documents assigned to oldCategory
+        // Update in Room Database if available
+        val currentDao = dao
+        if (currentDao != null) {
+            try {
+                val allEntities = currentDao.getAllPdfs()
+                allEntities.forEach { entity ->
+                    val folders = deserializeStringList(entity.foldersJson)
+                    if (folders.any { it.equals(oldTrimmed, ignoreCase = true) }) {
+                        val updated = folders.map { if (it.equals(oldTrimmed, ignoreCase = true)) newTrimmed else it }
+                        currentDao.upsertPdf(entity.copy(foldersJson = serializeStringList(updated)))
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Error renaming category in Room", e)
+            }
+        }
+
+        // Update all documents assigned to oldCategory in metadata prefs map
         val metadataMap = getMetadataMap()
         var modified = false
         val keys = metadataMap.keys()
@@ -93,7 +181,6 @@ class RecentPdfsRepository(
                 val docObj = metadataMap.optJSONObject(key) ?: continue
                 var docModified = false
 
-                // Update folders array if present
                 val foldersArr = docObj.optJSONArray("folders")
                 if (foldersArr != null) {
                     val updatedArr = JSONArray()
@@ -123,6 +210,7 @@ class RecentPdfsRepository(
         }
         if (modified) {
             saveMetadataMap(metadataMap)
+            cachedPdfsByPath.clear()
         }
 
         // Keep pinned folders list in sync with renamed category
@@ -130,6 +218,7 @@ class RecentPdfsRepository(
         val pinnedIndex = currentPinned.indexOfFirst { it.equals(oldTrimmed, ignoreCase = true) }
         if (pinnedIndex >= 0) {
             currentPinned[pinnedIndex] = newTrimmed
+            cachedPinnedFolders = currentPinned
             savePinnedFoldersList(currentPinned)
         }
 
@@ -145,6 +234,7 @@ class RecentPdfsRepository(
         val current = getCategories().toMutableList()
         val removedFromCategories = current.removeAll { it.equals(trimmed, ignoreCase = true) }
         if (removedFromCategories) {
+            cachedCategories = current
             saveCategoriesList(current)
         }
 
@@ -152,7 +242,26 @@ class RecentPdfsRepository(
         val currentPinned = getPinnedFolders().toMutableList()
         val removedFromPinned = currentPinned.removeAll { it.equals(trimmed, ignoreCase = true) }
         if (removedFromPinned) {
+            cachedPinnedFolders = currentPinned
             savePinnedFoldersList(currentPinned)
+        }
+
+        // Update in Room Database if available
+        val currentDao = dao
+        if (currentDao != null) {
+            try {
+                currentDao.deleteCategory(trimmed)
+                val allEntities = currentDao.getAllPdfs()
+                allEntities.forEach { entity ->
+                    val folders = deserializeStringList(entity.foldersJson)
+                    if (folders.any { it.equals(trimmed, ignoreCase = true) }) {
+                        val updated = folders.filterNot { it.equals(trimmed, ignoreCase = true) }
+                        currentDao.upsertPdf(entity.copy(foldersJson = serializeStringList(updated)))
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Error deleting category in Room", e)
+            }
         }
 
         val metadataMap = getMetadataMap()
@@ -196,17 +305,39 @@ class RecentPdfsRepository(
         }
         if (modified) {
             saveMetadataMap(metadataMap)
+            cachedPdfsByPath.clear()
         }
 
         removedFromCategories || removedFromPinned || modified
     }
 
     suspend fun getPinnedFolders(): List<String> = withContext(Dispatchers.IO) {
-        val raw = prefs.getString(KEY_PINNED_FOLDERS, null)
-        if (raw == null) {
-            savePinnedFoldersList(DEFAULT_PINNED_FOLDERS)
-            return@withContext DEFAULT_PINNED_FOLDERS
+        cachedPinnedFolders?.let { return@withContext it.toList() }
+
+        val currentDao = dao
+        if (currentDao != null) {
+            val fromDb = try { currentDao.getPinnedFolders() } catch (_: Throwable) { null }
+            if (!fromDb.isNullOrEmpty()) {
+                val list = fromDb.map { it.name }.take(MAX_PINNED_FOLDERS).toMutableList()
+                cachedPinnedFolders = list
+                return@withContext list.toList()
+            }
         }
+
+        val list = getLegacyPinnedFolders().toMutableList()
+        if (list.isEmpty()) {
+            val defaults = DEFAULT_PINNED_FOLDERS.toMutableList()
+            cachedPinnedFolders = defaults
+            savePinnedFoldersList(defaults)
+            return@withContext defaults.toList()
+        }
+        val result = list.take(MAX_PINNED_FOLDERS).toMutableList()
+        cachedPinnedFolders = result
+        result.toList()
+    }
+
+    private fun getLegacyPinnedFolders(): List<String> {
+        val raw = prefs.getString(KEY_PINNED_FOLDERS, null) ?: return emptyList()
         val items = deserializeStringList(raw)
         val list = mutableListOf<String>()
         for (item in items) {
@@ -215,7 +346,7 @@ class RecentPdfsRepository(
                 list.add(trimmed)
             }
         }
-        list.take(MAX_PINNED_FOLDERS)
+        return list
     }
 
     suspend fun setPinnedFolders(pinned: List<String>): Boolean = withContext(Dispatchers.IO) {
@@ -223,6 +354,8 @@ class RecentPdfsRepository(
             .filter { it.isNotEmpty() }
             .distinctBy { it.lowercase() }
             .take(MAX_PINNED_FOLDERS)
+            .toMutableList()
+        cachedPinnedFolders = sanitized
         savePinnedFoldersList(sanitized)
         true
     }
@@ -234,6 +367,7 @@ class RecentPdfsRepository(
         val existingIndex = current.indexOfFirst { it.equals(trimmed, ignoreCase = true) }
         if (existingIndex >= 0) {
             current.removeAt(existingIndex)
+            cachedPinnedFolders = current
             savePinnedFoldersList(current)
             true
         } else {
@@ -241,18 +375,31 @@ class RecentPdfsRepository(
                 return@withContext false
             }
             current.add(trimmed)
+            cachedPinnedFolders = current
             savePinnedFoldersList(current)
             true
         }
     }
 
     private fun savePinnedFoldersList(list: List<String>) {
-        prefs.edit(commit = true) { putString(KEY_PINNED_FOLDERS, serializeStringList(list)) }
+        prefs.edit { putString(KEY_PINNED_FOLDERS, serializeStringList(list)) }
+        val currentDao = dao
+        if (currentDao != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    currentDao.clearPinnedFolders()
+                    currentDao.upsertPinnedFolders(list.mapIndexed { idx, name -> PinnedFolderEntity(name, idx) })
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error saving pinned folders in Room", e)
+                }
+            }
+        }
     }
 
     suspend fun getRecentPdfs(): List<RecentPdf> = withContext(Dispatchers.IO) {
         val pdfDir = File(context.filesDir, "pdfs")
         if (!pdfDir.exists() || !pdfDir.isDirectory) {
+            cachedPdfsByPath.clear()
             return@withContext emptyList()
         }
 
@@ -261,17 +408,37 @@ class RecentPdfsRepository(
             file.isFile && file.name.endsWith(".pdf", ignoreCase = true)
         } ?: return@withContext emptyList()
 
-        val existingFileNames = pdfFiles.map { it.name }.toSet()
+        val existingFilePaths = HashSet<String>(pdfFiles.size)
+        val currentDao = dao
+        val dbEntitiesMap = try {
+            currentDao?.getAllPdfs()?.associateBy { it.filePath } ?: emptyMap()
+        } catch (_: Throwable) {
+            emptyMap()
+        }
 
         val pdfList = pdfFiles.map { file ->
+            val path = file.absolutePath
+            existingFilePaths.add(path)
+            val lastModified = file.lastModified()
+            val sizeBytes = file.length()
+
+            val existing = cachedPdfsByPath[path]
+            val dbEntity = dbEntitiesMap[path]
             val docObj = metadataMap.optJSONObject(file.name)
+
+            val isFavorite = dbEntity?.isFavorite ?: (docObj?.optBoolean("isFavorite", false) ?: false)
             val foldersList = mutableListOf<String>()
-            val foldersArr = docObj?.optJSONArray("folders")
-            if (foldersArr != null) {
-                for (i in 0 until foldersArr.length()) {
-                    val folderName = foldersArr.optString(i).trim()
-                    if (folderName.isNotEmpty() && !foldersList.contains(folderName)) {
-                        foldersList.add(folderName)
+
+            if (dbEntity != null) {
+                foldersList.addAll(deserializeStringList(dbEntity.foldersJson))
+            } else if (docObj?.has("folders") == true) {
+                val foldersArr = docObj.optJSONArray("folders")
+                if (foldersArr != null) {
+                    for (i in 0 until foldersArr.length()) {
+                        val folderName = foldersArr.optString(i).trim()
+                        if (folderName.isNotEmpty() && !foldersList.contains(folderName)) {
+                            foldersList.add(folderName)
+                        }
                     }
                 }
             } else {
@@ -281,36 +448,81 @@ class RecentPdfsRepository(
                 }
             }
 
-            val isFavorite = docObj?.optBoolean("isFavorite", false) ?: false
             val tagsList = mutableListOf<String>()
-            val tagsArr = docObj?.optJSONArray("tags")
-            if (tagsArr != null) {
-                for (i in 0 until tagsArr.length()) {
-                    val tagItem = tagsArr.optString(i).trim()
-                    if (tagItem.isNotEmpty()) tagsList.add(tagItem)
+            if (dbEntity != null) {
+                tagsList.addAll(deserializeStringList(dbEntity.tagsJson))
+            } else {
+                val tagsArr = docObj?.optJSONArray("tags")
+                if (tagsArr != null) {
+                    for (i in 0 until tagsArr.length()) {
+                        val tagItem = tagsArr.optString(i).trim()
+                        if (tagItem.isNotEmpty()) tagsList.add(tagItem)
+                    }
                 }
             }
 
-            RecentPdf(
-                file = file,
-                name = file.name,
-                sizeBytes = file.length(),
-                lastModifiedMillis = file.lastModified(),
-                folders = foldersList,
-                isFavorite = isFavorite,
-                tags = tagsList
-            )
+            // Sync into Room DB if not present or changed
+            if (currentDao != null && (dbEntity == null || dbEntity.lastModified != lastModified || dbEntity.fileSizeBytes != sizeBytes)) {
+                currentDao.upsertPdf(
+                    RecentPdfEntity(
+                        filePath = path,
+                        fileName = file.name,
+                        fileSizeBytes = sizeBytes,
+                        lastModified = lastModified,
+                        pageCount = dbEntity?.pageCount ?: 1,
+                        isFavorite = isFavorite,
+                        foldersJson = serializeStringList(foldersList),
+                        tagsJson = serializeStringList(tagsList),
+                        customTitle = dbEntity?.customTitle
+                    )
+                )
+            }
+
+            // Pre-generate thumbnail into cache in background if not already cached
+            PdfThumbnailLoader.pregenerateThumbnail(file, context.cacheDir)
+
+            if (existing != null &&
+                existing.lastModifiedMillis == lastModified &&
+                existing.sizeBytes == sizeBytes &&
+                existing.isFavorite == isFavorite &&
+                existing.folders == foldersList &&
+                existing.tags == tagsList
+            ) {
+                existing
+            } else {
+                val newPdf = RecentPdf(
+                    file = file,
+                    name = file.name,
+                    sizeBytes = sizeBytes,
+                    lastModifiedMillis = lastModified,
+                    folders = foldersList,
+                    isFavorite = isFavorite,
+                    tags = tagsList
+                )
+                cachedPdfsByPath[path] = newPdf
+                newPdf
+            }
         }.sortedByDescending { it.lastModifiedMillis }
 
-        // Clean up metadata keys for removed files
+        // Clean up metadata keys and Room records for removed files
+        if (currentDao != null) {
+            currentDao.deletePdfsNotIn(existingFilePaths.toList())
+        }
+
+        val keys = metadataMap.keys()
         val keysToRemove = mutableListOf<String>()
-        for (key in metadataMap.keys()) {
-            if (!existingFileNames.contains(key)) {
-                keysToRemove.add(key)
+        if (keys != null) {
+            for (key in keys) {
+                if (pdfFiles.none { it.name == key }) {
+                    keysToRemove.add(key)
+                }
             }
         }
         if (keysToRemove.isNotEmpty()) {
-            keysToRemove.forEach { metadataMap.remove(it) }
+            keysToRemove.forEach {
+                metadataMap.remove(it)
+                cachedPdfsByPath.remove(it)
+            }
             saveMetadataMap(metadataMap)
         }
 
@@ -318,9 +530,16 @@ class RecentPdfsRepository(
     }
 
     suspend fun updatePdfFolders(file: File, folders: List<String>): Boolean = withContext(Dispatchers.IO) {
+        val distinctFolders = folders.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        val foldersJson = serializeStringList(distinctFolders)
+
+        val currentDao = dao
+        if (currentDao != null) {
+            currentDao.updateFolders(file.absolutePath, foldersJson)
+        }
+
         val metadataMap = getMetadataMap()
         val docObj = metadataMap.optJSONObject(file.name) ?: JSONObject()
-        val distinctFolders = folders.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
         val foldersArr = JSONArray()
         distinctFolders.forEach { foldersArr.put(it) }
         docObj.put("folders", foldersArr)
@@ -331,6 +550,8 @@ class RecentPdfsRepository(
         }
         metadataMap.put(file.name, docObj)
         saveMetadataMap(metadataMap)
+
+        cachedPdfsByPath.remove(file.absolutePath)
         true
     }
 
@@ -346,6 +567,13 @@ class RecentPdfsRepository(
         docObj.put("isFavorite", newFav)
         metadataMap.put(file.name, docObj)
         saveMetadataMap(metadataMap)
+
+        val currentDao = dao
+        if (currentDao != null) {
+            currentDao.updateFavorite(file.absolutePath, newFav)
+        }
+
+        cachedPdfsByPath.remove(file.absolutePath)
         newFav
     }
 
@@ -357,15 +585,31 @@ class RecentPdfsRepository(
         docObj.put("tags", tagsArr)
         metadataMap.put(file.name, docObj)
         saveMetadataMap(metadataMap)
+
+        val currentDao = dao
+        if (currentDao != null) {
+            val existing = currentDao.getPdfByPath(file.absolutePath)
+            if (existing != null) {
+                currentDao.upsertPdf(existing.copy(tagsJson = serializeStringList(tags)))
+            }
+        }
+
+        cachedPdfsByPath.remove(file.absolutePath)
         true
     }
 
     suspend fun deletePdf(file: File): Boolean = withContext(Dispatchers.IO) {
+        val currentDao = dao
+        if (currentDao != null) {
+            currentDao.deletePdfByPath(file.absolutePath)
+        }
+
         val metadataMap = getMetadataMap()
         if (metadataMap.has(file.name)) {
             metadataMap.remove(file.name)
             saveMetadataMap(metadataMap)
         }
+        cachedPdfsByPath.remove(file.absolutePath)
 
         if (file.exists()) {
             file.delete()
@@ -375,21 +619,41 @@ class RecentPdfsRepository(
     }
 
     private fun getMetadataMap(): JSONObject {
-        val raw = prefs.getString(KEY_METADATA_MAP, null) ?: return JSONObject()
-        return try {
-            JSONObject(raw)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to parse document metadata map JSON", e)
+        cachedMetadataMap?.let { return it }
+        val raw = prefs.getString(KEY_METADATA_MAP, null)
+        val json = if (raw.isNullOrBlank()) {
             JSONObject()
+        } else {
+            try {
+                JSONObject(raw)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to parse document metadata map JSON", e)
+                JSONObject()
+            }
         }
+        cachedMetadataMap = json
+        return json
     }
 
     private fun saveMetadataMap(json: JSONObject) {
+        cachedMetadataMap = json
         prefs.edit { putString(KEY_METADATA_MAP, json.toString()) }
     }
 
     private fun saveCategoriesList(list: List<String>) {
+        cachedCategories = list.toMutableList()
         prefs.edit { putString(KEY_CATEGORIES, serializeStringList(list)) }
+        val currentDao = dao
+        if (currentDao != null) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    currentDao.clearCategories()
+                    currentDao.upsertCategories(list.mapIndexed { idx, name -> CategoryEntity(name, idx) })
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error saving categories in Room", e)
+                }
+            }
+        }
     }
 
     private fun serializeStringList(list: List<String>): String {

@@ -13,14 +13,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.StarBorder
-import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -117,7 +117,7 @@ fun RecentPdfItemCard(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Outlined.Folder,
+                                        imageVector = Icons.Filled.Folder,
                                         contentDescription = null,
                                         modifier = Modifier.size(12.dp)
                                     )
@@ -157,7 +157,7 @@ fun RecentPdfItemCard(
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        imageVector = if (recent.isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                        imageVector = if (recent.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
                         contentDescription = if (recent.isFavorite) "Remove from favorites" else "Add to favorites",
                         tint = if (recent.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
@@ -171,7 +171,7 @@ fun RecentPdfItemCard(
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.MoreVert,
+                        imageVector = Icons.Filled.MoreVert,
                         contentDescription = "Options",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
@@ -186,7 +186,7 @@ fun RecentPdfItemCard(
                         text = { Text("Open in Viewer") },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Outlined.Visibility,
+                                imageVector = Icons.Filled.Visibility,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -201,7 +201,7 @@ fun RecentPdfItemCard(
                         text = { Text("Share") },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Outlined.Share,
+                                imageVector = Icons.Filled.Share,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -217,7 +217,7 @@ fun RecentPdfItemCard(
                             text = { Text("Organize") },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.DriveFileMove,
+                                    imageVector = Icons.AutoMirrored.Filled.DriveFileMove,
                                     contentDescription = null,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -234,7 +234,7 @@ fun RecentPdfItemCard(
                             text = { Text(if (recent.isFavorite) "Remove from Favorites" else "Add to Favorites") },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = if (recent.isFavorite) Icons.Outlined.StarBorder else Icons.Filled.Star,
+                                    imageVector = if (recent.isFavorite) Icons.Filled.StarBorder else Icons.Filled.Star,
                                     contentDescription = null,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -255,7 +255,7 @@ fun RecentPdfItemCard(
                         },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Outlined.Delete,
+                                imageVector = Icons.Filled.Delete,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(20.dp)

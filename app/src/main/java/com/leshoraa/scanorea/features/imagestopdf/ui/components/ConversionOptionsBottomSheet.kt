@@ -17,15 +17,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Bookmarks
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.CreateNewFolder
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -182,7 +182,7 @@ fun ConversionOptionsBottomSheet(
                                         modifier = Modifier.size(24.dp)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Outlined.Delete,
+                                            imageVector = Icons.Filled.Delete,
                                             contentDescription = "Delete preset",
                                             modifier = Modifier.size(16.dp),
                                             tint = MaterialTheme.colorScheme.error
@@ -209,7 +209,7 @@ fun ConversionOptionsBottomSheet(
                         },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Outlined.Add,
+                                imageVector = Icons.Filled.Add,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -232,7 +232,7 @@ fun ConversionOptionsBottomSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Bookmarks,
+                        imageVector = Icons.Filled.Bookmarks,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(16.dp)
@@ -269,7 +269,7 @@ fun ConversionOptionsBottomSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.FolderOpen,
+                        imageVector = Icons.Filled.FolderOpen,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
@@ -288,7 +288,7 @@ fun ConversionOptionsBottomSheet(
                         )
                     }
                     Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                         contentDescription = "Change destination",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
@@ -320,7 +320,7 @@ fun ConversionOptionsBottomSheet(
                     onClick = { isCreateFolderDialogVisible = true }
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.CreateNewFolder,
+                        imageVector = Icons.Filled.CreateNewFolder,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
@@ -368,7 +368,7 @@ fun ConversionOptionsBottomSheet(
                             label = { Text(category) },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = if (isSelected) Icons.Outlined.Check else Icons.Outlined.Folder,
+                                    imageVector = if (isSelected) Icons.Filled.Check else Icons.Filled.Folder,
                                     contentDescription = null,
                                     modifier = Modifier.size(16.dp)
                                 )

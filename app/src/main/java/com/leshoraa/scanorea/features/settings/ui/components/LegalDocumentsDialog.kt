@@ -13,8 +13,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Gavel
-import androidx.compose.material.icons.outlined.Policy
+import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.Policy
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -66,8 +66,8 @@ fun LegalDocumentDialog(
     modifier: Modifier = Modifier
 ) {
     val icon: ImageVector = when (type) {
-        LegalDocumentType.PRIVACY_POLICY -> Icons.Outlined.Policy
-        LegalDocumentType.TERMS_OF_SERVICE -> Icons.Outlined.Gavel
+        LegalDocumentType.PRIVACY_POLICY -> Icons.Filled.Policy
+        LegalDocumentType.TERMS_OF_SERVICE -> Icons.Filled.Gavel
     }
 
     val sections: List<LegalSection> = when (type) {

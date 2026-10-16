@@ -14,12 +14,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.AutoFixHigh
-import androidx.compose.material.icons.outlined.Brightness6
-import androidx.compose.material.icons.outlined.Contrast
-import androidx.compose.material.icons.outlined.Remove
-import androidx.compose.material.icons.outlined.RestartAlt
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.Contrast
+import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -75,7 +75,7 @@ fun EditorAdjustPanel(
                 onClick = { activeTool = AdjustmentTool.CONTRAST },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.Contrast,
+                        imageVector = Icons.Filled.Contrast,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -106,7 +106,7 @@ fun EditorAdjustPanel(
                 onClick = { activeTool = AdjustmentTool.BRIGHTNESS },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.Brightness6,
+                        imageVector = Icons.Filled.Brightness6,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -137,7 +137,7 @@ fun EditorAdjustPanel(
                 onClick = onAutoAdjust,
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.AutoFixHigh,
+                        imageVector = Icons.Filled.AutoFixHigh,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -168,7 +168,7 @@ fun EditorAdjustPanel(
                 enabled = isModified,
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.RestartAlt,
+                        imageVector = Icons.Filled.RestartAlt,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -202,7 +202,7 @@ fun EditorAdjustPanel(
         ) {
             // Decrement / Min indicator icon
             Icon(
-                imageVector = Icons.Outlined.Remove,
+                imageVector = Icons.Filled.Remove,
                 contentDescription = "Decrease",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp)
@@ -248,7 +248,7 @@ fun EditorAdjustPanel(
 
             // Increment / Max indicator icon
             Icon(
-                imageVector = Icons.Outlined.Add,
+                imageVector = Icons.Filled.Add,
                 contentDescription = "Increase",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp)

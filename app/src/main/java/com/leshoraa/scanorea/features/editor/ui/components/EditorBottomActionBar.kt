@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -66,7 +66,7 @@ fun EditorBottomActionBar(
                 modifier = Modifier.height(44.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Check,
+                    imageVector = Icons.Filled.Check,
                     contentDescription = "Done",
                     modifier = Modifier.size(18.dp)
                 )

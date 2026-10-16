@@ -18,15 +18,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
-import androidx.compose.material.icons.outlined.CropSquare
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Highlight
-import androidx.compose.material.icons.outlined.Opacity
-import androidx.compose.material.icons.outlined.Palette
-import androidx.compose.material.icons.outlined.PanTool
-import androidx.compose.material.icons.outlined.RadioButtonUnchecked
-import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.CropSquare
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Highlight
+import androidx.compose.material.icons.filled.Opacity
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PanTool
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -87,7 +87,7 @@ fun EditorAnnotatePanel(
                 onClick = { onToolSelected(AnnotationTool.NAVIGATE) },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.PanTool,
+                        imageVector = Icons.Filled.PanTool,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -118,7 +118,7 @@ fun EditorAnnotatePanel(
                 onClick = { onToolSelected(AnnotationTool.PEN) },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.Edit,
+                        imageVector = Icons.Filled.Edit,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -149,7 +149,7 @@ fun EditorAnnotatePanel(
                 onClick = { onToolSelected(AnnotationTool.HIGHLIGHTER) },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.Highlight,
+                        imageVector = Icons.Filled.Highlight,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -180,7 +180,7 @@ fun EditorAnnotatePanel(
                 onClick = { onToolSelected(AnnotationTool.REDACT) },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.VisibilityOff,
+                        imageVector = Icons.Filled.VisibilityOff,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -211,7 +211,7 @@ fun EditorAnnotatePanel(
                 onClick = { onToolSelected(AnnotationTool.RECT_SHAPE) },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.CropSquare,
+                        imageVector = Icons.Filled.CropSquare,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -242,7 +242,7 @@ fun EditorAnnotatePanel(
                 onClick = { onToolSelected(AnnotationTool.OVAL_SHAPE) },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.RadioButtonUnchecked,
+                        imageVector = Icons.Filled.RadioButtonUnchecked,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -273,7 +273,7 @@ fun EditorAnnotatePanel(
                 onClick = { onToolSelected(AnnotationTool.ARROW_SHAPE) },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -337,7 +337,7 @@ fun EditorAnnotatePanel(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = Icons.Outlined.Palette,
+                            imageVector = Icons.Filled.Palette,
                             contentDescription = "Custom Color & Opacity",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
@@ -397,7 +397,7 @@ fun EditorAnnotatePanel(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Opacity,
+                            imageVector = Icons.Filled.Opacity,
                             contentDescription = "Opacity",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(14.dp)

@@ -14,14 +14,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
-import androidx.compose.material.icons.automirrored.outlined.RotateRight
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.CropFree
-import androidx.compose.material.icons.outlined.RestartAlt
-import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.RotateRight
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CropFree
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -112,7 +112,7 @@ fun EditorCropPanel(
                 },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.CropFree,
+                        imageVector = Icons.Filled.CropFree,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -152,7 +152,7 @@ fun EditorCropPanel(
                         )
                     } else {
                         Icon(
-                            imageVector = Icons.Outlined.AutoAwesome,
+                            imageVector = Icons.Filled.AutoAwesome,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
@@ -221,7 +221,7 @@ fun EditorCropPanel(
                     },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Outlined.RestartAlt,
+                            imageVector = Icons.Filled.RestartAlt,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
@@ -256,7 +256,7 @@ fun EditorCropPanel(
                 modifier = Modifier.size(38.dp)
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Previous page",
                     modifier = Modifier.size(18.dp)
                 )
@@ -272,7 +272,7 @@ fun EditorCropPanel(
                 modifier = Modifier.height(38.dp)
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.RotateRight,
+                    imageVector = Icons.AutoMirrored.Filled.RotateRight,
                     contentDescription = "Rotate",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(18.dp)
@@ -311,7 +311,7 @@ fun EditorCropPanel(
                 modifier = Modifier.height(38.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.RestartAlt,
+                    imageVector = Icons.Filled.RestartAlt,
                     contentDescription = "Reset Crop",
                     modifier = Modifier.size(18.dp),
                     tint = if (isResetEnabled) {
@@ -350,7 +350,7 @@ fun EditorCropPanel(
                 modifier = Modifier.height(38.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Check,
+                    imageVector = Icons.Filled.Check,
                     contentDescription = "Done",
                     modifier = Modifier.size(18.dp)
                 )
@@ -374,7 +374,7 @@ fun EditorCropPanel(
                         modifier = Modifier.height(38.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.SwapHoriz,
+                            imageVector = Icons.Filled.SwapHoriz,
                             contentDescription = "Move to page",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
@@ -428,7 +428,7 @@ fun EditorCropPanel(
                 modifier = Modifier.size(38.dp)
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = "Next page",
                     modifier = Modifier.size(18.dp)
                 )

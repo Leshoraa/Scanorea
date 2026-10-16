@@ -60,23 +60,42 @@ class RecentPdfsViewModel(
 
     fun deletePdf(file: File) {
         PdfThumbnailLoader.evict(file)
+        _uiState.update { state ->
+            state.copy(
+                recentPdfs = state.recentPdfs.filterNot { it.file.absolutePath == file.absolutePath }
+            )
+        }
         viewModelScope.launch {
             recentPdfsRepository.deletePdf(file)
-            loadRecentPdfs()
         }
     }
 
     fun toggleFavorite(file: File) {
+        _uiState.update { state ->
+            val updated = state.recentPdfs.map { pdf ->
+                if (pdf.file.absolutePath == file.absolutePath) {
+                    pdf.copy(isFavorite = !pdf.isFavorite)
+                } else pdf
+            }
+            state.copy(recentPdfs = updated)
+        }
         viewModelScope.launch {
             recentPdfsRepository.toggleFavorite(file)
-            loadRecentPdfs()
         }
     }
 
     fun updatePdfFolders(file: File, folders: List<String>) {
+        val distinctFolders = folders.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        _uiState.update { state ->
+            val updated = state.recentPdfs.map { pdf ->
+                if (pdf.file.absolutePath == file.absolutePath) {
+                    pdf.copy(folders = distinctFolders)
+                } else pdf
+            }
+            state.copy(recentPdfs = updated)
+        }
         viewModelScope.launch {
-            recentPdfsRepository.updatePdfFolders(file, folders)
-            loadRecentPdfs()
+            recentPdfsRepository.updatePdfFolders(file, distinctFolders)
         }
     }
 

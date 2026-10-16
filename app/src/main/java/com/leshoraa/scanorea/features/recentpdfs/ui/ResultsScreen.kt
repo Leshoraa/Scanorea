@@ -18,17 +18,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Sort
+import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Clear
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -144,7 +140,7 @@ fun ResultsScreen(
             actions = {
                 IconButton(onClick = { isSearchActive = !isSearchActive }) {
                     Icon(
-                        imageVector = Icons.Outlined.Search,
+                        imageVector = Icons.Filled.Search,
                         contentDescription = "Search"
                     )
                 }
@@ -152,7 +148,7 @@ fun ResultsScreen(
                 Box {
                     IconButton(onClick = { isOptionsMenuVisible = true }) {
                         Icon(
-                            imageVector = Icons.Outlined.MoreVert,
+                            imageVector = Icons.Filled.MoreVert,
                             contentDescription = "More options"
                         )
                     }
@@ -165,7 +161,7 @@ fun ResultsScreen(
                             text = { Text(if (isSortDescending) "Sort by Name (A-Z)" else "Sort by Newest First") },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.Sort,
+                                    imageVector = Icons.AutoMirrored.Filled.Sort,
                                     contentDescription = null,
                                     modifier = Modifier.size(20.dp)
                                 )
@@ -192,7 +188,7 @@ fun ResultsScreen(
                 singleLine = true,
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Outlined.Search,
+                        imageVector = Icons.Filled.Search,
                         contentDescription = null,
                         modifier = Modifier.size(20.dp)
                     )
@@ -201,7 +197,7 @@ fun ResultsScreen(
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { searchQuery = "" }) {
                             Icon(
-                                imageVector = Icons.Outlined.Clear,
+                                imageVector = Icons.Filled.Clear,
                                 contentDescription = "Clear search",
                                 modifier = Modifier.size(18.dp)
                             )
@@ -265,7 +261,7 @@ fun ResultsScreen(
                         modifier = Modifier.size(24.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Clear,
+                            imageVector = Icons.Filled.Clear,
                             contentDescription = "Clear filter",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
@@ -285,22 +281,22 @@ fun ResultsScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     val (icon, title, subtitle) = when {
                         searchQuery.isNotBlank() -> Triple(
-                            Icons.Outlined.Search,
+                            Icons.Filled.Search,
                             "No matching documents",
                             "Try searching with a different term"
                         )
                         currentFilter is DocumentFilter.Favorites -> Triple(
-                            Icons.Outlined.StarBorder,
+                            Icons.Filled.Star,
                             "No favorites yet",
                             "Tap the star on any document to add it to your favorites"
                         )
                         currentFilter is DocumentFilter.Category -> Triple(
-                            Icons.Outlined.FolderOpen,
+                            Icons.Filled.FolderOpen,
                             "Folder is empty",
                             "Move documents into \"${(currentFilter as DocumentFilter.Category).name}\" using the document options menu"
                         )
                         else -> Triple(
-                            Icons.Outlined.Description,
+                            Icons.Filled.Description,
                             "No results yet",
                             "PDF documents will appear here"
                         )
@@ -346,7 +342,11 @@ fun ResultsScreen(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(filteredPdfs, key = { it.file.absolutePath }) { recent ->
+                items(
+                    items = filteredPdfs,
+                    key = { it.file.absolutePath },
+                    contentType = { "recent_pdf_item" }
+                ) { recent ->
                     RecentPdfItemCard(
                         recent = recent,
                         onPdfClick = onPdfClick,

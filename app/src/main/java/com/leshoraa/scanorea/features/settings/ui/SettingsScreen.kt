@@ -17,16 +17,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
-import androidx.compose.material.icons.outlined.BookmarkBorder
-import androidx.compose.material.icons.outlined.ColorLens
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Gavel
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Policy
-import androidx.compose.material.icons.outlined.ScreenRotation
-import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Gavel
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Policy
+import androidx.compose.material.icons.filled.ScreenRotation
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -129,7 +129,7 @@ fun SettingsScreen(
                     StockPreferenceItem(
                         title = "Save destination",
                         summary = destinationFolderDisplayName,
-                        leadingIcon = Icons.Outlined.Folder,
+                        leadingIcon = Icons.Filled.Folder,
                         onClick = onChangeDestinationFolder
                     )
                     HorizontalDivider(
@@ -139,7 +139,7 @@ fun SettingsScreen(
                     StockPreferenceItem(
                         title = "Preset templates",
                         summary = "$presetsCount saved template(s) • Dynamic date & paper rules",
-                        leadingIcon = Icons.Outlined.BookmarkBorder,
+                        leadingIcon = Icons.Filled.Bookmark,
                         onClick = onNavigateToPresets
                     )
                 }
@@ -153,7 +153,7 @@ fun SettingsScreen(
                     StockPreferenceItem(
                         title = "Default paper size",
                         summary = defaultPageSize.label,
-                        leadingIcon = Icons.Outlined.Description,
+                        leadingIcon = Icons.Filled.Description,
                         onClick = { isPaperSizeDialogOpen = true }
                     )
                     HorizontalDivider(
@@ -163,7 +163,7 @@ fun SettingsScreen(
                     StockPreferenceItem(
                         title = "Default page orientation",
                         summary = defaultOrientation.label,
-                        leadingIcon = Icons.Outlined.ScreenRotation,
+                        leadingIcon = Icons.Filled.ScreenRotation,
                         onClick = { isOrientationDialogOpen = true }
                     )
                     HorizontalDivider(
@@ -173,7 +173,7 @@ fun SettingsScreen(
                     StockPreferenceItem(
                         title = "Default compression & quality",
                         summary = defaultCompression.label,
-                        leadingIcon = Icons.Outlined.Tune,
+                        leadingIcon = Icons.Filled.Tune,
                         onClick = { isCompressionDialogOpen = true }
                     )
                     HorizontalDivider(
@@ -183,7 +183,7 @@ fun SettingsScreen(
                     StockPreferenceItem(
                         title = "Default filter mode",
                         summary = defaultFilter.label,
-                        leadingIcon = Icons.Outlined.ColorLens,
+                        leadingIcon = Icons.Filled.ColorLens,
                         onClick = { isFilterDialogOpen = true }
                     )
                 }
@@ -197,7 +197,7 @@ fun SettingsScreen(
                     StockPreferenceItem(
                         title = "Privacy policy",
                         summary = "Local-first data governance, zero tracking",
-                        leadingIcon = Icons.Outlined.Policy,
+                        leadingIcon = Icons.Filled.Policy,
                         onClick = { activeLegalDocument = LegalDocumentType.PRIVACY_POLICY }
                     )
                     HorizontalDivider(
@@ -207,7 +207,7 @@ fun SettingsScreen(
                     StockPreferenceItem(
                         title = "Terms of service",
                         summary = "Usage rights, licensing, and limitations",
-                        leadingIcon = Icons.Outlined.Gavel,
+                        leadingIcon = Icons.Filled.Gavel,
                         onClick = { activeLegalDocument = LegalDocumentType.TERMS_OF_SERVICE }
                     )
                 }
@@ -221,7 +221,7 @@ fun SettingsScreen(
                     StockPreferenceItem(
                         title = "Scanorea",
                         summary = "Version 1.0.0 (Build 2026)",
-                        leadingIcon = Icons.Outlined.Info,
+                        leadingIcon = Icons.Filled.Info,
                         onClick = {},
                         trailing = {}
                     )
@@ -361,7 +361,7 @@ private fun StockPreferenceItem(
             trailing()
         } else {
             Icon(
-                imageVector = Icons.AutoMirrored.Outlined.ArrowForwardIos,
+                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.size(14.dp)

@@ -10,9 +10,9 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -28,12 +28,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -77,7 +77,7 @@ private const val MAX_VISIBLE_PINNED_FOLDERS = 5
 private const val CARD_LIFT_SCALE = 1.04f
 private const val CARD_RESTING_SCALE = 1.0f
 private const val COLOR_TRANSITION_DURATION_MS = 200
-private const val Z_INDEX_DRAGGING = 30f
+private const val Z_INDEX_DRAGGING = 100f
 private const val Z_INDEX_SHIFTED = 5f
 private const val Z_INDEX_RESTING = 1f
 
@@ -230,16 +230,24 @@ fun FolderGridSection(
                                 targetValue = targetOffset,
                                 animationSpec = spring(
                                     dampingRatio = Spring.DampingRatioLowBouncy,
-                                    stiffness = Spring.StiffnessMedium
+                                    stiffness = Spring.StiffnessMediumLow
                                 )
                             )
                             performDropHaptic()
 
-                            if (finalTarget in currentActivePinned.indices && finalTarget != currentDragged) {
+                            val reorderedList = if (finalTarget in currentActivePinned.indices && finalTarget != currentDragged) {
                                 val reordered = FolderGridDragCalculator.reorderList(currentActivePinned, currentDragged, finalTarget)
-                                val fullList = reordered + currentLocalPinnedFolders.drop(currentActivePinned.size)
-                                localPinnedFolders = fullList
-                                currentOnReorderPinnedFolders(fullList)
+                                reordered + currentLocalPinnedFolders.drop(currentActivePinned.size)
+                            } else null
+
+                            draggedIndex = -1
+                            targetDropIndex = -1
+                            dragOffset = Offset.Zero
+                            isSettling = false
+
+                            if (reorderedList != null) {
+                                localPinnedFolders = reorderedList
+                                currentOnReorderPinnedFolders(reorderedList)
                             }
                         } finally {
                             draggedIndex = -1
@@ -297,13 +305,17 @@ fun FolderGridSection(
             }
         }
 
+        val activeDragRow = if (draggedIndex != -1) draggedIndex / FolderGridDragCalculator.GRID_COLUMNS else -1
+
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Row 1: Slots 0 & 1 (or Slot 0 + Other if only 1 item, or Other + Spacer if 0 items)
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .zIndex(if (activeDragRow == 0) 100f else 1f),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 val firstFolder = activePinned.getOrNull(0)
@@ -390,7 +402,9 @@ fun FolderGridSection(
             // When 2 or 3 items: 2 rows layout
             if (activePinned.size in 2..3) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .zIndex(if (activeDragRow == 1) 100f else 1f),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     val thirdFolder = activePinned.getOrNull(2)
@@ -421,23 +435,34 @@ fun FolderGridSection(
                                 modifier = Modifier.weight(1f)
                             )
                         }
-                    } else {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
 
-                    key("action_other_card") {
-                        OtherFolderCard(
-                            totalFoldersCount = totalFoldersCount,
-                            isAnyItemDragging = isAnyDragging,
-                            onClick = onOpenAllFolders,
-                            modifier = Modifier.weight(1f)
-                        )
+                        key("action_other_card") {
+                            OtherFolderCard(
+                                totalFoldersCount = totalFoldersCount,
+                                isAnyItemDragging = isAnyDragging,
+                                onClick = onOpenAllFolders,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    } else {
+                        key("action_other_card") {
+                            OtherFolderCard(
+                                totalFoldersCount = totalFoldersCount,
+                                isAnyItemDragging = isAnyDragging,
+                                onClick = onOpenAllFolders,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             } else if (activePinned.size >= 4) {
                 // Row 2: Slots 2 & 3
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .zIndex(if (activeDragRow == 1) 100f else 1f),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     val thirdFolder = activePinned.getOrNull(2)
@@ -503,7 +528,9 @@ fun FolderGridSection(
 
                 // Row 3: Slot 4 & Other (Slot 5)
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .zIndex(if (activeDragRow == 2) 100f else 1f),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     val fifthFolder = activePinned.getOrNull(4)
@@ -534,17 +561,26 @@ fun FolderGridSection(
                                 modifier = Modifier.weight(1f)
                             )
                         }
-                    } else {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
 
-                    key("action_other_card") {
-                        OtherFolderCard(
-                            totalFoldersCount = totalFoldersCount,
-                            isAnyItemDragging = isAnyDragging,
-                            onClick = onOpenAllFolders,
-                            modifier = Modifier.weight(1f)
-                        )
+                        key("action_other_card") {
+                            OtherFolderCard(
+                                totalFoldersCount = totalFoldersCount,
+                                isAnyItemDragging = isAnyDragging,
+                                onClick = onOpenAllFolders,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    } else {
+                        key("action_other_card") {
+                            OtherFolderCard(
+                                totalFoldersCount = totalFoldersCount,
+                                isAnyItemDragging = isAnyDragging,
+                                onClick = onOpenAllFolders,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
                     }
                 }
             }
@@ -589,7 +625,7 @@ private fun PinnedFolderGridCard(
         targetValue = if (isCurrentDragging || !isAnyItemDragging) 0f else shift.x,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMedium
+            stiffness = Spring.StiffnessMediumLow
         ),
         label = "folderShiftX_$folderName"
     )
@@ -597,7 +633,7 @@ private fun PinnedFolderGridCard(
         targetValue = if (isCurrentDragging || !isAnyItemDragging) 0f else shift.y,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMedium
+            stiffness = Spring.StiffnessMediumLow
         ),
         label = "folderShiftY_$folderName"
     )
@@ -638,7 +674,7 @@ private fun OtherFolderCard(
     FolderGridCard(
         title = "Other",
         countLabel = "$totalFoldersCount folders",
-        icon = Icons.Outlined.FolderOpen,
+        icon = Icons.Filled.FolderOpen,
         isSelected = false,
         onClick = onClick,
         isDraggable = false,
@@ -698,8 +734,7 @@ private fun FolderGridCard(
 
     val containerColor by animateColorAsState(
         targetValue = when {
-            isLifted -> MaterialTheme.colorScheme.primaryContainer
-            isSelected -> MaterialTheme.colorScheme.primary
+            isLifted || isSelected -> MaterialTheme.colorScheme.primary
             else -> MaterialTheme.colorScheme.surfaceContainerHigh
         },
         animationSpec = tween(durationMillis = COLOR_TRANSITION_DURATION_MS),
@@ -708,8 +743,7 @@ private fun FolderGridCard(
 
     val contentColor by animateColorAsState(
         targetValue = when {
-            isLifted -> MaterialTheme.colorScheme.onPrimaryContainer
-            isSelected -> MaterialTheme.colorScheme.onPrimary
+            isLifted || isSelected -> MaterialTheme.colorScheme.onPrimary
             else -> MaterialTheme.colorScheme.onSurface
         },
         animationSpec = tween(durationMillis = COLOR_TRANSITION_DURATION_MS),
@@ -718,22 +752,13 @@ private fun FolderGridCard(
 
     val isShifted = isAnyItemDragging && !isDragging && (animatedShift.x != 0f || animatedShift.y != 0f)
 
-    val animatedBorderAlpha by animateFloatAsState(
-        targetValue = if (isLifted) 1f else 0f,
-        animationSpec = tween(durationMillis = COLOR_TRANSITION_DURATION_MS),
-        label = "cardBorderAlpha_$title"
-    )
-    val borderStroke = if (animatedBorderAlpha > 0.01f) {
-        BorderStroke(CARD_ACTIVE_BORDER_WIDTH, MaterialTheme.colorScheme.primary.copy(alpha = animatedBorderAlpha))
-    } else null
-
     val haptic = LocalHapticFeedback.current
 
     Surface(
         shape = RoundedCornerShape(CARD_CORNER_RADIUS),
         color = containerColor,
         contentColor = contentColor,
-        border = borderStroke,
+        border = null,
         shadowElevation = CARD_RESTING_SHADOW_ELEVATION,
         tonalElevation = CARD_RESTING_SHADOW_ELEVATION,
         modifier = modifier
@@ -794,6 +819,7 @@ private fun FolderGridCard(
                     Modifier
                 }
             )
+            .clip(RoundedCornerShape(CARD_CORNER_RADIUS))
             .clickable(enabled = !isAnyItemDragging && !isSettling, onClick = onClick)
     ) {
         Row(
@@ -806,8 +832,7 @@ private fun FolderGridCard(
                 imageVector = icon,
                 contentDescription = null,
                 tint = when {
-                    isSelected -> MaterialTheme.colorScheme.onPrimary
-                    isLifted -> MaterialTheme.colorScheme.primary
+                    isSelected || isLifted -> MaterialTheme.colorScheme.onPrimary
                     else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
                 },
                 modifier = Modifier.size(FOLDER_ICON_SIZE)
@@ -830,8 +855,7 @@ private fun FolderGridCard(
                     text = countLabel,
                     style = MaterialTheme.typography.bodySmall,
                     color = when {
-                        isSelected -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.80f)
-                        isDragging -> MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
+                        isSelected || isLifted -> MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.80f)
                         else -> MaterialTheme.colorScheme.onSurfaceVariant
                     },
                     maxLines = 1,
@@ -849,9 +873,9 @@ private fun FolderGridCard(
                         modifier = Modifier.size(MORE_OPTIONS_BUTTON_SIZE)
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.MoreVert,
+                            imageVector = Icons.Filled.MoreVert,
                             contentDescription = "Options for $title folder",
-                            tint = if (isSelected) {
+                            tint = if (isSelected || isLifted) {
                                 MaterialTheme.colorScheme.onPrimary
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
@@ -869,7 +893,7 @@ private fun FolderGridCard(
                                 text = { Text("Rename") },
                                 leadingIcon = {
                                     Icon(
-                                        imageVector = Icons.Outlined.Edit,
+                                        imageVector = Icons.Filled.Edit,
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp)
                                     )
@@ -890,7 +914,7 @@ private fun FolderGridCard(
                                 },
                                 leadingIcon = {
                                     Icon(
-                                        imageVector = Icons.Outlined.Delete,
+                                        imageVector = Icons.Filled.Delete,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.error,
                                         modifier = Modifier.size(18.dp)
@@ -913,7 +937,7 @@ private fun resolveFolderIcon(folderName: String): ImageVector {
     return if (folderName.equals("Favorites", ignoreCase = true)) {
         Icons.Filled.Star
     } else {
-        Icons.Outlined.Folder
+        Icons.Filled.Folder
     }
 }
 

@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Redo
-import androidx.compose.material.icons.automirrored.outlined.Undo
-import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -57,7 +57,7 @@ fun EditorMarkupActionBar(
                 modifier = Modifier.size(38.dp)
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.Undo,
+                    imageVector = Icons.AutoMirrored.Filled.Undo,
                     contentDescription = "Undo",
                     tint = if (canUndo) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                     modifier = Modifier.size(20.dp)
@@ -71,7 +71,7 @@ fun EditorMarkupActionBar(
                 modifier = Modifier.size(38.dp)
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.Redo,
+                    imageVector = Icons.AutoMirrored.Filled.Redo,
                     contentDescription = "Redo",
                     tint = if (canRedo) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                     modifier = Modifier.size(20.dp)
@@ -92,7 +92,7 @@ fun EditorMarkupActionBar(
                 modifier = Modifier.size(38.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.DeleteOutline,
+                    imageVector = Icons.Filled.Delete,
                     contentDescription = "Clear All",
                     tint = if (hasAnnotations) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                     modifier = Modifier.size(20.dp)

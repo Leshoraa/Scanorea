@@ -15,15 +15,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -110,7 +109,7 @@ fun AllFoldersBottomSheet(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Add,
+                        imageVector = Icons.Filled.Add,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -139,7 +138,7 @@ fun AllFoldersBottomSheet(
                     AllFoldersItemRow(
                         title = "All Documents",
                         countLabel = "${recentPdfs.size} documents",
-                        icon = Icons.Outlined.Description,
+                        icon = Icons.Filled.Description,
                         isSelected = currentFilter is DocumentFilter.All,
                         showPin = false,
                         isPinned = false,
@@ -190,7 +189,7 @@ fun AllFoldersBottomSheet(
                         AllFoldersItemRow(
                             title = category,
                             countLabel = "$folderCount documents",
-                            icon = Icons.Outlined.Folder,
+                            icon = Icons.Filled.Folder,
                             isSelected = isSelected,
                             showPin = true,
                             isPinned = isPinned,
@@ -274,7 +273,7 @@ private fun AllFoldersItemRow(
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
-                        imageVector = if (isPinned) Icons.Filled.PushPin else Icons.Outlined.PushPin,
+                        imageVector = Icons.Filled.PushPin,
                         contentDescription = if (isPinned) "Unpin from home grid" else "Pin to home grid",
                         tint = if (isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                         modifier = Modifier.size(20.dp)
@@ -290,7 +289,7 @@ private fun AllFoldersItemRow(
                         modifier = Modifier.size(36.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.MoreVert,
+                            imageVector = Icons.Filled.MoreVert,
                             contentDescription = "Folder options",
                             modifier = Modifier.size(18.dp)
                         )
@@ -304,7 +303,7 @@ private fun AllFoldersItemRow(
                             text = { Text("Rename") },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = Icons.Outlined.Edit,
+                                    imageVector = Icons.Filled.Edit,
                                     contentDescription = null,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -318,7 +317,7 @@ private fun AllFoldersItemRow(
                             text = { Text("Delete") },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = Icons.Outlined.Delete,
+                                    imageVector = Icons.Filled.Delete,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(18.dp)
