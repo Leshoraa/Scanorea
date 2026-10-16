@@ -77,7 +77,7 @@ object PdfThumbnailLoader {
         if (diskCacheFile != null && diskCacheFile.exists() && diskCacheFile.length() > 0L) {
             try {
                 val decodeOptions = BitmapFactory.Options().apply {
-                    inPreferredConfig = Bitmap.Config.RGB_565
+                    inPreferredConfig = Bitmap.Config.ARGB_8888
                 }
                 val diskBitmap = BitmapFactory.decodeFile(diskCacheFile.absolutePath, decodeOptions)
                 if (diskBitmap != null) {
@@ -107,7 +107,7 @@ object PdfThumbnailLoader {
             val aspectRatio = page.height.toFloat() / page.width.toFloat().coerceAtLeast(1f)
             val targetHeight = (targetWidth * aspectRatio).toInt().coerceIn(targetWidth, targetWidth * 2)
 
-            val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.RGB_565)
+            val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             canvas.drawColor(Color.WHITE)
 

@@ -49,6 +49,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.leshoraa.scanorea.core.designsystem.cardContainerColor
+import com.leshoraa.scanorea.core.designsystem.screenBackgroundColor
 import com.leshoraa.scanorea.features.recentpdfs.domain.model.RecentPdf
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.AllFoldersBottomSheet
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.CreateFolderDialog
@@ -175,7 +177,7 @@ fun ResultsScreen(
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = MaterialTheme.screenBackgroundColor
             )
         )
 
@@ -206,8 +208,8 @@ fun ResultsScreen(
                 },
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    focusedContainerColor = MaterialTheme.cardContainerColor,
+                    unfocusedContainerColor = MaterialTheme.cardContainerColor
                 ),
                 modifier = Modifier
                     .fillMaxWidth()

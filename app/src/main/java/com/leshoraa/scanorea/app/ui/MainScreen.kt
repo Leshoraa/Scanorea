@@ -34,6 +34,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.leshoraa.scanorea.app.navigation.MainNavTab
 import com.leshoraa.scanorea.app.ui.components.MainScreenModals
 import com.leshoraa.scanorea.app.ui.components.rememberMainScreenLaunchers
+import com.leshoraa.scanorea.core.designsystem.screenBackgroundColor
 import com.leshoraa.scanorea.core.share.PdfDocumentSharer
 import com.leshoraa.scanorea.features.editor.ui.EditorWorkspace
 import com.leshoraa.scanorea.features.editor.ui.components.EditorTopBar
@@ -125,6 +126,7 @@ fun MainScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        containerColor = MaterialTheme.screenBackgroundColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (uiState.hasPages) {
@@ -162,7 +164,7 @@ fun MainScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = MaterialTheme.screenBackgroundColor
                     )
                 )
             }
@@ -170,7 +172,7 @@ fun MainScreen(
         bottomBar = {
             if (!uiState.hasPages) {
                 NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    containerColor = MaterialTheme.screenBackgroundColor,
                     tonalElevation = 0.dp
                 ) {
                     MainNavTab.entries.forEach { tab ->

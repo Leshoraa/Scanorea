@@ -62,6 +62,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.leshoraa.scanorea.core.designsystem.screenBackgroundColor
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -142,8 +143,8 @@ fun PdfViewerScreen(
         }
     }
 
-    // View mode: PAGED (horizontal swipe between pages) or CONTINUOUS (vertical scroll)
-    var viewMode by remember { mutableStateOf(PdfViewMode.PAGED) }
+    // View mode: CONTINUOUS (vertical scroll, default) or PAGED (horizontal swipe between pages)
+    var viewMode by remember { mutableStateOf(PdfViewMode.CONTINUOUS) }
     val pagerState = rememberPagerState(initialPage = 0) { totalPages }
 
     // Sync active page position when switching between PAGED and CONTINUOUS modes
@@ -236,7 +237,7 @@ fun PdfViewerScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    containerColor = MaterialTheme.screenBackgroundColor
                 )
             )
         }
@@ -245,7 +246,7 @@ fun PdfViewerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .background(MaterialTheme.screenBackgroundColor)
         ) {
             if (errorMessage != null) {
                 Box(

@@ -65,4 +65,34 @@ class DocumentCornerDetectorTest {
         assertEquals(0.84f, detectedQuad.topRightX, 0.03f)
         assertEquals(0.15f, detectedQuad.topRightY, 0.03f)
     }
+
+    @Test
+    fun detectFromPixelArray_withPeripheralBrightObject_ignoresOutlierAndFindsDocumentCorners() {
+        val width = 100
+        val height = 100
+        val pixels = IntArray(width * height) { 0xFF222222.toInt() } // Dark background
+
+        // Draw white paper from (20, 20) to (75, 70)
+        for (y in 20 until 70) {
+            for (x in 20 until 75) {
+                pixels[y * width + x] = 0xFFFFFFFF.toInt()
+            }
+        }
+
+        // Draw peripheral bright object (e.g. knee/skin/table reflection) at bottom right (88, 88) to (98, 98)
+        for (y in 88 until 98) {
+            for (x in 88 until 98) {
+                pixels[y * width + x] = 0xFFDDDDDD.toInt()
+            }
+        }
+
+        val detectedQuad = DocumentCornerDetector.detectFromPixelArray(pixels, width, height)
+        assertTrue(detectedQuad.isValidConvex())
+
+        // Bottom right corner must be on the document (~0.74, ~0.69), NOT the peripheral object (~0.97, ~0.97)!
+        assertEquals(0.20f, detectedQuad.topLeftX, 0.03f)
+        assertEquals(0.20f, detectedQuad.topLeftY, 0.03f)
+        assertEquals(0.74f, detectedQuad.bottomRightX, 0.03f)
+        assertEquals(0.69f, detectedQuad.bottomRightY, 0.03f)
+    }
 }

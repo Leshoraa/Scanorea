@@ -34,6 +34,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.leshoraa.scanorea.core.designsystem.cardContainerColor
+import com.leshoraa.scanorea.core.designsystem.cardIconSurfaceColor
+import com.leshoraa.scanorea.core.designsystem.screenBackgroundColor
 
 /**
  * Tools navigation destination offering access to preset template configuration
@@ -64,7 +67,7 @@ fun ToolsScreen(
                 )
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = MaterialTheme.screenBackgroundColor
             )
         )
 
@@ -104,7 +107,7 @@ private fun ToolCard(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = MaterialTheme.cardContainerColor
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -115,7 +118,7 @@ private fun ToolCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                color = MaterialTheme.cardIconSurfaceColor,
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.size(52.dp)
             ) {

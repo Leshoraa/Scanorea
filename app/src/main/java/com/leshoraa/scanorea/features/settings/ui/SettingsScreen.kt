@@ -51,6 +51,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.leshoraa.scanorea.core.designsystem.cardContainerColor
+import com.leshoraa.scanorea.core.designsystem.cardIconSurfaceColor
+import com.leshoraa.scanorea.core.designsystem.screenBackgroundColor
 import com.leshoraa.scanorea.core.filter.ImageFilterType
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.CompressionProfile
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageOrientation
@@ -111,7 +114,7 @@ fun SettingsScreen(
                 )
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = MaterialTheme.screenBackgroundColor
             )
         )
 
@@ -302,7 +305,7 @@ private fun StockPreferenceGroup(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = MaterialTheme.cardContainerColor
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -327,7 +330,7 @@ private fun StockPreferenceItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = MaterialTheme.cardIconSurfaceColor,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.size(40.dp)
         ) {

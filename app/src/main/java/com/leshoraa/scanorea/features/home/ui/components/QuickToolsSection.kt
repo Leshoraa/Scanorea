@@ -26,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.leshoraa.scanorea.core.designsystem.cardContainerColor
+import com.leshoraa.scanorea.core.designsystem.cardIconSurfaceColor
 
 /**
  * Section displaying quick access cards for Gallery and Camera document capture.
@@ -75,13 +77,13 @@ fun QuickToolsSection(
                     .clickable(onClick = onGalleryClick),
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    containerColor = MaterialTheme.cardContainerColor
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        color = MaterialTheme.cardIconSurfaceColor,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.size(44.dp)
                     ) {
@@ -116,13 +118,13 @@ fun QuickToolsSection(
                     .clickable(onClick = onCameraClick),
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    containerColor = MaterialTheme.cardContainerColor
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        color = MaterialTheme.cardIconSurfaceColor,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.size(44.dp)
                     ) {

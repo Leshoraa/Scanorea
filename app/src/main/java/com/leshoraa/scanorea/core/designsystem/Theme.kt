@@ -8,6 +8,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val LightColorScheme = lightColorScheme(
@@ -29,7 +30,12 @@ private val LightColorScheme = lightColorScheme(
     onSurface = OnSurfaceLight,
     surfaceVariant = SurfaceVariantLight,
     onSurfaceVariant = OnSurfaceVariantLight,
-    outline = OutlineLight
+    outline = OutlineLight,
+    surfaceContainerLowest = SurfaceContainerLowestLight,
+    surfaceContainerLow = SurfaceContainerLowLight,
+    surfaceContainer = SurfaceContainerLight,
+    surfaceContainerHigh = SurfaceContainerHighLight,
+    surfaceContainerHighest = SurfaceContainerHighestLight
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -51,7 +57,12 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = OnSurfaceDark,
     surfaceVariant = SurfaceVariantDark,
     onSurfaceVariant = OnSurfaceVariantDark,
-    outline = OutlineDark
+    outline = OutlineDark,
+    surfaceContainerLowest = SurfaceContainerLowestDark,
+    surfaceContainerLow = SurfaceContainerLowDark,
+    surfaceContainer = SurfaceContainerDark,
+    surfaceContainerHigh = SurfaceContainerHighDark,
+    surfaceContainerHighest = SurfaceContainerHighestDark
 )
 
 @Composable
@@ -75,3 +86,40 @@ fun ScanoreaTheme(
         content = content
     )
 }
+
+/**
+ * Clean card container background color:
+ * - In light theme: Pure White (Color.White) so cards stand out against the soft tinted background.
+ * - In dark theme: Elevated surfaceContainer (#1E2621), avoiding harsh pitch-black void holes.
+ */
+val MaterialTheme.cardContainerColor: Color
+    @Composable
+    get() = if (isSystemInDarkTheme()) {
+        colorScheme.surfaceContainer
+    } else {
+        Color.White
+    }
+
+/**
+ * Screen root background color:
+ * - In light theme: soft sage-tinted surfaceContainer (#E9EFE6, matching Google Files).
+ * - In dark theme: soft deep dark surface (#111613, matching Google Files dark mode).
+ */
+val MaterialTheme.screenBackgroundColor: Color
+    @Composable
+    get() = if (isSystemInDarkTheme()) {
+        colorScheme.surface
+    } else {
+        colorScheme.surfaceContainer
+    }
+
+/**
+ * Subtle container surface for badge icons inside cards.
+ */
+val MaterialTheme.cardIconSurfaceColor: Color
+    @Composable
+    get() = if (isSystemInDarkTheme()) {
+        colorScheme.surfaceContainerHigh
+    } else {
+        colorScheme.surfaceContainer
+    }
