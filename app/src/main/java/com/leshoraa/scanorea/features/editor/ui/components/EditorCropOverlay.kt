@@ -59,6 +59,7 @@ fun EditorCropOverlayCanvas(
     modifier: Modifier = Modifier
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
+    val scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f)
 
     Canvas(modifier = modifier) {
         val touchMarginPx = touchMargin.toPx()
@@ -80,7 +81,7 @@ fun EditorCropOverlayCanvas(
         }
         clipPath(cropPath, clipOp = ClipOp.Difference) {
             drawRect(
-                color = Color.Black.copy(alpha = 0.55f),
+                color = scrimColor,
                 topLeft = Offset(touchMarginPx, touchMarginPx),
                 size = Size(imageW, imageH)
             )
@@ -249,6 +250,7 @@ fun EditorCropOverlay(
 
     val haptic = LocalHapticFeedback.current
     val primaryColor = MaterialTheme.colorScheme.primary
+    val scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.55f)
 
     // Synchronize external bounds updates (e.g. from preset chips or reset button)
     LaunchedEffect(cropBounds) {
@@ -436,7 +438,7 @@ fun EditorCropOverlay(
             }
             clipPath(cropPath, clipOp = ClipOp.Difference) {
                 drawRect(
-                    color = Color.Black.copy(alpha = 0.55f),
+                    color = scrimColor,
                     topLeft = Offset(touchMarginPx, touchMarginPx),
                     size = Size(imageW, imageH)
                 )

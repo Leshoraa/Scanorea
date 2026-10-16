@@ -38,7 +38,6 @@ private val CORNER_PIN_INNER_RADIUS = 6.dp
 private val CORNER_PIN_ACTIVE_RADIUS = 22.dp
 private val CORNER_TOUCH_THRESHOLD = 44.dp
 private val BORDER_STROKE_WIDTH = 2.5.dp
-private val SCRIM_COLOR = Color.Black.copy(alpha = 0.52f)
 
 /**
  * Interactive overlay allowing users to view and manually adjust the 4 corner pins
@@ -61,6 +60,7 @@ fun EditorPerspectiveOverlay(
 
     val primaryColor = MaterialTheme.colorScheme.primary
     val surfaceColor = MaterialTheme.colorScheme.surface
+    val scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.52f)
 
     Box(
         modifier = modifier
@@ -142,7 +142,7 @@ fun EditorPerspectiveOverlay(
             // Darken outside quadrilateral
             clipPath(quadPath, clipOp = ClipOp.Difference) {
                 drawRect(
-                    color = SCRIM_COLOR,
+                    color = scrimColor,
                     topLeft = Offset(touchMarginPx, touchMarginPx),
                     size = Size(imageWidth, imageHeight)
                 )

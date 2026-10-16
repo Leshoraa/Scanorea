@@ -62,7 +62,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.leshoraa.scanorea.core.designsystem.screenBackgroundColor
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -237,7 +236,7 @@ fun PdfViewerScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.screenBackgroundColor
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             )
         }
@@ -246,7 +245,7 @@ fun PdfViewerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(MaterialTheme.screenBackgroundColor)
+                .background(MaterialTheme.colorScheme.surface)
         ) {
             if (errorMessage != null) {
                 Box(

@@ -62,7 +62,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
-import com.leshoraa.scanorea.core.designsystem.cardContainerColor
 import coil.request.ImageRequest
 import coil.size.Precision
 import com.leshoraa.scanorea.features.editor.domain.CropGestureCalculator
@@ -201,7 +200,7 @@ fun EditorCanvasPager(
                     .alpha(if (isBeingMoved) 0f else 1f)
                     .padding(horizontal = 4.dp, vertical = 2.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.cardContainerColor),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 BoxWithConstraints(

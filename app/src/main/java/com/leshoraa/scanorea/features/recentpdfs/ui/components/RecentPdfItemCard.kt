@@ -40,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.leshoraa.scanorea.core.designsystem.cardContainerColor
 import com.leshoraa.scanorea.core.format.DateTimeFormatter
 import com.leshoraa.scanorea.core.format.FileSizeFormatter
 import com.leshoraa.scanorea.features.recentpdfs.domain.model.RecentPdf
@@ -67,7 +66,7 @@ fun RecentPdfItemCard(
             .clickable { onPdfClick(recent.file) },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.cardContainerColor
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {

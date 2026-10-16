@@ -80,7 +80,7 @@ fun BoxScope.EditorCanvasBadges(
         Surface(
             onClick = onResetZoom,
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xDD202020),
+            color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.90f),
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)),
             shadowElevation = 0.dp
         ) {
@@ -91,7 +91,7 @@ fun BoxScope.EditorCanvasBadges(
                 Text(
                     text = "${String.format(Locale.US, "%.1f", zoomScale)}x",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.inverseOnSurface,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.width(4.dp))
@@ -107,7 +107,7 @@ fun BoxScope.EditorCanvasBadges(
 
     // Top-right Page Indicator Badge
     Surface(
-        color = Color.Black.copy(alpha = 0.65f),
+        color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.85f),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier
             .align(Alignment.TopEnd)
@@ -117,7 +117,7 @@ fun BoxScope.EditorCanvasBadges(
             text = "${pageIndex + 1} / $totalPages",
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.inverseOnSurface,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
         )
     }

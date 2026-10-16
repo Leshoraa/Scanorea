@@ -25,8 +25,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.leshoraa.scanorea.core.designsystem.cardContainerColor
-import com.leshoraa.scanorea.core.designsystem.cardIconSurfaceColor
 
 /**
  * Primary call-to-action hero banner on the home screen initiating document capture and conversion workflows.
@@ -44,7 +42,7 @@ fun HomeHeroBanner(
             .padding(horizontal = 16.dp, vertical = 10.dp),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.cardContainerColor
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -54,7 +52,7 @@ fun HomeHeroBanner(
                 .padding(20.dp)
         ) {
             Surface(
-                color = MaterialTheme.cardIconSurfaceColor,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.size(50.dp)
             ) {

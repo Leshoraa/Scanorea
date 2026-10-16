@@ -362,7 +362,7 @@ fun EditorPagesGridDialog(
 
                                 // Page Number Badge (Top-Left)
                                 Surface(
-                                    color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.70f),
+                                    color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.85f),
                                     shape = RoundedCornerShape(topStart = 12.dp, bottomEnd = 8.dp),
                                     modifier = Modifier.align(Alignment.TopStart)
                                 ) {
@@ -370,7 +370,7 @@ fun EditorPagesGridDialog(
                                         text = "$displayPageNumber",
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (isCurrent) MaterialTheme.colorScheme.onPrimary else Color.White,
+                                        color = if (isCurrent) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.inverseOnSurface,
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                     )
                                 }
@@ -380,8 +380,8 @@ fun EditorPagesGridDialog(
                                     FilledTonalIconButton(
                                         onClick = { onRemovePage(page.id) },
                                         colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                            containerColor = Color.Black.copy(alpha = 0.65f),
-                                            contentColor = Color.White
+                                            containerColor = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.80f),
+                                            contentColor = MaterialTheme.colorScheme.inverseOnSurface
                                         ),
                                         modifier = Modifier
                                             .align(Alignment.TopEnd)

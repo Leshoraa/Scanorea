@@ -69,7 +69,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.leshoraa.scanorea.core.designsystem.cardContainerColor
 import com.leshoraa.scanorea.features.recentpdfs.domain.model.RecentPdf
 import com.leshoraa.scanorea.features.recentpdfs.ui.DocumentFilter
 import kotlinx.coroutines.launch
@@ -736,7 +735,7 @@ private fun FolderGridCard(
     val containerColor by animateColorAsState(
         targetValue = when {
             isLifted || isSelected -> MaterialTheme.colorScheme.primary
-            else -> MaterialTheme.cardContainerColor
+            else -> MaterialTheme.colorScheme.surfaceContainerLowest
         },
         animationSpec = tween(durationMillis = COLOR_TRANSITION_DURATION_MS),
         label = "cardContainerColor_$title"
