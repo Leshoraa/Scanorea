@@ -37,6 +37,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Compare
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.leshoraa.scanorea.core.format.FileSizeFormatter
 
 /**
@@ -59,6 +66,8 @@ fun EditorTopBar(
     onRotateAllPages: () -> Unit,
     onOptionsClick: () -> Unit,
     onDeleteCurrentPage: () -> Unit,
+    isComparing: Boolean = false,
+    onCompareChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var isMenuVisible by remember { mutableStateOf(false) }
@@ -112,12 +121,35 @@ fun EditorTopBar(
                 )
             }
 
-            // Add Photos / Scan Camera Button
-            IconButton(onClick = onAddPagesClick) {
+            // Hold-to-Compare Button (shows original unedited photo while held)
+            val haptic = LocalHapticFeedback.current
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onPress = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onCompareChange(true)
+                                try {
+                                    tryAwaitRelease()
+                                } finally {
+                                    onCompareChange(false)
+                                }
+                            }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
-                    imageVector = Icons.Filled.AddPhotoAlternate,
-                    contentDescription = "Add pages",
-                    tint = MaterialTheme.colorScheme.onSurface
+                    imageVector = Icons.Filled.Compare,
+                    contentDescription = "Hold to compare original",
+                    tint = if (isComparing) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
                 )
             }
 
@@ -135,6 +167,16 @@ fun EditorTopBar(
                     expanded = isMenuVisible,
                     onDismissRequest = { isMenuVisible = false }
                 ) {
+                    DropdownMenuItem(
+                        text = { Text("Add Pages") },
+                        leadingIcon = {
+                            Icon(Icons.Filled.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(20.dp))
+                        },
+                        onClick = {
+                            isMenuVisible = false
+                            onAddPagesClick()
+                        }
+                    )
                     DropdownMenuItem(
                         text = { Text("Rename Document") },
                         leadingIcon = {

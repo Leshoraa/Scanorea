@@ -509,6 +509,43 @@ class ImagesToPdfViewModel(
         }
     }
 
+    fun updatePageAnnotation(pageId: String, annotation: PageAnnotation) {
+        _uiState.update { currentState ->
+            val updatedPages = currentState.pages.map { page ->
+                if (page.id == pageId) {
+                    val updatedAnnotations = page.annotations.map {
+                        if (it.id == annotation.id) annotation else it
+                    }
+                    page.copy(annotations = updatedAnnotations)
+                } else {
+                    page
+                }
+            }
+            currentState.copy(pages = updatedPages)
+        }
+    }
+
+    fun removePageAnnotation(pageId: String, annotationId: String) {
+        _uiState.update { currentState ->
+            val targetPage = currentState.pages.find { it.id == pageId } ?: return@update currentState
+            val annotationToRemove = targetPage.annotations.find { it.id == annotationId }
+            val updatedPages = currentState.pages.map { page ->
+                if (page.id == pageId) {
+                    page.copy(annotations = page.annotations.filterNot { it.id == annotationId })
+                } else {
+                    page
+                }
+            }
+            val currentRedoList = currentState.redoAnnotationsMap[pageId] ?: emptyList()
+            val updatedRedo = if (annotationToRemove != null) {
+                currentState.redoAnnotationsMap + (pageId to (currentRedoList + annotationToRemove))
+            } else {
+                currentState.redoAnnotationsMap
+            }
+            currentState.copy(pages = updatedPages, redoAnnotationsMap = updatedRedo)
+        }
+    }
+
     fun setGridView(enabled: Boolean) {
         _uiState.update { it.copy(isGridView = enabled) }
     }

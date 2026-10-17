@@ -404,7 +404,7 @@ fun PdfViewerScreen(
                                 modifier = Modifier.fillMaxSize(),
                                 shape = RoundedCornerShape(4.dp),
                                 colors = CardDefaults.cardColors(
-                                    containerColor = Color.White
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
                                 ),
                                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                             ) {
@@ -488,7 +488,7 @@ fun PdfViewerScreen(
                                 .aspectRatio(pageRatio),
                             shape = RoundedCornerShape(4.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = Color.White
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
                             ),
                             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                         ) {

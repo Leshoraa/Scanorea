@@ -1,5 +1,7 @@
 package com.leshoraa.scanorea.features.pdfviewer.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -18,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -27,18 +30,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.features.pdfviewer.domain.PdfScrollCalculator
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
  * Interactive fast-scroller and thumb controller for the PDF document viewer.
- * Supports direct track dragging and real-time page detection based on thumb intersection.
+ * Supports direct track dragging, real-time page detection based on thumb intersection,
+ * and smooth auto-hide when scrolling is idle.
  */
 @Composable
 fun PdfFastScroller(
@@ -60,10 +66,28 @@ fun PdfFastScroller(
     var isDragging by remember { mutableStateOf(false) }
     var dragY by remember { mutableFloatStateOf(verticalPaddingPx) }
 
+    var isVisible by remember { mutableStateOf(true) }
+
+    LaunchedEffect(listState.isScrollInProgress, isDragging) {
+        if (listState.isScrollInProgress || isDragging) {
+            isVisible = true
+        } else {
+            delay(1500L)
+            isVisible = false
+        }
+    }
+
+    val alpha by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0f,
+        animationSpec = tween(durationMillis = 300),
+        label = "fast_scroller_alpha"
+    )
+
     BoxWithConstraints(
         modifier = modifier
             .fillMaxHeight()
             .width(64.dp)
+            .graphicsLayer { this.alpha = alpha }
     ) {
         val containerHeightPx = constraints.maxHeight.toFloat()
         val minY = verticalPaddingPx
@@ -153,8 +177,8 @@ fun PdfFastScroller(
         }
 
         // Entire right track area captures drag and touch gestures
-        Box(
-            modifier = Modifier
+        val trackModifier = if (alpha > 0.01f) {
+            Modifier
                 .fillMaxHeight()
                 .width(64.dp)
                 .systemGestureExclusion()
@@ -180,6 +204,14 @@ fun PdfFastScroller(
                         }
                     }
                 }
+        } else {
+            Modifier
+                .fillMaxHeight()
+                .width(64.dp)
+        }
+
+        Box(
+            modifier = trackModifier
         ) {
             // Subtle track bar line
             Box(

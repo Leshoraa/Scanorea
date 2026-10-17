@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -25,6 +26,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +47,7 @@ import com.leshoraa.scanorea.features.recentpdfs.ui.RecentPdfsViewModel
 import com.leshoraa.scanorea.features.recentpdfs.ui.ResultsScreen
 import com.leshoraa.scanorea.features.settings.ui.SettingsScreen
 import com.leshoraa.scanorea.features.tools.ui.ToolsScreen
+import kotlinx.coroutines.launch
 
 /**
  * Primary host screen managing navigation routing, workspace transitions, and system integrations.
@@ -65,15 +68,24 @@ fun MainScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    var currentTab by remember { mutableStateOf(MainNavTab.HOME) }
+    val tabs = remember { MainNavTab.entries }
+    val tabPagerState = rememberPagerState(
+        initialPage = 0,
+        pageCount = { tabs.size }
+    )
+    val coroutineScope = rememberCoroutineScope()
+    val currentTab = tabs[tabPagerState.currentPage]
+
     var isRenameDialogOpen by remember { mutableStateOf(false) }
     var isPagesGridVisible by remember { mutableStateOf(false) }
     var isPresetManagerVisible by remember { mutableStateOf(false) }
     var isDiscardDialogVisible by remember { mutableStateOf(false) }
     var captureSourceSheetTitle by remember { mutableStateOf<String?>(null) }
+    var isComparingOriginal by remember { mutableStateOf(false) }
 
-    LaunchedEffect(currentTab) {
-        if (currentTab == MainNavTab.RESULTS || currentTab == MainNavTab.HOME) {
+    LaunchedEffect(tabPagerState.currentPage) {
+        val tab = tabs[tabPagerState.currentPage]
+        if (tab == MainNavTab.RESULTS || tab == MainNavTab.HOME) {
             recentPdfsViewModel.loadRecentPdfs()
         }
     }
@@ -119,8 +131,12 @@ fun MainScreen(
     // Back button handling: Intercept unsaved changes with Discard confirmation dialog
     if (uiState.hasPages) {
         BackHandler { isDiscardDialogVisible = true }
-    } else if (currentTab != MainNavTab.HOME) {
-        BackHandler { currentTab = MainNavTab.HOME }
+    } else if (tabPagerState.currentPage != 0) {
+        BackHandler {
+            coroutineScope.launch {
+                tabPagerState.animateScrollToPage(0)
+            }
+        }
     }
 
     Scaffold(
@@ -144,7 +160,9 @@ fun MainScreen(
                     onRotateCurrentPage = { currentPage?.let { viewModel.rotatePage(it.id) } },
                     onRotateAllPages = { viewModel.rotateAllPages() },
                     onOptionsClick = { viewModel.showOptionsBottomSheet(true) },
-                    onDeleteCurrentPage = { currentPage?.let { viewModel.removePage(it.id) } }
+                    onDeleteCurrentPage = { currentPage?.let { viewModel.removePage(it.id) } },
+                    isComparing = isComparingOriginal,
+                    onCompareChange = { isComparingOriginal = it }
                 )
             } else if (currentTab == MainNavTab.HOME) {
                 TopAppBar(
@@ -174,13 +192,18 @@ fun MainScreen(
                     containerColor = MaterialTheme.colorScheme.surface,
                     tonalElevation = 0.dp
                 ) {
-                    MainNavTab.entries.forEach { tab ->
+                    tabs.forEach { tab ->
+                        val isSelected = tabPagerState.currentPage == tab.ordinal
                         NavigationBarItem(
-                            selected = currentTab == tab,
-                            onClick = { currentTab = tab },
+                            selected = isSelected,
+                            onClick = {
+                                coroutineScope.launch {
+                                    tabPagerState.animateScrollToPage(tab.ordinal)
+                                }
+                            },
                             icon = {
                                 Icon(
-                                    imageVector = if (currentTab == tab) tab.selectedIcon else tab.unselectedIcon,
+                                    imageVector = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
                                     contentDescription = tab.title
                                 )
                             },
@@ -202,62 +225,76 @@ fun MainScreen(
                 .padding(innerPadding)
         ) {
             if (!uiState.hasPages) {
-                when (currentTab) {
-                    MainNavTab.HOME -> {
-                        HomeScreen(
-                            recentPdfs = recentPdfsUiState.recentPdfs,
-                            onScanConvertClick = { captureSourceSheetTitle = "Scan & Convert to PDF" },
-                            onGalleryClick = { launchers.launchPhotoPicker() },
-                            onCameraClick = { launchers.launchCamera() },
-                            onSeeAllToolsClick = { currentTab = MainNavTab.TOOLS },
-                            onSeeAllResultsClick = { currentTab = MainNavTab.RESULTS },
-                            onPdfClick = { viewModel.openPdfInViewer(it) },
-                            onShareClick = { PdfDocumentSharer.share(context, it) },
-                            onDeleteClick = { recentPdfsViewModel.deletePdf(it) },
-                            onToggleFavorite = { recentPdfsViewModel.toggleFavorite(it) }
-                        )
-                    }
+                HorizontalPager(
+                    state = tabPagerState,
+                    userScrollEnabled = tabPagerState.currentPage != MainNavTab.RESULTS.ordinal,
+                    modifier = Modifier.fillMaxSize()
+                ) { pageIndex ->
+                    when (tabs[pageIndex]) {
+                        MainNavTab.HOME -> {
+                            HomeScreen(
+                                recentPdfs = recentPdfsUiState.recentPdfs,
+                                onScanConvertClick = { captureSourceSheetTitle = "Scan & Convert to PDF" },
+                                onGalleryClick = { launchers.launchPhotoPicker() },
+                                onCameraClick = { launchers.launchCamera() },
+                                onSeeAllToolsClick = {
+                                    coroutineScope.launch {
+                                        tabPagerState.animateScrollToPage(MainNavTab.TOOLS.ordinal)
+                                    }
+                                },
+                                onSeeAllResultsClick = {
+                                    coroutineScope.launch {
+                                        tabPagerState.animateScrollToPage(MainNavTab.RESULTS.ordinal)
+                                    }
+                                },
+                                onPdfClick = { viewModel.openPdfInViewer(it) },
+                                onShareClick = { PdfDocumentSharer.share(context, it) },
+                                onDeleteClick = { recentPdfsViewModel.deletePdf(it) },
+                                onToggleFavorite = { recentPdfsViewModel.toggleFavorite(it) }
+                            )
+                        }
 
-                    MainNavTab.TOOLS -> {
-                        ToolsScreen(
-                            onPresetsClick = { isPresetManagerVisible = true },
-                            onOpenPdfClick = { launchers.launchOpenPdf() }
-                        )
-                    }
+                        MainNavTab.TOOLS -> {
+                            ToolsScreen(
+                                onPresetsClick = { isPresetManagerVisible = true },
+                                onOpenPdfClick = { launchers.launchOpenPdf() }
+                            )
+                        }
 
-                    MainNavTab.RESULTS -> {
-                        ResultsScreen(
-                            recentPdfs = recentPdfsUiState.recentPdfs,
-                            categories = recentPdfsUiState.categories,
-                            pinnedFolders = recentPdfsUiState.pinnedFolders,
-                            onTogglePinFolder = { recentPdfsViewModel.togglePinFolder(it) },
-                            onPdfClick = { viewModel.openPdfInViewer(it) },
-                            onShareClick = { PdfDocumentSharer.share(context, it) },
-                            onDeleteClick = { recentPdfsViewModel.deletePdf(it) },
-                            onToggleFavorite = { recentPdfsViewModel.toggleFavorite(it) },
-                            onAssignFolders = { file, folders -> recentPdfsViewModel.updatePdfFolders(file, folders) },
-                            onAddCategory = { recentPdfsViewModel.addCategory(it) },
-                            onRenameCategory = { oldName, newName -> recentPdfsViewModel.renameCategory(oldName, newName) },
-                            onDeleteCategory = { recentPdfsViewModel.deleteCategory(it) },
-                            onReorderPinnedFolders = { recentPdfsViewModel.setPinnedFolders(it) }
-                        )
-                    }
+                        MainNavTab.RESULTS -> {
+                            ResultsScreen(
+                                recentPdfs = recentPdfsUiState.recentPdfs,
+                                categories = recentPdfsUiState.categories,
+                                pinnedFolders = recentPdfsUiState.pinnedFolders,
+                                onTogglePinFolder = { recentPdfsViewModel.togglePinFolder(it) },
+                                onPdfClick = { viewModel.openPdfInViewer(it) },
+                                onShareClick = { PdfDocumentSharer.share(context, it) },
+                                onDeleteClick = { recentPdfsViewModel.deletePdf(it) },
+                                onToggleFavorite = { recentPdfsViewModel.toggleFavorite(it) },
+                                onAssignFolders = { file, folders -> recentPdfsViewModel.updatePdfFolders(file, folders) },
+                                onAddCategory = { recentPdfsViewModel.addCategory(it) },
+                                onRenameCategory = { oldName, newName -> recentPdfsViewModel.renameCategory(oldName, newName) },
+                                onDeleteCategory = { recentPdfsViewModel.deleteCategory(it) },
+                                onReorderPinnedFolders = { recentPdfsViewModel.setPinnedFolders(it) }
+                            )
+                        }
 
-                    MainNavTab.SETTINGS -> {
-                        SettingsScreen(
-                            destinationFolderDisplayName = uiState.destinationFolderDisplayName,
-                            onChangeDestinationFolder = { launchers.launchFolderPicker() },
-                            defaultPageSize = uiState.options.pageSize,
-                            onDefaultPageSizeChange = { viewModel.updateDefaultPageSize(it) },
-                            defaultOrientation = uiState.options.orientation,
-                            onDefaultOrientationChange = { viewModel.updateDefaultOrientation(it) },
-                            defaultCompression = uiState.options.compressionProfile,
-                            onDefaultCompressionChange = { viewModel.updateDefaultCompression(it) },
-                            defaultFilter = uiState.defaultFilter,
-                            onDefaultFilterChange = { viewModel.updateDefaultFilter(it) },
-                            presetsCount = uiState.presets.size,
-                            onNavigateToPresets = { isPresetManagerVisible = true }
-                        )
+                        MainNavTab.SETTINGS -> {
+                            SettingsScreen(
+                                destinationFolderDisplayName = uiState.destinationFolderDisplayName,
+                                onChangeDestinationFolder = { launchers.launchFolderPicker() },
+                                defaultPageSize = uiState.options.pageSize,
+                                onDefaultPageSizeChange = { viewModel.updateDefaultPageSize(it) },
+                                defaultOrientation = uiState.options.orientation,
+                                onDefaultOrientationChange = { viewModel.updateDefaultOrientation(it) },
+                                defaultCompression = uiState.options.compressionProfile,
+                                onDefaultCompressionChange = { viewModel.updateDefaultCompression(it) },
+                                defaultFilter = uiState.defaultFilter,
+                                onDefaultFilterChange = { viewModel.updateDefaultFilter(it) },
+                                presetsCount = uiState.presets.size,
+                                onNavigateToPresets = { isPresetManagerVisible = true }
+                            )
+                        }
                     }
                 }
             } else {
@@ -303,6 +340,12 @@ fun MainScreen(
                     onAddAnnotation = { pageId, annotation ->
                         viewModel.addPageAnnotation(pageId, annotation)
                     },
+                    onUpdateAnnotation = { pageId, annotation ->
+                        viewModel.updatePageAnnotation(pageId, annotation)
+                    },
+                    onRemoveAnnotation = { pageId, annotationId ->
+                        viewModel.removePageAnnotation(pageId, annotationId)
+                    },
                     onUndoAnnotation = { pageId ->
                         viewModel.undoPageAnnotation(pageId)
                     },
@@ -313,7 +356,9 @@ fun MainScreen(
                         viewModel.clearPageAnnotations(pageId)
                     },
                     onCancel = { viewModel.clearAllPages() },
-                    onOpenOptionsSheet = { viewModel.showOptionsBottomSheet(true) }
+                    onOpenOptionsSheet = { viewModel.showOptionsBottomSheet(true) },
+                    isComparing = isComparingOriginal,
+                    onCompareChange = { isComparingOriginal = it }
                 )
             }
         }
@@ -336,7 +381,11 @@ fun MainScreen(
         captureSourceSheetTitle = captureSourceSheetTitle,
         onDismissCaptureSourceSheet = { captureSourceSheetTitle = null },
         onOpenPdfInViewer = { viewModel.openPdfInViewer(it) },
-        onNavigateToResults = { currentTab = MainNavTab.RESULTS },
+        onNavigateToResults = {
+            coroutineScope.launch {
+                tabPagerState.animateScrollToPage(MainNavTab.RESULTS.ordinal)
+            }
+        },
         context = context
     )
 }

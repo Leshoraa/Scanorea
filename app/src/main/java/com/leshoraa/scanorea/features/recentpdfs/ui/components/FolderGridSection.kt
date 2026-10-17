@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -111,6 +112,7 @@ fun FolderGridSection(
     onOpenAllFolders: () -> Unit,
     onRenameFolder: (String) -> Unit = {},
     onDeleteFolder: (String) -> Unit = {},
+    onUnpinFolder: (String) -> Unit = {},
     onReorderPinnedFolders: (List<String>) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -230,7 +232,7 @@ fun FolderGridSection(
                                 targetValue = targetOffset,
                                 animationSpec = spring(
                                     dampingRatio = Spring.DampingRatioLowBouncy,
-                                    stiffness = Spring.StiffnessMediumLow
+                                    stiffness = Spring.StiffnessMedium
                                 )
                             )
                             performDropHaptic()
@@ -330,6 +332,7 @@ fun FolderGridSection(
                             onSelectFilter = onSelectFilter,
                             onRenameFolder = onRenameFolder,
                             onDeleteFolder = onDeleteFolder,
+                            onUnpinFolder = onUnpinFolder,
                             activePinnedSize = activePinned.size,
                             draggedIndex = draggedIndex,
                             targetDropIndex = targetDropIndex,
@@ -369,6 +372,7 @@ fun FolderGridSection(
                             onSelectFilter = onSelectFilter,
                             onRenameFolder = onRenameFolder,
                             onDeleteFolder = onDeleteFolder,
+                            onUnpinFolder = onUnpinFolder,
                             activePinnedSize = activePinned.size,
                             draggedIndex = draggedIndex,
                             targetDropIndex = targetDropIndex,
@@ -419,6 +423,7 @@ fun FolderGridSection(
                                 onSelectFilter = onSelectFilter,
                                 onRenameFolder = onRenameFolder,
                                 onDeleteFolder = onDeleteFolder,
+                                onUnpinFolder = onUnpinFolder,
                                 activePinnedSize = activePinned.size,
                                 draggedIndex = draggedIndex,
                                 targetDropIndex = targetDropIndex,
@@ -477,6 +482,7 @@ fun FolderGridSection(
                                 onSelectFilter = onSelectFilter,
                                 onRenameFolder = onRenameFolder,
                                 onDeleteFolder = onDeleteFolder,
+                                onUnpinFolder = onUnpinFolder,
                                 activePinnedSize = activePinned.size,
                                 draggedIndex = draggedIndex,
                                 targetDropIndex = targetDropIndex,
@@ -507,6 +513,7 @@ fun FolderGridSection(
                                 onSelectFilter = onSelectFilter,
                                 onRenameFolder = onRenameFolder,
                                 onDeleteFolder = onDeleteFolder,
+                                onUnpinFolder = onUnpinFolder,
                                 activePinnedSize = activePinned.size,
                                 draggedIndex = draggedIndex,
                                 targetDropIndex = targetDropIndex,
@@ -545,6 +552,7 @@ fun FolderGridSection(
                                 onSelectFilter = onSelectFilter,
                                 onRenameFolder = onRenameFolder,
                                 onDeleteFolder = onDeleteFolder,
+                                onUnpinFolder = onUnpinFolder,
                                 activePinnedSize = activePinned.size,
                                 draggedIndex = draggedIndex,
                                 targetDropIndex = targetDropIndex,
@@ -602,6 +610,7 @@ private fun PinnedFolderGridCard(
     onSelectFilter: (DocumentFilter) -> Unit,
     onRenameFolder: (String) -> Unit,
     onDeleteFolder: (String) -> Unit,
+    onUnpinFolder: (String) -> Unit,
     activePinnedSize: Int,
     draggedIndex: Int,
     targetDropIndex: Int,
@@ -620,23 +629,28 @@ private fun PinnedFolderGridCard(
     val targetSlot = FolderGridDragCalculator.calculateTargetSlot(slotIndex, draggedIndex, targetDropIndex)
     val shift = FolderGridDragCalculator.calculateSlotShift(slotIndex, targetSlot, cardWidthPx, cardHeightPx, spacingPx)
     val isCurrentDragging = draggedIndex == slotIndex
+    val isSlotShifted = isAnyItemDragging && !isCurrentDragging && (targetSlot != slotIndex)
 
-    val animatedShiftX by animateFloatAsState(
+    val animatedShiftX = animateFloatAsState(
         targetValue = if (isCurrentDragging || !isAnyItemDragging) 0f else shift.x,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMediumLow
+            stiffness = Spring.StiffnessMedium
         ),
         label = "folderShiftX_$folderName"
     )
-    val animatedShiftY by animateFloatAsState(
+    val animatedShiftY = animateFloatAsState(
         targetValue = if (isCurrentDragging || !isAnyItemDragging) 0f else shift.y,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMediumLow
+            stiffness = Spring.StiffnessMedium
         ),
         label = "folderShiftY_$folderName"
     )
+
+    val shiftOffsetProvider = {
+        Offset(animatedShiftX.value, animatedShiftY.value)
+    }
 
     FolderGridCard(
         title = folderName,
@@ -647,11 +661,13 @@ private fun PinnedFolderGridCard(
         isCustomFolder = !folderName.equals("Favorites", ignoreCase = true),
         onRename = { onRenameFolder(folderName) },
         onDelete = { onDeleteFolder(folderName) },
+        onUnpin = { onUnpinFolder(folderName) },
         isDraggable = activePinnedSize > 1,
         isDragging = isCurrentDragging,
         isSettling = isSettling,
         dragOffsetProvider = dragOffsetProvider,
-        animatedShift = if (isAnyItemDragging) Offset(animatedShiftX, animatedShiftY) else Offset.Zero,
+        shiftOffsetProvider = shiftOffsetProvider,
+        isSlotShifted = isSlotShifted,
         isAnyItemDragging = isAnyItemDragging,
         onStartDrag = { onStartDrag(slotIndex) },
         onDragDelta = onDragDelta,
@@ -697,11 +713,13 @@ private fun FolderGridCard(
     isCustomFolder: Boolean = false,
     onRename: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null,
+    onUnpin: (() -> Unit)? = null,
     isDraggable: Boolean = false,
     isDragging: Boolean = false,
     isSettling: Boolean = false,
     dragOffsetProvider: () -> Offset = { Offset.Zero },
-    animatedShift: Offset = Offset.Zero,
+    shiftOffsetProvider: () -> Offset = { Offset.Zero },
+    isSlotShifted: Boolean = false,
     isAnyItemDragging: Boolean = false,
     onStartDrag: () -> Unit = {},
     onDragDelta: (Offset) -> Unit = {},
@@ -715,7 +733,7 @@ private fun FolderGridCard(
 
     val isLifted = isDragging && !isSettling
 
-    val animatedScale by animateFloatAsState(
+    val animatedScale = animateFloatAsState(
         targetValue = if (isLifted) CARD_LIFT_SCALE else CARD_RESTING_SCALE,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioLowBouncy,
@@ -724,7 +742,7 @@ private fun FolderGridCard(
         label = "cardScale_$title"
     )
 
-    val animatedElevation by animateDpAsState(
+    val animatedElevation = animateDpAsState(
         targetValue = if (isLifted) CARD_DRAG_SHADOW_ELEVATION else CARD_RESTING_SHADOW_ELEVATION,
         animationSpec = spring(
             stiffness = Spring.StiffnessMedium
@@ -750,8 +768,6 @@ private fun FolderGridCard(
         label = "cardContentColor_$title"
     )
 
-    val isShifted = isAnyItemDragging && !isDragging && (animatedShift.x != 0f || animatedShift.y != 0f)
-
     val haptic = LocalHapticFeedback.current
 
     Surface(
@@ -766,7 +782,7 @@ private fun FolderGridCard(
             .zIndex(
                 when {
                     isDragging -> Z_INDEX_DRAGGING
-                    isShifted -> Z_INDEX_SHIFTED
+                    isSlotShifted -> Z_INDEX_SHIFTED
                     else -> Z_INDEX_RESTING
                 }
             )
@@ -780,12 +796,13 @@ private fun FolderGridCard(
                     val offset = dragOffsetProvider()
                     translationX = offset.x
                     translationY = offset.y
-                    scaleX = animatedScale
-                    scaleY = animatedScale
-                    shadowElevation = animatedElevation.toPx()
+                    scaleX = animatedScale.value
+                    scaleY = animatedScale.value
+                    shadowElevation = animatedElevation.value.toPx()
                 } else if (isAnyItemDragging) {
-                    translationX = animatedShift.x
-                    translationY = animatedShift.y
+                    val shift = shiftOffsetProvider()
+                    translationX = shift.x
+                    translationY = shift.y
                     scaleX = 1f
                     scaleY = 1f
                 } else {
@@ -822,10 +839,12 @@ private fun FolderGridCard(
             .clip(RoundedCornerShape(CARD_CORNER_RADIUS))
             .clickable(enabled = !isAnyItemDragging && !isSettling, onClick = onClick)
     ) {
+        val hasOptionsMenu = onUnpin != null || (isCustomFolder && (onRename != null || onDelete != null))
+
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 14.dp, end = if (isCustomFolder) 4.dp else 14.dp, top = 8.dp, bottom = 8.dp),
+                .padding(start = 14.dp, end = if (hasOptionsMenu) 4.dp else 14.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -863,7 +882,7 @@ private fun FolderGridCard(
                 )
             }
 
-            if (isCustomFolder && (onRename != null || onDelete != null)) {
+            if (hasOptionsMenu) {
                 Box {
                     var isMenuExpanded by remember { mutableStateOf(false) }
 
@@ -888,7 +907,23 @@ private fun FolderGridCard(
                         expanded = isMenuExpanded,
                         onDismissRequest = { isMenuExpanded = false }
                     ) {
-                        if (onRename != null) {
+                        if (onUnpin != null) {
+                            DropdownMenuItem(
+                                text = { Text("Unpin") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Filled.PushPin,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                },
+                                onClick = {
+                                    isMenuExpanded = false
+                                    onUnpin()
+                                }
+                            )
+                        }
+                        if (isCustomFolder && onRename != null) {
                             DropdownMenuItem(
                                 text = { Text("Rename") },
                                 leadingIcon = {
@@ -904,7 +939,7 @@ private fun FolderGridCard(
                                 }
                             )
                         }
-                        if (onDelete != null) {
+                        if (isCustomFolder && onDelete != null) {
                             DropdownMenuItem(
                                 text = {
                                     Text(

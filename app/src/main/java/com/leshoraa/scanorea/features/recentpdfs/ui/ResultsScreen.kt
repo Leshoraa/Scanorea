@@ -225,6 +225,7 @@ fun ResultsScreen(
             onOpenAllFolders = { isAllFoldersSheetVisible = true },
             onRenameFolder = { folderToRename = it },
             onDeleteFolder = { folderToDelete = it },
+            onUnpinFolder = onTogglePinFolder,
             onReorderPinnedFolders = onReorderPinnedFolders
         )
 

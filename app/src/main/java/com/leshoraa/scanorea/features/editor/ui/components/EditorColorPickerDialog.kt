@@ -184,7 +184,7 @@ fun EditorColorPickerDialog(
                                 .background(presetColor)
                                 .border(
                                     width = if (isSelected) 3.dp else 1.dp,
-                                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.25f),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                                     shape = CircleShape
                                 )
                                 .clickable {

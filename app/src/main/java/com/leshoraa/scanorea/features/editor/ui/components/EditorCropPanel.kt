@@ -1,5 +1,6 @@
 package com.leshoraa.scanorea.features.editor.ui.components
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -42,6 +44,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.features.editor.domain.model.DocumentQuad
@@ -79,6 +84,8 @@ fun EditorCropPanel(
     onResetCrop: () -> Unit,
     onResetPerspective: () -> Unit = {},
     onApplyCrop: () -> Unit = {},
+    isComparing: Boolean = false,
+    onCompareChange: (Boolean) -> Unit = {},
     onPreviousPage: () -> Unit,
     onNextPage: () -> Unit,
     onMovePage: (sourceIndex: Int, targetIndex: Int) -> Unit,
@@ -333,32 +340,60 @@ fun EditorCropPanel(
                 )
             }
 
-            Button(
-                onClick = onApplyCrop,
+            val haptic = LocalHapticFeedback.current
+
+            FilledTonalButton(
+                onClick = {},
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = if (isComparing) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerHigh
+                    },
+                    contentColor = if (isComparing) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
                 ),
-                elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 0.dp,
-                    pressedElevation = 0.dp,
-                    focusedElevation = 0.dp,
-                    hoveredElevation = 0.dp
-                ),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                modifier = Modifier.height(38.dp)
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier
+                    .height(38.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onPress = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onCompareChange(true)
+                                try {
+                                    tryAwaitRelease()
+                                } finally {
+                                    onCompareChange(false)
+                                }
+                            }
+                        )
+                    }
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = "Done",
-                    modifier = Modifier.size(18.dp)
+                    imageVector = Icons.Filled.Compare,
+                    contentDescription = "Hold to compare original",
+                    modifier = Modifier.size(18.dp),
+                    tint = if (isComparing) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    }
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "Done",
+                    text = "Compare",
                     style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isComparing) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
                 )
             }
 

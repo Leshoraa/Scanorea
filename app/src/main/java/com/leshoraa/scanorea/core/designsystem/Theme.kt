@@ -74,23 +74,7 @@ fun ScanoreaTheme(
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            val dynamic = if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-            if (darkTheme) {
-                dynamic.copy(
-                    surface = DarkColorScheme.surface,
-                    surfaceContainer = DarkColorScheme.surfaceContainer,
-                    surfaceContainerLowest = DarkColorScheme.surfaceContainerLowest,
-                    surfaceContainerLow = DarkColorScheme.surfaceContainerLow,
-                    surfaceContainerHigh = DarkColorScheme.surfaceContainerHigh,
-                )
-            } else {
-                dynamic.copy(
-                    surface = LightColorScheme.surface,
-                    surfaceContainer = LightColorScheme.surfaceContainer,
-                    surfaceContainerLowest = LightColorScheme.surfaceContainerLowest,
-                    surfaceContainerHigh = LightColorScheme.surfaceContainerHigh,
-                )
-            }
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
         darkTheme -> DarkColorScheme
         else -> LightColorScheme

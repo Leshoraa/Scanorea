@@ -81,11 +81,15 @@ fun EditorWorkspace(
     canUndoAnnotation: Boolean = false,
     canRedoAnnotation: Boolean = false,
     onAddAnnotation: (pageId: String, annotation: PageAnnotation) -> Unit = { _, _ -> },
+    onUpdateAnnotation: (pageId: String, annotation: PageAnnotation) -> Unit = { _, _ -> },
+    onRemoveAnnotation: (pageId: String, annotationId: String) -> Unit = { _, _ -> },
     onUndoAnnotation: (pageId: String) -> Unit = {},
     onRedoAnnotation: (pageId: String) -> Unit = {},
     onClearAnnotations: (pageId: String) -> Unit = {},
     onCancel: () -> Unit,
     onOpenOptionsSheet: () -> Unit,
+    isComparing: Boolean = false,
+    onCompareChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (pages.isEmpty()) return
@@ -115,8 +119,16 @@ fun EditorWorkspace(
     var originalCropBoundsOnEnter by remember { mutableStateOf(ImageCropBounds.DEFAULT) }
     var originalPerspectiveQuadOnEnter by remember { mutableStateOf(DocumentQuad.DEFAULT) }
     var isAutoDetectingPerspective by remember { mutableStateOf(false) }
+    var localIsComparing by remember { mutableStateOf(false) }
+    val effectiveIsComparing = isComparing || localIsComparing
+    val effectiveOnCompareChange: (Boolean) -> Unit = { active ->
+        localIsComparing = active
+        onCompareChange(active)
+    }
 
     LaunchedEffect(activeCategory, pagerState.currentPage) {
+        localIsComparing = false
+        onCompareChange(false)
         if (activeCategory == EditorCategory.CROP) {
             val curr = pages.getOrNull(pagerState.currentPage)
             originalCropBoundsOnEnter = curr?.cropBounds ?: ImageCropBounds.DEFAULT
@@ -226,6 +238,7 @@ fun EditorWorkspace(
             movingTargetIndex = movingTargetIndex,
             liftProgress = liftAnim.value,
             isCropMode = activeCategory == EditorCategory.CROP,
+            isComparing = effectiveIsComparing,
             cropPanelMode = cropPanelMode,
             cropAspectRatio = selectedCropRatio,
             stagedCropBounds = stagedCropBounds,
@@ -242,6 +255,8 @@ fun EditorWorkspace(
             canUndoAnnotation = canUndoAnnotation,
             canRedoAnnotation = canRedoAnnotation,
             onAddAnnotation = onAddAnnotation,
+            onUpdateAnnotation = onUpdateAnnotation,
+            onRemoveAnnotation = onRemoveAnnotation,
             onUndoAnnotation = { currentPage?.let { onUndoAnnotation(it.id) } },
             onRedoAnnotation = { currentPage?.let { onRedoAnnotation(it.id) } },
             onClearAnnotations = { currentPage?.let { onClearAnnotations(it.id) } },
@@ -307,6 +322,8 @@ fun EditorWorkspace(
                                     stagedPerspectiveQuad = DocumentQuad.DEFAULT
                                 },
                                 onApplyCrop = handleApplyCrop,
+                                isComparing = effectiveIsComparing,
+                                onCompareChange = effectiveOnCompareChange,
                                 onPreviousPage = {
                                     coroutineScope.launch {
                                         if (pagerState.currentPage > 0) {
@@ -347,7 +364,7 @@ fun EditorWorkspace(
             selectedCategory = activeCategory,
             onCategorySelected = { targetCategory ->
                 if (activeCategory == EditorCategory.CROP && targetCategory != EditorCategory.CROP) {
-                    handleCancelCrop()
+                    handleApplyCrop()
                 }
                 activeCategory = targetCategory
             }

@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
@@ -95,6 +96,7 @@ fun EditorCanvasPager(
     movingTargetIndex: Int,
     liftProgress: Float,
     isCropMode: Boolean,
+    isComparing: Boolean = false,
     cropPanelMode: CropPanelMode = CropPanelMode.RECTANGLE,
     cropAspectRatio: CropAspectRatio = CropAspectRatio.FREE,
     stagedCropBounds: ImageCropBounds = ImageCropBounds.DEFAULT,
@@ -111,6 +113,8 @@ fun EditorCanvasPager(
     canUndoAnnotation: Boolean = false,
     canRedoAnnotation: Boolean = false,
     onAddAnnotation: (pageId: String, annotation: PageAnnotation) -> Unit = { _, _ -> },
+    onUpdateAnnotation: (pageId: String, annotation: PageAnnotation) -> Unit = { _, _ -> },
+    onRemoveAnnotation: (pageId: String, annotationId: String) -> Unit = { _, _ -> },
     onUndoAnnotation: () -> Unit = {},
     onRedoAnnotation: () -> Unit = {},
     onClearAnnotations: () -> Unit = {},
@@ -135,10 +139,12 @@ fun EditorCanvasPager(
             userScrollEnabled = !isReordering && !isCropMode && !isAnnotateMode && (activeZoomScale <= 1.05f)
         ) { pageIndex ->
             val page = pages.getOrNull(pageIndex) ?: return@HorizontalPager
-            val colorMatrix = page.filter.createColorMatrix(page.contrast, page.brightness)
-            val colorFilter = colorMatrix?.let { ColorFilter.colorMatrix(ColorMatrix(it.array)) }
             val isBeingMoved = isReordering && page.id == movingPage?.id
             val isCurrentFocusedPage = pageIndex == pagerState.currentPage
+            val isComparingThisPage = isComparing && isCurrentFocusedPage
+
+            val colorMatrix = if (isComparingThisPage) null else page.filter.createColorMatrix(page.contrast, page.brightness)
+            val colorFilter = colorMatrix?.let { ColorFilter.colorMatrix(ColorMatrix(it.array)) }
 
             val coroutineScope = rememberCoroutineScope()
             val currentOnCropChange by rememberUpdatedState(onCropChange)
@@ -148,11 +154,17 @@ fun EditorCanvasPager(
             val currentAnnotationAlpha by rememberUpdatedState(selectedAnnotationAlpha)
             val currentStrokeSize by rememberUpdatedState(selectedStrokeSize)
             val currentOnAddAnnotation by rememberUpdatedState(onAddAnnotation)
+            val currentOnUpdateAnnotation by rememberUpdatedState(onUpdateAnnotation)
+            val currentOnRemoveAnnotation by rememberUpdatedState(onRemoveAnnotation)
 
             var liveInProgressAnnotation by remember { mutableStateOf<PageAnnotation?>(null) }
+            var selectedAnnotationId by remember(page.id, isAnnotateMode) { mutableStateOf<String?>(null) }
+            var liveManipulatedAnnotation by remember { mutableStateOf<PageAnnotation?>(null) }
 
             LaunchedEffect(isAnnotateMode, page.id) {
                 liveInProgressAnnotation = null
+                selectedAnnotationId = null
+                liveManipulatedAnnotation = null
             }
 
             var zoomScale by remember(page.id, isCropMode) { mutableFloatStateOf(1f) }
@@ -213,7 +225,7 @@ fun EditorCanvasPager(
                     var imageAspectRatio by remember(page.id, page.rotationDegrees) { mutableFloatStateOf(0f) }
 
                     // Determine transformation based on active mode
-                    val effectiveCropBounds = if (isCropMode && isCurrentFocusedPage) {
+                    val effectiveCropBounds = if (isComparingThisPage || (isCropMode && isCurrentFocusedPage)) {
                         ImageCropBounds.DEFAULT
                     } else {
                         page.cropBounds
@@ -274,7 +286,7 @@ fun EditorCanvasPager(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .pointerInput(page.id, isCropMode, isAnnotateMode, isCurrentFocusedPage, fittedWPx, fittedHPx) {
+                            .pointerInput(page.id, isCropMode, isAnnotateMode, isCurrentFocusedPage, fittedWPx, fittedHPx, selectedAnnotationId) {
                                 if (!isCurrentFocusedPage) return@pointerInput
 
                                 val cornerHitRadius = 34.dp.toPx()
@@ -313,72 +325,139 @@ fun EditorCanvasPager(
                                     var activePoints = mutableListOf<NormalizedPoint>()
                                     var activeAnno: PageAnnotation? = null
 
-                                    if (currentIsAnnotateMode && currentAnnotationTool != AnnotationTool.NAVIGATE) {
-                                        val isInsideImage = startPos.x in (imgScreenLeft - 24f)..(imgScreenLeft + imgScreenW + 24f) &&
-                                                startPos.y in (imgScreenTop - 24f)..(imgScreenTop + imgScreenH + 24f)
-                                        if (isInsideImage) {
-                                            isAnnotating = true
-                                            startNorm = toNorm(startPos)
-                                            activePoints = mutableListOf(startNorm)
+                                    var activeResizeHandle = AnnotationResizeHandle.NONE
+                                    var currentResizeBounds: Rect? = null
 
-                                            activeAnno = when (currentAnnotationTool) {
-                                                AnnotationTool.NAVIGATE -> null
-                                                AnnotationTool.PEN -> PageAnnotation.FreehandPath(
-                                                    color = currentAnnotationColor,
-                                                    strokeWidth = currentStrokeSize.widthDp,
-                                                    alpha = currentAnnotationAlpha,
-                                                    points = activePoints.toList()
+                                    if (currentIsAnnotateMode) {
+                                        val densityDpi = this.density
+
+                                        // 1. Check if user interacted with the currently selected box annotation
+                                        val currentSelectedAnno = page.annotations.find { it.id == selectedAnnotationId }
+                                        if (currentSelectedAnno != null) {
+                                            val b = AnnotationLayerHelper.getNormalizedBounds(currentSelectedAnno)
+                                            if (b != null) {
+                                                // Did user tap the floating action toolbar (Delete / Done)?
+                                                if (AnnotationLayerHelper.isTouchOnToolbar(startPos, b, imgScreenLeft, imgScreenTop, imgScreenW, imgScreenH, densityDpi)) {
+                                                    // Let child clickable handle Delete/Done
+                                                    while (true) {
+                                                        val ev = awaitPointerEvent()
+                                                        if (ev.changes.none { it.pressed }) break
+                                                    }
+                                                    return@awaitEachGesture
+                                                }
+
+                                                // Did user touch a resize handle or the body?
+                                                val handle = AnnotationLayerHelper.hitTestHandle(
+                                                    touchPos = startPos,
+                                                    bounds = b,
+                                                    imgLeft = imgScreenLeft,
+                                                    imgTop = imgScreenTop,
+                                                    imgW = imgScreenW,
+                                                    imgH = imgScreenH,
+                                                    cornerHitRadius = cornerHitRadius,
+                                                    edgeHitRadius = edgeHitRadius
                                                 )
-                                                AnnotationTool.HIGHLIGHTER -> PageAnnotation.RectBox(
-                                                    color = currentAnnotationColor,
-                                                    strokeWidth = 0f,
-                                                    left = startNorm.x,
-                                                    top = startNorm.y,
-                                                    right = startNorm.x,
-                                                    bottom = startNorm.y,
-                                                    isFilled = true,
-                                                    alpha = if (currentAnnotationAlpha < 1.0f) currentAnnotationAlpha else 0.38f
-                                                )
-                                                AnnotationTool.REDACT -> PageAnnotation.RectBox(
-                                                    color = 0xFF111111,
-                                                    strokeWidth = 0f,
-                                                    left = startNorm.x,
-                                                    top = startNorm.y,
-                                                    right = startNorm.x,
-                                                    bottom = startNorm.y,
-                                                    isFilled = true,
-                                                    alpha = 1.0f
-                                                )
-                                                AnnotationTool.RECT_SHAPE -> PageAnnotation.RectBox(
-                                                    color = currentAnnotationColor,
-                                                    strokeWidth = currentStrokeSize.widthDp,
-                                                    left = startNorm.x,
-                                                    top = startNorm.y,
-                                                    right = startNorm.x,
-                                                    bottom = startNorm.y,
-                                                    isFilled = false,
-                                                    alpha = currentAnnotationAlpha
-                                                )
-                                                AnnotationTool.OVAL_SHAPE -> PageAnnotation.OvalShape(
-                                                    color = currentAnnotationColor,
-                                                    strokeWidth = currentStrokeSize.widthDp,
-                                                    left = startNorm.x,
-                                                    top = startNorm.y,
-                                                    right = startNorm.x,
-                                                    bottom = startNorm.y,
-                                                    alpha = currentAnnotationAlpha
-                                                )
-                                                AnnotationTool.ARROW_SHAPE -> PageAnnotation.ArrowLine(
-                                                    color = currentAnnotationColor,
-                                                    strokeWidth = currentStrokeSize.widthDp,
-                                                    startX = startNorm.x,
-                                                    startY = startNorm.y,
-                                                    endX = startNorm.x,
-                                                    endY = startNorm.y,
-                                                    alpha = currentAnnotationAlpha
-                                                )
+                                                if (handle != AnnotationResizeHandle.NONE) {
+                                                    activeResizeHandle = handle
+                                                    currentResizeBounds = b
+                                                    liveManipulatedAnnotation = currentSelectedAnno
+                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                }
                                             }
-                                            liveInProgressAnnotation = activeAnno
+                                        }
+
+                                        // 2. If nothing on current selection was hit, check if user tapped another existing box annotation
+                                        if (activeResizeHandle == AnnotationResizeHandle.NONE) {
+                                            val hitAnno = page.annotations.reversed().firstOrNull { anno ->
+                                                val b = AnnotationLayerHelper.getNormalizedBounds(anno) ?: return@firstOrNull false
+                                                val screenLeft = imgScreenLeft + b.left * imgScreenW
+                                                val screenRight = imgScreenLeft + b.right * imgScreenW
+                                                val screenTop = imgScreenTop + b.top * imgScreenH
+                                                val screenBottom = imgScreenTop + b.bottom * imgScreenH
+                                                startPos.x in screenLeft..screenRight && startPos.y in screenTop..screenBottom
+                                            }
+                                            if (hitAnno != null) {
+                                                selectedAnnotationId = hitAnno.id
+                                                currentResizeBounds = AnnotationLayerHelper.getNormalizedBounds(hitAnno)
+                                                activeResizeHandle = AnnotationResizeHandle.BODY
+                                                liveManipulatedAnnotation = hitAnno
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            } else {
+                                                // Tapped empty canvas: deselect
+                                                if (selectedAnnotationId != null) {
+                                                    selectedAnnotationId = null
+                                                }
+                                            }
+                                        }
+
+                                        // 3. If no handle/annotation selection drag and tool != NAVIGATE, start drawing new markup
+                                        if (activeResizeHandle == AnnotationResizeHandle.NONE && currentAnnotationTool != AnnotationTool.NAVIGATE) {
+                                            val isInsideImage = startPos.x in (imgScreenLeft - 24f)..(imgScreenLeft + imgScreenW + 24f) &&
+                                                    startPos.y in (imgScreenTop - 24f)..(imgScreenTop + imgScreenH + 24f)
+                                            if (isInsideImage) {
+                                                isAnnotating = true
+                                                startNorm = toNorm(startPos)
+                                                activePoints = mutableListOf(startNorm)
+
+                                                activeAnno = when (currentAnnotationTool) {
+                                                    AnnotationTool.NAVIGATE -> null
+                                                    AnnotationTool.PEN -> PageAnnotation.FreehandPath(
+                                                        color = currentAnnotationColor,
+                                                        strokeWidth = currentStrokeSize.widthDp,
+                                                        alpha = currentAnnotationAlpha,
+                                                        points = activePoints.toList()
+                                                    )
+                                                    AnnotationTool.HIGHLIGHTER -> PageAnnotation.RectBox(
+                                                        color = currentAnnotationColor,
+                                                        strokeWidth = 0f,
+                                                        left = startNorm.x,
+                                                        top = startNorm.y,
+                                                        right = startNorm.x,
+                                                        bottom = startNorm.y,
+                                                        isFilled = true,
+                                                        alpha = if (currentAnnotationAlpha < 1.0f) currentAnnotationAlpha else 0.38f
+                                                    )
+                                                    AnnotationTool.REDACT -> PageAnnotation.RectBox(
+                                                        color = 0xFF111111,
+                                                        strokeWidth = 0f,
+                                                        left = startNorm.x,
+                                                        top = startNorm.y,
+                                                        right = startNorm.x,
+                                                        bottom = startNorm.y,
+                                                        isFilled = true,
+                                                        alpha = 1.0f
+                                                    )
+                                                    AnnotationTool.RECT_SHAPE -> PageAnnotation.RectBox(
+                                                        color = currentAnnotationColor,
+                                                        strokeWidth = currentStrokeSize.widthDp,
+                                                        left = startNorm.x,
+                                                        top = startNorm.y,
+                                                        right = startNorm.x,
+                                                        bottom = startNorm.y,
+                                                        isFilled = false,
+                                                        alpha = currentAnnotationAlpha
+                                                    )
+                                                    AnnotationTool.OVAL_SHAPE -> PageAnnotation.OvalShape(
+                                                        color = currentAnnotationColor,
+                                                        strokeWidth = currentStrokeSize.widthDp,
+                                                        left = startNorm.x,
+                                                        top = startNorm.y,
+                                                        right = startNorm.x,
+                                                        bottom = startNorm.y,
+                                                        alpha = currentAnnotationAlpha
+                                                    )
+                                                    AnnotationTool.ARROW_SHAPE -> PageAnnotation.ArrowLine(
+                                                        color = currentAnnotationColor,
+                                                        strokeWidth = currentStrokeSize.widthDp,
+                                                        startX = startNorm.x,
+                                                        startY = startNorm.y,
+                                                        endX = startNorm.x,
+                                                        endY = startNorm.y,
+                                                        alpha = currentAnnotationAlpha
+                                                    )
+                                                }
+                                                liveInProgressAnnotation = activeAnno
+                                            }
                                         }
                                     }
 
@@ -441,6 +520,12 @@ fun EditorCanvasPager(
                                         val event = awaitPointerEvent()
                                         val pressed = event.changes.filter { it.pressed }
                                         if (pressed.isEmpty()) {
+                                            if (activeResizeHandle != AnnotationResizeHandle.NONE && liveManipulatedAnnotation != null) {
+                                                currentOnUpdateAnnotation(page.id, liveManipulatedAnnotation!!)
+                                                liveManipulatedAnnotation = null
+                                                activeResizeHandle = AnnotationResizeHandle.NONE
+                                            }
+
                                             if (isAnnotating && activeAnno != null && !isPinch) {
                                                 val finalAnno = activeAnno
                                                 val isMicroTap = when (finalAnno) {
@@ -451,6 +536,9 @@ fun EditorCanvasPager(
                                                 }
                                                 if (!isMicroTap) {
                                                     currentOnAddAnnotation(page.id, finalAnno)
+                                                    if (finalAnno is PageAnnotation.RectBox || finalAnno is PageAnnotation.OvalShape) {
+                                                        selectedAnnotationId = finalAnno.id
+                                                    }
                                                 }
                                                 activeAnno = null
                                                 liveInProgressAnnotation = null
@@ -458,7 +546,7 @@ fun EditorCanvasPager(
                                             }
 
                                             val duration = System.currentTimeMillis() - startTime
-                                            if (handle == DragHandle.NONE && !currentIsAnnotateMode && totalDragDistance < 15f && duration < 300L) {
+                                            if (handle == DragHandle.NONE && activeResizeHandle == AnnotationResizeHandle.NONE && !currentIsAnnotateMode && totalDragDistance < 15f && duration < 300L) {
                                                 val now = System.currentTimeMillis()
                                                 if (now - lastTapTime < 350L && hypot(startPos.x - lastTapPos.x, startPos.y - lastTapPos.y) < 60.dp.toPx()) {
                                                     if (zoomScale > 1.05f) {
@@ -494,6 +582,8 @@ fun EditorCanvasPager(
                                         if (pressed.size >= 2) {
                                             isPinch = true
                                             activeCropHandle = DragHandle.NONE
+                                            activeResizeHandle = AnnotationResizeHandle.NONE
+                                            liveManipulatedAnnotation = null
                                             if (isAnnotating) {
                                                 isAnnotating = false
                                                 activeAnno = null
@@ -538,7 +628,19 @@ fun EditorCanvasPager(
                                             val dragAmount = change.positionChange()
                                             totalDragDistance += hypot(dragAmount.x, dragAmount.y)
 
-                                            if (isAnnotating && activeAnno != null) {
+                                            if (activeResizeHandle != AnnotationResizeHandle.NONE && currentResizeBounds != null && liveManipulatedAnnotation != null) {
+                                                change.consume()
+                                                val deltaX = if (imgScreenW > 0f) dragAmount.x / imgScreenW else 0f
+                                                val deltaY = if (imgScreenH > 0f) dragAmount.y / imgScreenH else 0f
+                                                val newBounds = AnnotationLayerHelper.calculateResizedBounds(
+                                                    bounds = currentResizeBounds!!,
+                                                    handle = activeResizeHandle,
+                                                    deltaX = deltaX,
+                                                    deltaY = deltaY
+                                                )
+                                                currentResizeBounds = newBounds
+                                                liveManipulatedAnnotation = AnnotationLayerHelper.updateBounds(liveManipulatedAnnotation!!, newBounds)
+                                            } else if (isAnnotating && activeAnno != null) {
                                                 change.consume()
                                                 val currNorm = toNorm(change.position)
                                                 activeAnno = when (currentAnnotationTool) {
@@ -637,7 +739,7 @@ fun EditorCanvasPager(
                                 modifier = Modifier.size(fittedW, fittedH),
                                 contentAlignment = Alignment.Center
                             ) {
-                                val effectivePerspectiveQuad = if (isCropMode && cropPanelMode == CropPanelMode.PERSPECTIVE) {
+                                val effectivePerspectiveQuad = if (isComparingThisPage || (isCropMode && cropPanelMode == CropPanelMode.PERSPECTIVE)) {
                                     DocumentQuad.DEFAULT
                                 } else {
                                     page.perspectiveQuad
@@ -673,15 +775,48 @@ fun EditorCanvasPager(
                                 )
 
                                 // Annotations Overlay (committed annotations + live drawing preview)
-                                EditorAnnotationCanvas(
-                                    annotations = page.annotations,
-                                    activeAnnotation = if (isAnnotateMode && isCurrentFocusedPage) liveInProgressAnnotation else null,
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                                if (!isComparingThisPage) {
+                                    val displayAnnotations = if (liveManipulatedAnnotation != null && isCurrentFocusedPage) {
+                                        page.annotations.map { if (it.id == liveManipulatedAnnotation?.id) liveManipulatedAnnotation!! else it }
+                                    } else {
+                                        page.annotations
+                                    }
+                                    EditorAnnotationCanvas(
+                                        annotations = displayAnnotations,
+                                        activeAnnotation = if (isAnnotateMode && isCurrentFocusedPage) liveInProgressAnnotation else null,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+
+                                    // Layer Box Selection & Adjustment Overlay
+                                    if (isAnnotateMode && isCurrentFocusedPage && selectedAnnotationId != null) {
+                                        val selectedAnnoToDisplay = if (liveManipulatedAnnotation?.id == selectedAnnotationId) {
+                                            liveManipulatedAnnotation
+                                        } else {
+                                            page.annotations.find { it.id == selectedAnnotationId }
+                                        }
+                                        if (selectedAnnoToDisplay != null) {
+                                            EditorAnnotationLayerOverlay(
+                                                annotation = selectedAnnoToDisplay,
+                                                canvasWidth = fittedWPx,
+                                                canvasHeight = fittedHPx,
+                                                onDelete = {
+                                                    currentOnRemoveAnnotation(page.id, selectedAnnoToDisplay.id)
+                                                    selectedAnnotationId = null
+                                                    liveManipulatedAnnotation = null
+                                                },
+                                                onDeselect = {
+                                                    selectedAnnotationId = null
+                                                    liveManipulatedAnnotation = null
+                                                },
+                                                modifier = Modifier.fillMaxSize()
+                                            )
+                                        }
+                                    }
+                                }
                             }
 
                             // Interactive Crop or Perspective Overlay Canvas when in Crop mode for current page
-                            if (isCropMode && isCurrentFocusedPage) {
+                            if (isCropMode && isCurrentFocusedPage && !isComparingThisPage) {
                                 if (cropPanelMode == CropPanelMode.PERSPECTIVE) {
                                     EditorPerspectiveOverlay(
                                         documentQuad = stagedPerspectiveQuad,
@@ -711,6 +846,31 @@ fun EditorCanvasPager(
                         zoomScale = zoomScale,
                         onResetZoom = { animateZoom(1f, Offset.Zero) }
                     )
+
+                    // Floating "ORIGINAL" badge when holding to compare
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isComparingThisPage,
+                        enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(120)),
+                        exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)),
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 16.dp)
+                            .zIndex(30f)
+                    ) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.88f),
+                            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                            shape = RoundedCornerShape(12.dp),
+                            shadowElevation = 4.dp
+                        ) {
+                            Text(
+                                text = "ORIGINAL",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
