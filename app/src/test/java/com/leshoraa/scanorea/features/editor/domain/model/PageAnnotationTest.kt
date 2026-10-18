@@ -115,4 +115,87 @@ class PageAnnotationTest {
         assertTrue(tools.contains(AnnotationTool.NAVIGATE))
         assertTrue(tools.contains(AnnotationTool.PEN))
     }
+
+    @Test
+    fun rotateClockwise_rotatesAllAnnotationTypes() {
+        val path = PageAnnotation.FreehandPath(
+            color = AnnotationColors.RED,
+            points = listOf(NormalizedPoint(0.2f, 0.3f))
+        ).rotateClockwise() as PageAnnotation.FreehandPath
+        assertEquals(0.7f, path.points.first().x, 1e-4f)
+        assertEquals(0.2f, path.points.first().y, 1e-4f)
+
+        val rect = PageAnnotation.RectBox(
+            color = AnnotationColors.BLUE,
+            left = 0.1f, top = 0.2f, right = 0.6f, bottom = 0.8f,
+            isFilled = false
+        ).rotateClockwise() as PageAnnotation.RectBox
+        assertEquals(0.2f, rect.left, 1e-4f)
+        assertEquals(0.1f, rect.top, 1e-4f)
+        assertEquals(0.8f, rect.right, 1e-4f)
+        assertEquals(0.6f, rect.bottom, 1e-4f)
+
+        val arrow = PageAnnotation.ArrowLine(
+            color = AnnotationColors.GREEN,
+            startX = 0.2f, startY = 0.3f, endX = 0.7f, endY = 0.8f
+        ).rotateClockwise() as PageAnnotation.ArrowLine
+        assertEquals(0.7f, arrow.startX, 1e-4f)
+        assertEquals(0.2f, arrow.startY, 1e-4f)
+        assertEquals(0.2f, arrow.endX, 1e-4f)
+        assertEquals(0.7f, arrow.endY, 1e-4f)
+    }
+
+    @Test
+    fun rotateCounterClockwise_rotatesAllAnnotationTypes() {
+        val rect = PageAnnotation.RectBox(
+            color = AnnotationColors.BLUE,
+            left = 0.1f, top = 0.2f, right = 0.6f, bottom = 0.8f,
+            isFilled = false
+        )
+        val reverted = rect.rotateClockwise().rotateCounterClockwise() as PageAnnotation.RectBox
+        assertEquals(rect.left, reverted.left, 1e-4f)
+        assertEquals(rect.top, reverted.top, 1e-4f)
+        assertEquals(rect.right, reverted.right, 1e-4f)
+        assertEquals(rect.bottom, reverted.bottom, 1e-4f)
+    }
+
+    @Test
+    fun rotateClockwise_fourTimes_returnsOriginalCoordinates() {
+        val rect = PageAnnotation.RectBox(
+            color = AnnotationColors.BLUE,
+            left = 0.15f, top = 0.25f, right = 0.65f, bottom = 0.75f,
+            isFilled = false
+        )
+        val fullRotatedRect = rect
+            .rotateClockwise()
+            .rotateClockwise()
+            .rotateClockwise()
+            .rotateClockwise() as PageAnnotation.RectBox
+        assertEquals(rect.left, fullRotatedRect.left, 1e-4f)
+        assertEquals(rect.top, fullRotatedRect.top, 1e-4f)
+        assertEquals(rect.right, fullRotatedRect.right, 1e-4f)
+        assertEquals(rect.bottom, fullRotatedRect.bottom, 1e-4f)
+
+        val arrow = PageAnnotation.ArrowLine(
+            color = AnnotationColors.RED,
+            startX = 0.2f, startY = 0.3f, endX = 0.8f, endY = 0.6f
+        )
+        val fullRotatedArrow = arrow
+            .rotateClockwise()
+            .rotateClockwise()
+            .rotateClockwise()
+            .rotateClockwise() as PageAnnotation.ArrowLine
+        assertEquals(arrow.startX, fullRotatedArrow.startX, 1e-4f)
+        assertEquals(arrow.startY, fullRotatedArrow.startY, 1e-4f)
+        assertEquals(arrow.endX, fullRotatedArrow.endX, 1e-4f)
+        assertEquals(arrow.endY, fullRotatedArrow.endY, 1e-4f)
+    }
+
+    @Test
+    fun adjustmentTool_containsSharpness() {
+        val tools = AdjustmentTool.entries
+        assertTrue(tools.contains(AdjustmentTool.CONTRAST))
+        assertTrue(tools.contains(AdjustmentTool.BRIGHTNESS))
+        assertTrue(tools.contains(AdjustmentTool.SHARPNESS))
+    }
 }

@@ -1,6 +1,7 @@
 package com.leshoraa.scanorea.app.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -85,7 +86,7 @@ fun MainScreen(
 
     LaunchedEffect(tabPagerState.settledPage) {
         val tab = tabs[tabPagerState.settledPage]
-        if (tab == MainNavTab.RESULTS || tab == MainNavTab.HOME) {
+        if ((tab == MainNavTab.RESULTS || tab == MainNavTab.HOME) && recentPdfsUiState.recentPdfs.isEmpty()) {
             recentPdfsViewModel.loadRecentPdfs()
         }
     }
@@ -139,9 +140,16 @@ fun MainScreen(
         }
     }
 
+    val isDark = isSystemInDarkTheme()
+    val mainBgColor = if (isDark) {
+        MaterialTheme.colorScheme.surfaceContainer
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = mainBgColor,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (uiState.hasPages) {
@@ -162,7 +170,11 @@ fun MainScreen(
                     onOptionsClick = { viewModel.showOptionsBottomSheet(true) },
                     onDeleteCurrentPage = { currentPage?.let { viewModel.removePage(it.id) } },
                     isComparing = isComparingOriginal,
-                    onCompareChange = { isComparingOriginal = it }
+                    onCompareChange = { isComparingOriginal = it },
+                    canUndo = currentPage?.let { uiState.canUndo(it.id) } ?: false,
+                    onUndoClick = { currentPage?.let { viewModel.undoPageEdit(it.id) } },
+                    canRedo = currentPage?.let { uiState.canRedo(it.id) } ?: false,
+                    onRedoClick = { currentPage?.let { viewModel.redoPageEdit(it.id) } }
                 )
             } else if (currentTab == MainNavTab.HOME) {
                 TopAppBar(
@@ -181,7 +193,7 @@ fun MainScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = mainBgColor
                     )
                 )
             }
@@ -189,7 +201,7 @@ fun MainScreen(
         bottomBar = {
             if (!uiState.hasPages) {
                 NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = mainBgColor,
                     tonalElevation = 0.dp
                 ) {
                     tabs.forEach { tab ->
@@ -275,7 +287,8 @@ fun MainScreen(
                                 onAddCategory = { recentPdfsViewModel.addCategory(it) },
                                 onRenameCategory = { oldName, newName -> recentPdfsViewModel.renameCategory(oldName, newName) },
                                 onDeleteCategory = { recentPdfsViewModel.deleteCategory(it) },
-                                onReorderPinnedFolders = { recentPdfsViewModel.setPinnedFolders(it) }
+                                onReorderPinnedFolders = { recentPdfsViewModel.setPinnedFolders(it) },
+                                isLoading = recentPdfsUiState.isLoading
                             )
                         }
 
@@ -308,8 +321,11 @@ fun MainScreen(
                     onRemovePage = { viewModel.removePage(it) },
                     onFilterSelected = { pageId, filter -> viewModel.updatePageFilter(pageId, filter) },
                     onApplyFilterToAll = { filter -> viewModel.applyFilterToAll(filter) },
-                    onAdjustmentChange = { pageId, contrast, brightness ->
-                        viewModel.updatePageAdjustment(pageId, contrast, brightness)
+                    onAdjustmentChange = { pageId, contrast, brightness, sharpness ->
+                        viewModel.updatePageAdjustment(pageId, contrast, brightness, sharpness)
+                    },
+                    onAdjustmentChangeFinished = { pageId ->
+                        viewModel.commitPageAdjustment(pageId)
                     },
                     onAutoAdjustPage = { pageId, resolver ->
                         viewModel.autoAdjustPage(pageId, resolver)
@@ -323,6 +339,9 @@ fun MainScreen(
                     onPerspectiveQuadChange = { pageId, quad ->
                         viewModel.updatePagePerspectiveQuad(pageId, quad)
                     },
+                    onApplyCropAndPerspective = { pageId, bounds, quad ->
+                        viewModel.applyPageCropAndPerspective(pageId, bounds, quad)
+                    },
                     onAutoDetectPerspective = { pageId ->
                         viewModel.autoDetectPagePerspective(pageId, context.contentResolver)
                     },
@@ -331,6 +350,9 @@ fun MainScreen(
                     },
                     onRotatePage = { pageId ->
                         viewModel.rotatePage(pageId)
+                    },
+                    onRotatePageLeft = { pageId ->
+                        viewModel.rotatePageLeft(pageId)
                     },
                     onResetCrop = { pageId ->
                         viewModel.resetPageCrop(pageId)

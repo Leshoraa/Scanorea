@@ -37,7 +37,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import android.media.ExifInterface
 import java.io.File
+import java.io.InputStream
 import java.util.UUID
 
 /**
@@ -233,43 +235,85 @@ class ImagesToPdfViewModel(
         _uiState.update { it.copy(isGridView = !it.isGridView) }
     }
 
+    private var pendingAdjustmentSnapshot: Pair<String, ImagePage>? = null
+
+    private fun pushPageHistory(pageId: String, state: ImagesToPdfUiState): ImagesToPdfUiState {
+        val targetPage = state.pages.find { it.id == pageId } ?: return state
+        val history = state.undoPageHistoryMap[pageId] ?: emptyList()
+        val updatedHistory = (history + targetPage).takeLast(MAX_PAGE_HISTORY_SIZE)
+        return state.copy(
+            undoPageHistoryMap = state.undoPageHistoryMap + (pageId to updatedHistory),
+            redoPageHistoryMap = state.redoPageHistoryMap + (pageId to emptyList()),
+            redoAnnotationsMap = state.redoAnnotationsMap + (pageId to emptyList())
+        )
+    }
+
     fun applyFilterToAll(filter: ImageFilterType) {
         _uiState.update { currentState ->
-            currentState.copy(
+            var state = currentState
+            currentState.pages.forEach { page ->
+                state = pushPageHistory(page.id, state)
+            }
+            state.copy(
                 activeFilter = filter,
-                pages = currentState.pages.map { it.copy(filter = filter) }
+                pages = state.pages.map { it.copy(filter = filter) }
             )
         }
     }
 
     fun updatePageFilter(pageId: String, filter: ImageFilterType) {
         _uiState.update { currentState ->
-            val updatedPages = currentState.pages.map { page ->
+            val stateWithHistory = pushPageHistory(pageId, currentState)
+            val updatedPages = stateWithHistory.pages.map { page ->
                 if (page.id == pageId) page.copy(filter = filter) else page
             }
-            currentState.copy(pages = updatedPages, activeFilter = filter)
+            stateWithHistory.copy(pages = updatedPages, activeFilter = filter)
         }
     }
 
-    fun updatePageAdjustment(pageId: String, contrast: Float, brightness: Float) {
+    fun updatePageAdjustment(pageId: String, contrast: Float, brightness: Float, sharpness: Float = 0.0f) {
         _uiState.update { currentState ->
+            val targetPage = currentState.pages.find { it.id == pageId } ?: return@update currentState
+            if (pendingAdjustmentSnapshot?.first != pageId) {
+                pendingAdjustmentSnapshot = pageId to targetPage
+            }
             val updatedPages = currentState.pages.map { page ->
-                if (page.id == pageId) page.copy(contrast = contrast, brightness = brightness) else page
+                if (page.id == pageId) page.copy(contrast = contrast, brightness = brightness, sharpness = sharpness) else page
             }
             currentState.copy(pages = updatedPages)
+        }
+    }
+
+    fun commitPageAdjustment(pageId: String) {
+        val snapshot = pendingAdjustmentSnapshot
+        if (snapshot != null && snapshot.first == pageId) {
+            _uiState.update { currentState ->
+                val history = currentState.undoPageHistoryMap[pageId] ?: emptyList()
+                val updatedHistory = (history + snapshot.second).takeLast(MAX_PAGE_HISTORY_SIZE)
+                currentState.copy(
+                    undoPageHistoryMap = currentState.undoPageHistoryMap + (pageId to updatedHistory),
+                    redoPageHistoryMap = currentState.redoPageHistoryMap + (pageId to emptyList())
+                )
+            }
+            pendingAdjustmentSnapshot = null
         }
     }
 
     fun resetPageAdjustment(pageId: String) {
         _uiState.update { currentState ->
-            val updatedPages = currentState.pages.map { page ->
+            val stateWithHistory = pushPageHistory(pageId, currentState)
+            val updatedPages = stateWithHistory.pages.map { page ->
                 if (page.id == pageId) {
-                    page.copy(contrast = page.initialContrast, brightness = page.initialBrightness)
+                    page.copy(
+                        contrast = page.initialContrast,
+                        brightness = page.initialBrightness,
+                        sharpness = 0.0f
+                    )
                 } else {
                     page
                 }
             }
-            currentState.copy(pages = updatedPages)
+            stateWithHistory.copy(pages = updatedPages)
         }
     }
 
@@ -335,7 +379,8 @@ class ImagesToPdfViewModel(
      */
     fun recordAutoCalibration(pageId: String, optimalContrast: Float, optimalBrightness: Float) {
         _uiState.update { currentState ->
-            val updatedPages = currentState.pages.map { page ->
+            val stateWithHistory = pushPageHistory(pageId, currentState)
+            val updatedPages = stateWithHistory.pages.map { page ->
                 if (page.id == pageId) {
                     page.copy(
                         contrast = optimalContrast,
@@ -347,7 +392,7 @@ class ImagesToPdfViewModel(
                     page
                 }
             }
-            currentState.copy(pages = updatedPages)
+            stateWithHistory.copy(pages = updatedPages)
         }
     }
 
@@ -384,34 +429,72 @@ class ImagesToPdfViewModel(
 
     fun rotatePage(pageId: String) {
         _uiState.update { currentState ->
-            val updatedPages = currentState.pages.map { page ->
+            val stateWithHistory = pushPageHistory(pageId, currentState)
+            val updatedPages = stateWithHistory.pages.map { page ->
                 if (page.id == pageId) {
                     val nextRotation = (page.rotationDegrees + 90) % 360
-                    page.copy(rotationDegrees = nextRotation)
+                    page.copy(
+                        rotationDegrees = nextRotation,
+                        cropBounds = page.cropBounds.rotateClockwise(),
+                        perspectiveQuad = page.perspectiveQuad.rotateClockwise(),
+                        annotations = page.annotations.map { it.rotateClockwise() }
+                    )
                 } else {
                     page
                 }
             }
-            currentState.copy(pages = updatedPages)
+            stateWithHistory.copy(pages = updatedPages)
+        }
+    }
+
+    fun rotatePageLeft(pageId: String) {
+        _uiState.update { currentState ->
+            val stateWithHistory = pushPageHistory(pageId, currentState)
+            val updatedPages = stateWithHistory.pages.map { page ->
+                if (page.id == pageId) {
+                    val nextRotation = (page.rotationDegrees + 270) % 360
+                    page.copy(
+                        rotationDegrees = nextRotation,
+                        cropBounds = page.cropBounds.rotateCounterClockwise(),
+                        perspectiveQuad = page.perspectiveQuad.rotateCounterClockwise(),
+                        annotations = page.annotations.map { it.rotateCounterClockwise() }
+                    )
+                } else {
+                    page
+                }
+            }
+            stateWithHistory.copy(pages = updatedPages)
         }
     }
 
     fun rotateAllPages() {
         _uiState.update { currentState ->
-            val updatedPages = currentState.pages.map { page ->
-                val nextRotation = (page.rotationDegrees + 90) % 360
-                page.copy(rotationDegrees = nextRotation)
+            var state = currentState
+            currentState.pages.forEach { page ->
+                state = pushPageHistory(page.id, state)
             }
-            currentState.copy(pages = updatedPages)
+            val updatedPages = state.pages.map { page ->
+                val nextRotation = (page.rotationDegrees + 90) % 360
+                page.copy(
+                    rotationDegrees = nextRotation,
+                    cropBounds = page.cropBounds.rotateClockwise(),
+                    perspectiveQuad = page.perspectiveQuad.rotateClockwise(),
+                    annotations = page.annotations.map { it.rotateClockwise() }
+                )
+            }
+            state.copy(pages = updatedPages)
         }
     }
 
     fun updatePageCrop(pageId: String, cropBounds: ImageCropBounds) {
         _uiState.update { currentState ->
-            val updatedPages = currentState.pages.map { page ->
+            val targetPage = currentState.pages.find { it.id == pageId } ?: return@update currentState
+            if (targetPage.cropBounds == cropBounds) return@update currentState
+            val stateWithHistory = pushPageHistory(pageId, currentState)
+            val updatedPages = stateWithHistory.pages.map { page ->
                 if (page.id == pageId) page.copy(cropBounds = cropBounds) else page
             }
-            currentState.copy(pages = updatedPages)
+            stateWithHistory.copy(pages = updatedPages)
         }
     }
 
@@ -421,10 +504,31 @@ class ImagesToPdfViewModel(
 
     fun updatePagePerspectiveQuad(pageId: String, perspectiveQuad: DocumentQuad) {
         _uiState.update { currentState ->
-            val updatedPages = currentState.pages.map { page ->
+            val targetPage = currentState.pages.find { it.id == pageId } ?: return@update currentState
+            if (targetPage.perspectiveQuad == perspectiveQuad) return@update currentState
+            val stateWithHistory = pushPageHistory(pageId, currentState)
+            val updatedPages = stateWithHistory.pages.map { page ->
                 if (page.id == pageId) page.copy(perspectiveQuad = perspectiveQuad) else page
             }
-            currentState.copy(pages = updatedPages)
+            stateWithHistory.copy(pages = updatedPages)
+        }
+    }
+
+    fun applyPageCropAndPerspective(pageId: String, cropBounds: ImageCropBounds, perspectiveQuad: DocumentQuad) {
+        _uiState.update { currentState ->
+            val targetPage = currentState.pages.find { it.id == pageId } ?: return@update currentState
+            if (targetPage.cropBounds == cropBounds && targetPage.perspectiveQuad == perspectiveQuad) {
+                return@update currentState
+            }
+            val stateWithHistory = pushPageHistory(pageId, currentState)
+            val updatedPages = stateWithHistory.pages.map { page ->
+                if (page.id == pageId) {
+                    page.copy(cropBounds = cropBounds, perspectiveQuad = perspectiveQuad)
+                } else {
+                    page
+                }
+            }
+            stateWithHistory.copy(pages = updatedPages)
         }
     }
 
@@ -442,53 +546,92 @@ class ImagesToPdfViewModel(
 
     fun addPageAnnotation(pageId: String, annotation: PageAnnotation) {
         _uiState.update { currentState ->
-            val updatedPages = currentState.pages.map { page ->
+            val stateWithHistory = pushPageHistory(pageId, currentState)
+            val updatedPages = stateWithHistory.pages.map { page ->
                 if (page.id == pageId) {
                     page.copy(annotations = page.annotations + annotation)
                 } else {
                     page
                 }
             }
-            val updatedRedo = currentState.redoAnnotationsMap + (pageId to emptyList())
-            currentState.copy(pages = updatedPages, redoAnnotationsMap = updatedRedo)
+            val updatedRedo = stateWithHistory.redoAnnotationsMap + (pageId to emptyList())
+            stateWithHistory.copy(pages = updatedPages, redoAnnotationsMap = updatedRedo)
+        }
+    }
+
+    fun undoPageEdit(pageId: String) {
+        _uiState.update { currentState ->
+            val history = currentState.undoPageHistoryMap[pageId]
+            if (!history.isNullOrEmpty()) {
+                val previousSnapshot = history.last()
+                val remainingHistory = history.dropLast(1)
+                val currentPage = currentState.pages.find { it.id == pageId } ?: return@update currentState
+                val currentRedo = currentState.redoPageHistoryMap[pageId] ?: emptyList()
+
+                val updatedPages = currentState.pages.map { page ->
+                    if (page.id == pageId) previousSnapshot else page
+                }
+                currentState.copy(
+                    pages = updatedPages,
+                    undoPageHistoryMap = currentState.undoPageHistoryMap + (pageId to remainingHistory),
+                    redoPageHistoryMap = currentState.redoPageHistoryMap + (pageId to (currentRedo + currentPage))
+                )
+            } else if (currentState.pages.find { it.id == pageId }?.annotations?.isNotEmpty() == true) {
+                val targetPage = currentState.pages.find { it.id == pageId } ?: return@update currentState
+                val annotationToUndo = targetPage.annotations.last()
+                val updatedAnnotations = targetPage.annotations.dropLast(1)
+                val currentRedoList = currentState.redoAnnotationsMap[pageId] ?: emptyList()
+                val updatedPages = currentState.pages.map { page ->
+                    if (page.id == pageId) page.copy(annotations = updatedAnnotations) else page
+                }
+                val updatedRedo = currentState.redoAnnotationsMap + (pageId to (currentRedoList + annotationToUndo))
+                currentState.copy(pages = updatedPages, redoAnnotationsMap = updatedRedo)
+            } else {
+                currentState
+            }
+        }
+    }
+
+    fun redoPageEdit(pageId: String) {
+        _uiState.update { currentState ->
+            val redoHistory = currentState.redoPageHistoryMap[pageId]
+            if (!redoHistory.isNullOrEmpty()) {
+                val nextSnapshot = redoHistory.last()
+                val remainingRedo = redoHistory.dropLast(1)
+                val currentPage = currentState.pages.find { it.id == pageId } ?: return@update currentState
+                val currentUndo = currentState.undoPageHistoryMap[pageId] ?: emptyList()
+
+                val updatedPages = currentState.pages.map { page ->
+                    if (page.id == pageId) nextSnapshot else page
+                }
+                currentState.copy(
+                    pages = updatedPages,
+                    undoPageHistoryMap = currentState.undoPageHistoryMap + (pageId to (currentUndo + currentPage)),
+                    redoPageHistoryMap = currentState.redoPageHistoryMap + (pageId to remainingRedo)
+                )
+            } else if (currentState.redoAnnotationsMap[pageId]?.isNotEmpty() == true) {
+                val redoList = currentState.redoAnnotationsMap[pageId] ?: return@update currentState
+                if (redoList.isEmpty()) return@update currentState
+                val annotationToRedo = redoList.last()
+                val updatedPages = currentState.pages.map { page ->
+                    if (page.id == pageId) page.copy(annotations = page.annotations + annotationToRedo) else page
+                }
+                currentState.copy(
+                    pages = updatedPages,
+                    redoAnnotationsMap = currentState.redoAnnotationsMap + (pageId to redoList.dropLast(1))
+                )
+            } else {
+                currentState
+            }
         }
     }
 
     fun undoPageAnnotation(pageId: String) {
-        _uiState.update { currentState ->
-            val targetPage = currentState.pages.find { it.id == pageId } ?: return@update currentState
-            if (targetPage.annotations.isEmpty()) return@update currentState
-
-            val annotationToUndo = targetPage.annotations.last()
-            val updatedPages = currentState.pages.map { page ->
-                if (page.id == pageId) {
-                    page.copy(annotations = page.annotations.dropLast(1))
-                } else {
-                    page
-                }
-            }
-            val currentRedoList = currentState.redoAnnotationsMap[pageId] ?: emptyList()
-            val updatedRedo = currentState.redoAnnotationsMap + (pageId to (currentRedoList + annotationToUndo))
-            currentState.copy(pages = updatedPages, redoAnnotationsMap = updatedRedo)
-        }
+        undoPageEdit(pageId)
     }
 
     fun redoPageAnnotation(pageId: String) {
-        _uiState.update { currentState ->
-            val redoList = currentState.redoAnnotationsMap[pageId] ?: return@update currentState
-            if (redoList.isEmpty()) return@update currentState
-
-            val annotationToRedo = redoList.last()
-            val updatedPages = currentState.pages.map { page ->
-                if (page.id == pageId) {
-                    page.copy(annotations = page.annotations + annotationToRedo)
-                } else {
-                    page
-                }
-            }
-            val updatedRedo = currentState.redoAnnotationsMap + (pageId to redoList.dropLast(1))
-            currentState.copy(pages = updatedPages, redoAnnotationsMap = updatedRedo)
-        }
+        redoPageEdit(pageId)
     }
 
     fun clearPageAnnotations(pageId: String) {
@@ -496,22 +639,46 @@ class ImagesToPdfViewModel(
             val targetPage = currentState.pages.find { it.id == pageId } ?: return@update currentState
             if (targetPage.annotations.isEmpty()) return@update currentState
 
-            val currentRedoList = currentState.redoAnnotationsMap[pageId] ?: emptyList()
-            val updatedRedo = currentState.redoAnnotationsMap + (pageId to (currentRedoList + targetPage.annotations))
-            val updatedPages = currentState.pages.map { page ->
+            val stateWithHistory = pushPageHistory(pageId, currentState)
+            val currentRedoList = stateWithHistory.redoAnnotationsMap[pageId] ?: emptyList()
+            val updatedRedo = stateWithHistory.redoAnnotationsMap + (pageId to (currentRedoList + targetPage.annotations))
+            val updatedPages = stateWithHistory.pages.map { page ->
                 if (page.id == pageId) {
                     page.copy(annotations = emptyList())
                 } else {
                     page
                 }
             }
-            currentState.copy(pages = updatedPages, redoAnnotationsMap = updatedRedo)
+            stateWithHistory.copy(pages = updatedPages, redoAnnotationsMap = updatedRedo)
+        }
+    }
+
+    fun removePageAnnotation(pageId: String, annotationId: String) {
+        _uiState.update { currentState ->
+            val targetPage = currentState.pages.find { it.id == pageId } ?: return@update currentState
+            val annotationToRemove = targetPage.annotations.find { it.id == annotationId }
+            val stateWithHistory = pushPageHistory(pageId, currentState)
+            val updatedPages = stateWithHistory.pages.map { page ->
+                if (page.id == pageId) {
+                    page.copy(annotations = page.annotations.filterNot { it.id == annotationId })
+                } else {
+                    page
+                }
+            }
+            val currentRedoList = stateWithHistory.redoAnnotationsMap[pageId] ?: emptyList()
+            val updatedRedo = if (annotationToRemove != null) {
+                stateWithHistory.redoAnnotationsMap + (pageId to (currentRedoList + annotationToRemove))
+            } else {
+                stateWithHistory.redoAnnotationsMap
+            }
+            stateWithHistory.copy(pages = updatedPages, redoAnnotationsMap = updatedRedo)
         }
     }
 
     fun updatePageAnnotation(pageId: String, annotation: PageAnnotation) {
         _uiState.update { currentState ->
-            val updatedPages = currentState.pages.map { page ->
+            val stateWithHistory = pushPageHistory(pageId, currentState)
+            val updatedPages = stateWithHistory.pages.map { page ->
                 if (page.id == pageId) {
                     val updatedAnnotations = page.annotations.map {
                         if (it.id == annotation.id) annotation else it
@@ -521,28 +688,7 @@ class ImagesToPdfViewModel(
                     page
                 }
             }
-            currentState.copy(pages = updatedPages)
-        }
-    }
-
-    fun removePageAnnotation(pageId: String, annotationId: String) {
-        _uiState.update { currentState ->
-            val targetPage = currentState.pages.find { it.id == pageId } ?: return@update currentState
-            val annotationToRemove = targetPage.annotations.find { it.id == annotationId }
-            val updatedPages = currentState.pages.map { page ->
-                if (page.id == pageId) {
-                    page.copy(annotations = page.annotations.filterNot { it.id == annotationId })
-                } else {
-                    page
-                }
-            }
-            val currentRedoList = currentState.redoAnnotationsMap[pageId] ?: emptyList()
-            val updatedRedo = if (annotationToRemove != null) {
-                currentState.redoAnnotationsMap + (pageId to (currentRedoList + annotationToRemove))
-            } else {
-                currentState.redoAnnotationsMap
-            }
-            currentState.copy(pages = updatedPages, redoAnnotationsMap = updatedRedo)
+            stateWithHistory.copy(pages = updatedPages)
         }
     }
 
@@ -673,8 +819,20 @@ class ImagesToPdfViewModel(
                 val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 BitmapFactory.decodeStream(stream, null, opts)
                 if (opts.outWidth > 0 && opts.outHeight > 0) {
-                    width = opts.outWidth
-                    height = opts.outHeight
+                    val exifOrientation = try {
+                        contentResolver.openInputStream(uri)?.use { s: InputStream ->
+                            android.media.ExifInterface(s).getAttributeInt(
+                                android.media.ExifInterface.TAG_ORIENTATION,
+                                android.media.ExifInterface.ORIENTATION_NORMAL
+                            )
+                        } ?: android.media.ExifInterface.ORIENTATION_NORMAL
+                    } catch (_: Exception) {
+                        android.media.ExifInterface.ORIENTATION_NORMAL
+                    }
+                    val isExifRotated = exifOrientation == android.media.ExifInterface.ORIENTATION_ROTATE_90 ||
+                            exifOrientation == android.media.ExifInterface.ORIENTATION_ROTATE_270
+                    width = if (isExifRotated) opts.outHeight else opts.outWidth
+                    height = if (isExifRotated) opts.outWidth else opts.outHeight
                 }
             }
         } catch (_: Exception) {
@@ -692,6 +850,8 @@ class ImagesToPdfViewModel(
     )
 
     companion object {
+        private const val MAX_PAGE_HISTORY_SIZE = 25
+
         fun provideFactory(context: Context): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")

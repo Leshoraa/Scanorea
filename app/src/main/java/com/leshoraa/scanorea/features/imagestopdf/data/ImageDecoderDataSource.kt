@@ -9,6 +9,7 @@ import android.net.Uri
 import android.graphics.Canvas
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
+import com.leshoraa.scanorea.core.filter.DocumentSharpnessFilter
 import com.leshoraa.scanorea.core.filter.ImageFilterType
 import com.leshoraa.scanorea.features.editor.domain.PerspectiveWarpCalculator
 import com.leshoraa.scanorea.features.editor.domain.model.DocumentQuad
@@ -35,7 +36,8 @@ class ImageDecoderDataSource(private val context: Context) {
         brightness: Float = 0.0f,
         rotationDegrees: Int = 0,
         cropBounds: ImageCropBounds = ImageCropBounds.DEFAULT,
-        perspectiveQuad: DocumentQuad = DocumentQuad.DEFAULT
+        perspectiveQuad: DocumentQuad = DocumentQuad.DEFAULT,
+        sharpness: Float = 0.0f
     ): Bitmap {
         val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true
@@ -106,7 +108,16 @@ class ImageDecoderDataSource(private val context: Context) {
             warpedBitmap
         }
 
-        return applyFilter(croppedBitmap, filter, contrast, brightness)
+        val filteredBitmap = applyFilter(croppedBitmap, filter, contrast, brightness)
+        return if (sharpness > 0.01f) {
+            val sharpened = DocumentSharpnessFilter.apply(filteredBitmap, sharpness)
+            if (sharpened != filteredBitmap) {
+                filteredBitmap.recycle()
+            }
+            sharpened
+        } else {
+            filteredBitmap
+        }
     }
 
     private fun applyFilter(

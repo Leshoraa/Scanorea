@@ -128,4 +128,63 @@ class ImageCropBoundsTest {
         val actualRatio = physicalWidth / physicalHeight
         assertEquals(a4Ratio, actualRatio, 0.001f)
     }
+
+    @Test
+    fun rotateClockwise_rotatesBoundsCorrectly() {
+        // Original bounds: top half of canvas
+        val original = ImageCropBounds(left = 0.0f, top = 0.0f, right = 1.0f, bottom = 0.5f)
+        val rotated = original.rotateClockwise()
+
+        // 90 degrees clockwise should map top half to right half
+        assertEquals(0.5f, rotated.left, 0.0001f)
+        assertEquals(0.0f, rotated.top, 0.0001f)
+        assertEquals(1.0f, rotated.right, 0.0001f)
+        assertEquals(1.0f, rotated.bottom, 0.0001f)
+    }
+
+    @Test
+    fun rotateCounterClockwise_rotatesBoundsCorrectly() {
+        // Original bounds: top half of canvas
+        val original = ImageCropBounds(left = 0.0f, top = 0.0f, right = 1.0f, bottom = 0.5f)
+        val rotated = original.rotateCounterClockwise()
+
+        // 90 degrees counter-clockwise should map top half to left half
+        assertEquals(0.0f, rotated.left, 0.0001f)
+        assertEquals(0.0f, rotated.top, 0.0001f)
+        assertEquals(0.5f, rotated.right, 0.0001f)
+        assertEquals(1.0f, rotated.bottom, 0.0001f)
+    }
+
+    @Test
+    fun rotateClockwise_fourTimesReturnsToOriginal() {
+        val original = ImageCropBounds(left = 0.1f, top = 0.2f, right = 0.8f, bottom = 0.9f)
+        val fullTurn = original
+            .rotateClockwise()
+            .rotateClockwise()
+            .rotateClockwise()
+            .rotateClockwise()
+
+        assertEquals(original.left, fullTurn.left, 0.001f)
+        assertEquals(original.top, fullTurn.top, 0.001f)
+        assertEquals(original.right, fullTurn.right, 0.001f)
+        assertEquals(original.bottom, fullTurn.bottom, 0.001f)
+    }
+
+    @Test
+    fun rotateClockwiseThenCounterClockwise_returnsToOriginal() {
+        val original = ImageCropBounds(left = 0.15f, top = 0.25f, right = 0.75f, bottom = 0.85f)
+        val reverted = original.rotateClockwise().rotateCounterClockwise()
+
+        assertEquals(original.left, reverted.left, 0.001f)
+        assertEquals(original.top, reverted.top, 0.001f)
+        assertEquals(original.right, reverted.right, 0.001f)
+        assertEquals(original.bottom, reverted.bottom, 0.001f)
+    }
+
+    @Test
+    fun rotate_defaultBoundsStaysDefault() {
+        val defaultBounds = ImageCropBounds.DEFAULT
+        assertTrue(defaultBounds.rotateClockwise().isDefault)
+        assertTrue(defaultBounds.rotateCounterClockwise().isDefault)
+    }
 }

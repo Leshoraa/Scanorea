@@ -21,12 +21,13 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.leshoraa.scanorea.core.designsystem.skeletonShimmer
 import com.leshoraa.scanorea.features.recentpdfs.data.PdfThumbnailLoader
 import java.io.File
 
 /**
  * Renders an asynchronous 1-page visual preview thumbnail of a [file].
- * Falls back gracefully to a document icon if unreadable.
+ * Displays a fluid skeleton shimmer while loading and falls back to a document icon if unreadable.
  */
 @Composable
 fun PdfThumbnailPreview(
@@ -66,13 +67,15 @@ fun PdfThumbnailPreview(
         } else {
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+                    .skeletonShimmer()
             ) {
                 Icon(
                     imageVector = Icons.Filled.Description,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }

@@ -79,6 +79,40 @@ data class DocumentQuad(
     }
 
     /**
+     * Rotates the quadrilateral 90 degrees clockwise within normalized coordinates.
+     */
+    fun rotateClockwise(): DocumentQuad {
+        if (isDefault) return this
+        return DocumentQuad(
+            topLeftX = (1.0f - bottomLeftY).coerceIn(MIN_COORDINATE, MAX_COORDINATE),
+            topLeftY = bottomLeftX.coerceIn(MIN_COORDINATE, MAX_COORDINATE),
+            topRightX = (1.0f - topLeftY).coerceIn(MIN_COORDINATE, MAX_COORDINATE),
+            topRightY = topLeftX.coerceIn(MIN_COORDINATE, MAX_COORDINATE),
+            bottomRightX = (1.0f - topRightY).coerceIn(MIN_COORDINATE, MAX_COORDINATE),
+            bottomRightY = topRightX.coerceIn(MIN_COORDINATE, MAX_COORDINATE),
+            bottomLeftX = (1.0f - bottomRightY).coerceIn(MIN_COORDINATE, MAX_COORDINATE),
+            bottomLeftY = bottomRightX.coerceIn(MIN_COORDINATE, MAX_COORDINATE)
+        )
+    }
+
+    /**
+     * Rotates the quadrilateral 90 degrees counter-clockwise within normalized coordinates.
+     */
+    fun rotateCounterClockwise(): DocumentQuad {
+        if (isDefault) return this
+        return DocumentQuad(
+            topLeftX = topRightY.coerceIn(MIN_COORDINATE, MAX_COORDINATE),
+            topLeftY = (1.0f - topRightX).coerceIn(MIN_COORDINATE, MAX_COORDINATE),
+            topRightX = bottomRightY.coerceIn(MIN_COORDINATE, MAX_COORDINATE),
+            topRightY = (1.0f - bottomRightX).coerceIn(MIN_COORDINATE, MAX_COORDINATE),
+            bottomRightX = bottomLeftY.coerceIn(MIN_COORDINATE, MAX_COORDINATE),
+            bottomRightY = (1.0f - bottomLeftX).coerceIn(MIN_COORDINATE, MAX_COORDINATE),
+            bottomLeftX = topLeftY.coerceIn(MIN_COORDINATE, MAX_COORDINATE),
+            bottomLeftY = (1.0f - topLeftX).coerceIn(MIN_COORDINATE, MAX_COORDINATE)
+        )
+    }
+
+    /**
      * Estimates the pixel dimensions of the rectified document based on physical edge lengths.
      */
     fun calculateTargetDimensions(imageWidth: Int, imageHeight: Int): TargetDimensions {

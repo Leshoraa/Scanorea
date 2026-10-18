@@ -62,9 +62,15 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import coil.compose.AsyncImage
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.graphics.painter.Painter
+import coil.compose.AsyncImagePainter
+import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import coil.size.Precision
+import com.leshoraa.scanorea.core.designsystem.ContainedLoadingIndicator
 import com.leshoraa.scanorea.features.editor.domain.CropGestureCalculator
 import com.leshoraa.scanorea.features.editor.domain.model.AnnotationColors
 import com.leshoraa.scanorea.features.editor.domain.model.AnnotationTool
@@ -122,6 +128,7 @@ fun EditorCanvasPager(
 ) {
     val context = LocalContext.current
     var activeZoomScale by remember { mutableFloatStateOf(1f) }
+    var selectedAnnotationId by remember(pagerState.currentPage, isAnnotateMode) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(pagerState.currentPage, isCropMode, isAnnotateMode) {
         activeZoomScale = 1f
@@ -156,14 +163,14 @@ fun EditorCanvasPager(
             val currentOnAddAnnotation by rememberUpdatedState(onAddAnnotation)
             val currentOnUpdateAnnotation by rememberUpdatedState(onUpdateAnnotation)
             val currentOnRemoveAnnotation by rememberUpdatedState(onRemoveAnnotation)
+            val currentPage by rememberUpdatedState(page)
+            val currentPageAnnotations by rememberUpdatedState(page.annotations)
 
             var liveInProgressAnnotation by remember { mutableStateOf<PageAnnotation?>(null) }
-            var selectedAnnotationId by remember(page.id, isAnnotateMode) { mutableStateOf<String?>(null) }
             var liveManipulatedAnnotation by remember { mutableStateOf<PageAnnotation?>(null) }
 
-            LaunchedEffect(isAnnotateMode, page.id) {
+            LaunchedEffect(isAnnotateMode, page.id, page.rotationDegrees) {
                 liveInProgressAnnotation = null
-                selectedAnnotationId = null
                 liveManipulatedAnnotation = null
             }
 
@@ -222,13 +229,20 @@ fun EditorCanvasPager(
                         .clip(RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    var imageAspectRatio by remember(page.id, page.rotationDegrees) { mutableFloatStateOf(0f) }
-
                     // Determine transformation based on active mode
                     val effectiveCropBounds = if (isComparingThisPage || (isCropMode && isCurrentFocusedPage)) {
                         ImageCropBounds.DEFAULT
                     } else {
                         page.cropBounds
+                    }
+
+                    val initialAspect = run {
+                        val cropW = if (!effectiveCropBounds.isDefault) effectiveCropBounds.widthFraction else 1.0f
+                        val cropH = if (!effectiveCropBounds.isDefault) effectiveCropBounds.heightFraction else 1.0f
+                        (page.effectiveAspectRatio * (cropW / cropH)).coerceIn(0.05f, 20f)
+                    }
+                    var imageAspectRatio by remember(page.id, page.rotationDegrees, effectiveCropBounds) {
+                        mutableFloatStateOf(initialAspect)
                     }
 
                     // Viewport breathing room in Crop mode so edges & corners are never cramped against screen bounds
@@ -251,6 +265,37 @@ fun EditorCanvasPager(
                     } else {
                         availableW to availableH
                     }
+
+                    val animFittedW by animateDpAsState(
+                        targetValue = fittedW,
+                        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+                        label = "canvasFittedW"
+                    )
+                    val animFittedH by animateDpAsState(
+                        targetValue = fittedH,
+                        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+                        label = "canvasFittedH"
+                    )
+
+                    var targetContinuousDegrees by remember(page.id) { mutableFloatStateOf(page.rotationDegrees.toFloat()) }
+                    var prevPageDegrees by remember(page.id) { mutableIntStateOf(page.rotationDegrees) }
+
+                    LaunchedEffect(page.rotationDegrees) {
+                        val diff = (page.rotationDegrees - (prevPageDegrees % 360) + 360) % 360
+                        when (diff) {
+                            90 -> targetContinuousDegrees += 90f
+                            270 -> targetContinuousDegrees -= 90f
+                            180 -> targetContinuousDegrees += 180f
+                            else -> targetContinuousDegrees = page.rotationDegrees.toFloat()
+                        }
+                        prevPageDegrees = page.rotationDegrees
+                    }
+
+                    val animatedRotation by animateFloatAsState(
+                        targetValue = targetContinuousDegrees,
+                        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+                        label = "canvasRotation"
+                    )
 
                     val touchMargin = 24.dp
 
@@ -289,8 +334,8 @@ fun EditorCanvasPager(
                             .pointerInput(page.id, isCropMode, isAnnotateMode, isCurrentFocusedPage, fittedWPx, fittedHPx, selectedAnnotationId) {
                                 if (!isCurrentFocusedPage) return@pointerInput
 
-                                val cornerHitRadius = 34.dp.toPx()
-                                val edgeHitRadius = 42.dp.toPx()
+                                val cornerHitRadius = 24.dp.toPx()
+                                val edgeHitRadius = 20.dp.toPx()
                                 val edgePad = 16.dp.toPx()
 
                                 var lastTapTime = 0L
@@ -329,23 +374,11 @@ fun EditorCanvasPager(
                                     var currentResizeBounds: Rect? = null
 
                                     if (currentIsAnnotateMode) {
-                                        val densityDpi = this.density
-
-                                        // 1. Check if user interacted with the currently selected box annotation
-                                        val currentSelectedAnno = page.annotations.find { it.id == selectedAnnotationId }
+                                        // Check if user interacted with the currently selected box annotation
+                                        val currentSelectedAnno = currentPageAnnotations.find { it.id == selectedAnnotationId }
                                         if (currentSelectedAnno != null) {
                                             val b = AnnotationLayerHelper.getNormalizedBounds(currentSelectedAnno)
                                             if (b != null) {
-                                                // Did user tap the floating action toolbar (Delete / Done)?
-                                                if (AnnotationLayerHelper.isTouchOnToolbar(startPos, b, imgScreenLeft, imgScreenTop, imgScreenW, imgScreenH, densityDpi)) {
-                                                    // Let child clickable handle Delete/Done
-                                                    while (true) {
-                                                        val ev = awaitPointerEvent()
-                                                        if (ev.changes.none { it.pressed }) break
-                                                    }
-                                                    return@awaitEachGesture
-                                                }
-
                                                 // Did user touch a resize handle or the body?
                                                 val handle = AnnotationLayerHelper.hitTestHandle(
                                                     touchPos = startPos,
@@ -366,9 +399,9 @@ fun EditorCanvasPager(
                                             }
                                         }
 
-                                        // 2. If nothing on current selection was hit, check if user tapped another existing box annotation
+                                        // If nothing on current selection was hit, check if user tapped another existing box annotation
                                         if (activeResizeHandle == AnnotationResizeHandle.NONE) {
-                                            val hitAnno = page.annotations.reversed().firstOrNull { anno ->
+                                            val hitAnno = currentPageAnnotations.reversed().firstOrNull { anno ->
                                                 val b = AnnotationLayerHelper.getNormalizedBounds(anno) ?: return@firstOrNull false
                                                 val screenLeft = imgScreenLeft + b.left * imgScreenW
                                                 val screenRight = imgScreenLeft + b.right * imgScreenW
@@ -390,7 +423,7 @@ fun EditorCanvasPager(
                                             }
                                         }
 
-                                        // 3. If no handle/annotation selection drag and tool != NAVIGATE, start drawing new markup
+                                        // If no handle/annotation selection drag and tool != NAVIGATE, start drawing new markup
                                         if (activeResizeHandle == AnnotationResizeHandle.NONE && currentAnnotationTool != AnnotationTool.NAVIGATE) {
                                             val isInsideImage = startPos.x in (imgScreenLeft - 24f)..(imgScreenLeft + imgScreenW + 24f) &&
                                                     startPos.y in (imgScreenTop - 24f)..(imgScreenTop + imgScreenH + 24f)
@@ -521,7 +554,8 @@ fun EditorCanvasPager(
                                         val pressed = event.changes.filter { it.pressed }
                                         if (pressed.isEmpty()) {
                                             if (activeResizeHandle != AnnotationResizeHandle.NONE && liveManipulatedAnnotation != null) {
-                                                currentOnUpdateAnnotation(page.id, liveManipulatedAnnotation!!)
+                                                val committed = liveManipulatedAnnotation!!
+                                                currentOnUpdateAnnotation(currentPage.id, committed)
                                                 liveManipulatedAnnotation = null
                                                 activeResizeHandle = AnnotationResizeHandle.NONE
                                             }
@@ -535,7 +569,7 @@ fun EditorCanvasPager(
                                                     is PageAnnotation.FreehandPath -> false
                                                 }
                                                 if (!isMicroTap) {
-                                                    currentOnAddAnnotation(page.id, finalAnno)
+                                                    currentOnAddAnnotation(currentPage.id, finalAnno)
                                                     if (finalAnno is PageAnnotation.RectBox || finalAnno is PageAnnotation.OvalShape) {
                                                         selectedAnnotationId = finalAnno.id
                                                     }
@@ -725,7 +759,7 @@ fun EditorCanvasPager(
                         // Inner Hardware-Accelerated Scaled & Panned Content Container
                         Box(
                             modifier = Modifier
-                                .size(fittedW + touchMargin * 2, fittedH + touchMargin * 2)
+                                .size(animFittedW + touchMargin * 2, animFittedH + touchMargin * 2)
                                 .graphicsLayer {
                                     scaleX = zoomScale
                                     scaleY = zoomScale
@@ -736,7 +770,7 @@ fun EditorCanvasPager(
                             contentAlignment = Alignment.Center
                         ) {
                             Box(
-                                modifier = Modifier.size(fittedW, fittedH),
+                                modifier = Modifier.size(animFittedW, animFittedH),
                                 contentAlignment = Alignment.Center
                             ) {
                                 val effectivePerspectiveQuad = if (isComparingThisPage || (isCropMode && cropPanelMode == CropPanelMode.PERSPECTIVE)) {
@@ -744,35 +778,72 @@ fun EditorCanvasPager(
                                 } else {
                                     page.perspectiveQuad
                                 }
-                                val imageRequest = remember(context, page.uri, page.rotationDegrees, effectiveCropBounds, effectivePerspectiveQuad) {
+
+                                var lastSuccessfulPainter by remember(page.id) { mutableStateOf<Painter?>(null) }
+                                var lastPainterOrientation by remember(page.id) { mutableFloatStateOf(targetContinuousDegrees) }
+
+                                val imageRequest = remember(context, page.uri, page.rotationDegrees, effectiveCropBounds, effectivePerspectiveQuad, page.sharpness) {
                                     ImageRequest.Builder(context)
                                         .data(page.uri)
                                         .size(1080, 1920)
                                         .precision(Precision.INEXACT)
-                                        .allowRgb565(true)
+                                        .allowHardware(false)
+                                        .allowRgb565(false)
                                         .transformations(
                                             PagePreviewTransformation(
                                                 rotationDegrees = page.rotationDegrees,
                                                 cropBounds = effectiveCropBounds,
-                                                perspectiveQuad = effectivePerspectiveQuad
+                                                perspectiveQuad = effectivePerspectiveQuad,
+                                                sharpness = page.sharpness
                                             )
                                         )
-                                        .crossfade(true)
+                                        .crossfade(false)
                                         .build()
                                 }
-                                AsyncImage(
+
+                                SubcomposeAsyncImage(
                                     model = imageRequest,
                                     contentDescription = page.displayName ?: "Page ${pageIndex + 1}",
-                                    contentScale = ContentScale.Fit,
-                                    colorFilter = colorFilter,
-                                    onSuccess = { success ->
-                                        val d = success.result.drawable
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    val state = painter.state
+                                    if (state is AsyncImagePainter.State.Success) {
+                                        lastSuccessfulPainter = painter
+                                        lastPainterOrientation = targetContinuousDegrees
+                                        val d = state.result.drawable
                                         if (d.intrinsicWidth > 0 && d.intrinsicHeight > 0) {
                                             imageAspectRatio = d.intrinsicWidth.toFloat() / d.intrinsicHeight.toFloat()
                                         }
-                                    },
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                                    }
+
+                                    val currentPainter = if (state is AsyncImagePainter.State.Success) {
+                                        painter
+                                    } else {
+                                        lastSuccessfulPainter
+                                    }
+
+                                    if (currentPainter != null) {
+                                        val relativeAngle = animatedRotation - lastPainterOrientation
+                                        Image(
+                                            painter = currentPainter,
+                                            contentDescription = page.displayName ?: "Page ${pageIndex + 1}",
+                                            contentScale = ContentScale.Fit,
+                                            colorFilter = colorFilter,
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .graphicsLayer {
+                                                    rotationZ = relativeAngle
+                                                }
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            ContainedLoadingIndicator()
+                                        }
+                                    }
+                                }
 
                                 // Annotations Overlay (committed annotations + live drawing preview)
                                 androidx.compose.animation.AnimatedVisibility(
@@ -781,9 +852,9 @@ fun EditorCanvasPager(
                                     exit = fadeOut(tween(150))
                                 ) {
                                     val displayAnnotations = if (liveManipulatedAnnotation != null && isCurrentFocusedPage) {
-                                        page.annotations.map { if (it.id == liveManipulatedAnnotation?.id) liveManipulatedAnnotation!! else it }
+                                        currentPageAnnotations.map { if (it.id == liveManipulatedAnnotation?.id) liveManipulatedAnnotation!! else it }
                                     } else {
-                                        page.annotations
+                                        currentPageAnnotations
                                     }
                                     EditorAnnotationCanvas(
                                         annotations = displayAnnotations,
@@ -796,7 +867,7 @@ fun EditorCanvasPager(
                                         val selectedAnnoToDisplay = if (liveManipulatedAnnotation?.id == selectedAnnotationId) {
                                             liveManipulatedAnnotation
                                         } else {
-                                            page.annotations.find { it.id == selectedAnnotationId }
+                                            currentPageAnnotations.find { it.id == selectedAnnotationId }
                                         }
                                         if (selectedAnnoToDisplay != null) {
                                             EditorAnnotationLayerOverlay(
@@ -804,7 +875,7 @@ fun EditorCanvasPager(
                                                 canvasWidth = fittedWPx,
                                                 canvasHeight = fittedHPx,
                                                 onDelete = {
-                                                    currentOnRemoveAnnotation(page.id, selectedAnnoToDisplay.id)
+                                                    currentOnRemoveAnnotation(currentPage.id, selectedAnnoToDisplay.id)
                                                     selectedAnnotationId = null
                                                     liveManipulatedAnnotation = null
                                                 },
@@ -888,7 +959,7 @@ fun EditorCanvasPager(
             )
         }
 
-        // Floating Top Markup Action Bar (Undo, Redo, Clear All)
+        // Floating Top Markup Action Bar (Undo, Redo, Delete Selected)
         androidx.compose.animation.AnimatedVisibility(
             visible = isAnnotateMode,
             enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { -it / 2 },
@@ -897,13 +968,21 @@ fun EditorCanvasPager(
                 .align(Alignment.TopCenter)
                 .zIndex(25f)
         ) {
+            val hasSelected = selectedAnnotationId != null
             EditorMarkupActionBar(
                 canUndo = canUndoAnnotation,
                 canRedo = canRedoAnnotation,
-                hasAnnotations = canUndoAnnotation,
+                hasSelectedAnnotation = hasSelected,
                 onUndo = onUndoAnnotation,
                 onRedo = onRedoAnnotation,
-                onClearAll = onClearAnnotations,
+                onDeleteSelected = {
+                    val toDelete = selectedAnnotationId
+                    val currentFocusedPage = pages.getOrNull(pagerState.currentPage)
+                    if (toDelete != null && currentFocusedPage != null) {
+                        onRemoveAnnotation(currentFocusedPage.id, toDelete)
+                        selectedAnnotationId = null
+                    }
+                },
                 modifier = Modifier.padding(top = 8.dp)
             )
         }

@@ -69,14 +69,20 @@ fun EditorWorkspace(
     onRemovePage: (String) -> Unit,
     onFilterSelected: (pageId: String, filter: ImageFilterType) -> Unit,
     onApplyFilterToAll: (filter: ImageFilterType) -> Unit,
-    onAdjustmentChange: (pageId: String, contrast: Float, brightness: Float) -> Unit,
+    onAdjustmentChange: (pageId: String, contrast: Float, brightness: Float, sharpness: Float) -> Unit,
+    onAdjustmentChangeFinished: (pageId: String) -> Unit = {},
     onAutoAdjustPage: (pageId: String, contentResolver: ContentResolver) -> Unit,
     onResetAdjustments: (pageId: String) -> Unit,
     onCropChange: (pageId: String, bounds: ImageCropBounds) -> Unit,
     onPerspectiveQuadChange: (pageId: String, quad: DocumentQuad) -> Unit = { _, _ -> },
+    onApplyCropAndPerspective: (pageId: String, bounds: ImageCropBounds, quad: DocumentQuad) -> Unit = { pageId, bounds, quad ->
+        onCropChange(pageId, bounds)
+        onPerspectiveQuadChange(pageId, quad)
+    },
     onAutoDetectPerspective: (pageId: String) -> Unit = {},
     onResetPerspective: (pageId: String) -> Unit = {},
     onRotatePage: (pageId: String) -> Unit,
+    onRotatePageLeft: (pageId: String) -> Unit = {},
     onResetCrop: (pageId: String) -> Unit,
     canUndoAnnotation: Boolean = false,
     canRedoAnnotation: Boolean = false,
@@ -120,6 +126,38 @@ fun EditorWorkspace(
     var originalPerspectiveQuadOnEnter by remember { mutableStateOf(DocumentQuad.DEFAULT) }
     var isAutoDetectingPerspective by remember { mutableStateOf(false) }
 
+    var previousRotationDegrees by remember(currentPage?.id) {
+        mutableIntStateOf(currentPage?.rotationDegrees ?: 0)
+    }
+
+    LaunchedEffect(currentPage?.id, currentPage?.rotationDegrees) {
+        val currentRot = currentPage?.rotationDegrees ?: 0
+        if (currentRot != previousRotationDegrees) {
+            val diff = (currentRot - previousRotationDegrees + 360) % 360
+            previousRotationDegrees = currentRot
+            when (diff) {
+                90 -> {
+                    stagedCropBounds = stagedCropBounds.rotateClockwise()
+                    stagedPerspectiveQuad = stagedPerspectiveQuad.rotateClockwise()
+                    originalCropBoundsOnEnter = originalCropBoundsOnEnter.rotateClockwise()
+                    originalPerspectiveQuadOnEnter = originalPerspectiveQuadOnEnter.rotateClockwise()
+                }
+                270 -> {
+                    stagedCropBounds = stagedCropBounds.rotateCounterClockwise()
+                    stagedPerspectiveQuad = stagedPerspectiveQuad.rotateCounterClockwise()
+                    originalCropBoundsOnEnter = originalCropBoundsOnEnter.rotateCounterClockwise()
+                    originalPerspectiveQuadOnEnter = originalPerspectiveQuadOnEnter.rotateCounterClockwise()
+                }
+                180 -> {
+                    stagedCropBounds = stagedCropBounds.rotateClockwise().rotateClockwise()
+                    stagedPerspectiveQuad = stagedPerspectiveQuad.rotateClockwise().rotateClockwise()
+                    originalCropBoundsOnEnter = originalCropBoundsOnEnter.rotateClockwise().rotateClockwise()
+                    originalPerspectiveQuadOnEnter = originalPerspectiveQuadOnEnter.rotateClockwise().rotateClockwise()
+                }
+            }
+        }
+    }
+
     LaunchedEffect(activeCategory, pagerState.currentPage) {
         onCompareChange(false)
         if (activeCategory == EditorCategory.CROP) {
@@ -153,8 +191,9 @@ fun EditorWorkspace(
     val handleApplyCrop: () -> Unit = {
         val curr = pages.getOrNull(pagerState.currentPage)
         if (curr != null) {
-            onCropChange(curr.id, stagedCropBounds)
-            onPerspectiveQuadChange(curr.id, stagedPerspectiveQuad)
+            onApplyCropAndPerspective(curr.id, stagedCropBounds, stagedPerspectiveQuad)
+            originalCropBoundsOnEnter = stagedCropBounds
+            originalPerspectiveQuadOnEnter = stagedPerspectiveQuad
         }
         selectedCropRatio = CropAspectRatio.FREE
         cropPanelMode = CropPanelMode.RECTANGLE
@@ -164,8 +203,7 @@ fun EditorWorkspace(
     val handleCancelCrop: () -> Unit = {
         val curr = pages.getOrNull(pagerState.currentPage)
         if (curr != null) {
-            onCropChange(curr.id, originalCropBoundsOnEnter)
-            onPerspectiveQuadChange(curr.id, originalPerspectiveQuadOnEnter)
+            onApplyCropAndPerspective(curr.id, originalCropBoundsOnEnter, originalPerspectiveQuadOnEnter)
             stagedCropBounds = originalCropBoundsOnEnter
             stagedPerspectiveQuad = originalPerspectiveQuadOnEnter
         }
@@ -283,9 +321,10 @@ fun EditorWorkspace(
                                 page = currentPage,
                                 onAutoAdjust = { onAutoAdjustPage(currentPage.id, context.contentResolver) },
                                 onResetAdjustments = { onResetAdjustments(currentPage.id) },
-                                onAdjustmentChange = { contrast, brightness ->
-                                    onAdjustmentChange(currentPage.id, contrast, brightness)
-                                }
+                                onAdjustmentChange = { contrast, brightness, sharpness ->
+                                    onAdjustmentChange(currentPage.id, contrast, brightness, sharpness)
+                                },
+                                onAdjustmentChangeFinished = { onAdjustmentChangeFinished(currentPage.id) }
                             )
                         }
                         EditorCategory.CROP -> {
@@ -307,12 +346,15 @@ fun EditorWorkspace(
                                 stagedPerspectiveQuad = stagedPerspectiveQuad,
                                 onCropBoundsChange = { newBounds -> stagedCropBounds = newBounds },
                                 onRotatePage = { onRotatePage(currentPage.id) },
+                                onRotatePageLeft = { onRotatePageLeft(currentPage.id) },
                                 onResetCrop = {
                                     selectedCropRatio = CropAspectRatio.FREE
                                     stagedCropBounds = ImageCropBounds.DEFAULT
+                                    onResetCrop(currentPage.id)
                                 },
                                 onResetPerspective = {
                                     stagedPerspectiveQuad = DocumentQuad.DEFAULT
+                                    onResetPerspective(currentPage.id)
                                 },
                                 onApplyCrop = handleApplyCrop,
                                 onPreviousPage = {

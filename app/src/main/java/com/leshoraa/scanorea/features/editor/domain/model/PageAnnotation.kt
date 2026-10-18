@@ -1,6 +1,8 @@
 package com.leshoraa.scanorea.features.editor.domain.model
 
 import java.util.UUID
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Annotation tools available for document markup.
@@ -64,6 +66,9 @@ sealed interface PageAnnotation {
     val alpha: Float
     val tool: AnnotationTool
 
+    fun rotateClockwise(): PageAnnotation
+    fun rotateCounterClockwise(): PageAnnotation
+
     /**
      * Freehand curved drawing path.
      */
@@ -75,6 +80,18 @@ sealed interface PageAnnotation {
         val points: List<NormalizedPoint>
     ) : PageAnnotation {
         override val tool: AnnotationTool = AnnotationTool.PEN
+
+        override fun rotateClockwise(): PageAnnotation = copy(
+            points = points.map { pt ->
+                NormalizedPoint((1.0f - pt.y).coerceIn(0f, 1f), pt.x.coerceIn(0f, 1f))
+            }
+        )
+
+        override fun rotateCounterClockwise(): PageAnnotation = copy(
+            points = points.map { pt ->
+                NormalizedPoint(pt.y.coerceIn(0f, 1f), (1.0f - pt.x).coerceIn(0f, 1f))
+            }
+        )
     }
 
     /**
@@ -93,7 +110,33 @@ sealed interface PageAnnotation {
         override val tool: AnnotationTool = if (isFilled && alpha < 1.0f) AnnotationTool.HIGHLIGHTER
         else if (isFilled) AnnotationTool.REDACT
         else AnnotationTool.RECT_SHAPE
-    ) : PageAnnotation
+    ) : PageAnnotation {
+        override fun rotateClockwise(): PageAnnotation {
+            val oldLeft = min(left, right)
+            val oldTop = min(top, bottom)
+            val oldRight = max(left, right)
+            val oldBottom = max(top, bottom)
+            return copy(
+                left = (1.0f - oldBottom).coerceIn(0f, 1f),
+                top = oldLeft.coerceIn(0f, 1f),
+                right = (1.0f - oldTop).coerceIn(0f, 1f),
+                bottom = oldRight.coerceIn(0f, 1f)
+            )
+        }
+
+        override fun rotateCounterClockwise(): PageAnnotation {
+            val oldLeft = min(left, right)
+            val oldTop = min(top, bottom)
+            val oldRight = max(left, right)
+            val oldBottom = max(top, bottom)
+            return copy(
+                left = oldTop.coerceIn(0f, 1f),
+                top = (1.0f - oldRight).coerceIn(0f, 1f),
+                right = oldBottom.coerceIn(0f, 1f),
+                bottom = (1.0f - oldLeft).coerceIn(0f, 1f)
+            )
+        }
+    }
 
     /**
      * Outlined ellipse / oval shape.
@@ -109,6 +152,32 @@ sealed interface PageAnnotation {
         override val alpha: Float = 1.0f
     ) : PageAnnotation {
         override val tool: AnnotationTool = AnnotationTool.OVAL_SHAPE
+
+        override fun rotateClockwise(): PageAnnotation {
+            val oldLeft = min(left, right)
+            val oldTop = min(top, bottom)
+            val oldRight = max(left, right)
+            val oldBottom = max(top, bottom)
+            return copy(
+                left = (1.0f - oldBottom).coerceIn(0f, 1f),
+                top = oldLeft.coerceIn(0f, 1f),
+                right = (1.0f - oldTop).coerceIn(0f, 1f),
+                bottom = oldRight.coerceIn(0f, 1f)
+            )
+        }
+
+        override fun rotateCounterClockwise(): PageAnnotation {
+            val oldLeft = min(left, right)
+            val oldTop = min(top, bottom)
+            val oldRight = max(left, right)
+            val oldBottom = max(top, bottom)
+            return copy(
+                left = oldTop.coerceIn(0f, 1f),
+                top = (1.0f - oldRight).coerceIn(0f, 1f),
+                right = oldBottom.coerceIn(0f, 1f),
+                bottom = (1.0f - oldLeft).coerceIn(0f, 1f)
+            )
+        }
     }
 
     /**
@@ -125,5 +194,31 @@ sealed interface PageAnnotation {
         override val alpha: Float = 1.0f
     ) : PageAnnotation {
         override val tool: AnnotationTool = AnnotationTool.ARROW_SHAPE
+
+        override fun rotateClockwise(): PageAnnotation {
+            val oldStartX = startX
+            val oldStartY = startY
+            val oldEndX = endX
+            val oldEndY = endY
+            return copy(
+                startX = (1.0f - oldStartY).coerceIn(0f, 1f),
+                startY = oldStartX.coerceIn(0f, 1f),
+                endX = (1.0f - oldEndY).coerceIn(0f, 1f),
+                endY = oldEndX.coerceIn(0f, 1f)
+            )
+        }
+
+        override fun rotateCounterClockwise(): PageAnnotation {
+            val oldStartX = startX
+            val oldStartY = startY
+            val oldEndX = endX
+            val oldEndY = endY
+            return copy(
+                startX = oldStartY.coerceIn(0f, 1f),
+                startY = (1.0f - oldStartX).coerceIn(0f, 1f),
+                endX = oldEndY.coerceIn(0f, 1f),
+                endY = (1.0f - oldEndX).coerceIn(0f, 1f)
+            )
+        }
     }
 }

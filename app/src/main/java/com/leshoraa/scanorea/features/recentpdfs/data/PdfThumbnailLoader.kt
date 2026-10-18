@@ -10,6 +10,8 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import android.util.LruCache
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -26,6 +28,8 @@ object PdfThumbnailLoader {
     private const val MEMORY_CACHE_SIZE = 60
     private const val THUMBNAIL_QUALITY = 85
     private const val THUMBNAILS_DIR_NAME = "pdf_thumbnails"
+
+    private val renderSemaphore = Semaphore(2)
 
     @Volatile
     private var appCacheDir: File? = null
@@ -65,7 +69,7 @@ object PdfThumbnailLoader {
 
         val cacheKey = "${file.absolutePath}_${file.lastModified()}_$targetWidth"
 
-        // 1. Check L1 Memory Cache
+        // Memory cache lookup
         memoryCache.get(cacheKey)?.let { cachedBitmap ->
             return@withContext cachedBitmap
         }
@@ -73,11 +77,11 @@ object PdfThumbnailLoader {
         val effectiveCacheDir = diskCacheDir ?: appCacheDir ?: file.parentFile?.parentFile?.let { File(it, "cache") }
         val diskCacheFile = getDiskCacheFile(file, targetWidth, effectiveCacheDir)
 
-        // 2. Check L2 Disk Cache
+        // Disk cache lookup
         if (diskCacheFile != null && diskCacheFile.exists() && diskCacheFile.length() > 0L) {
             try {
                 val decodeOptions = BitmapFactory.Options().apply {
-                    inPreferredConfig = Bitmap.Config.ARGB_8888
+                    inPreferredConfig = Bitmap.Config.RGB_565
                 }
                 val diskBitmap = BitmapFactory.decodeFile(diskCacheFile.absolutePath, decodeOptions)
                 if (diskBitmap != null) {
@@ -90,56 +94,61 @@ object PdfThumbnailLoader {
             }
         }
 
-        // 3. Fallback: Render Page 0 via Native PdfRenderer
-        var pfd: ParcelFileDescriptor? = null
-        var renderer: PdfRenderer? = null
-        var page: PdfRenderer.Page? = null
+        // Fallback: Render Page 0 via Native PdfRenderer with concurrency control
+        renderSemaphore.withPermit {
+            // Re-check memoryCache inside permit in case a concurrent coroutine just rendered it
+            memoryCache.get(cacheKey)?.let { return@withPermit it }
 
-        try {
-            pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-            renderer = PdfRenderer(pfd)
+            var pfd: ParcelFileDescriptor? = null
+            var renderer: PdfRenderer? = null
+            var page: PdfRenderer.Page? = null
 
-            if (renderer.pageCount <= 0) {
-                return@withContext null
-            }
-
-            page = renderer.openPage(0)
-            val aspectRatio = page.height.toFloat() / page.width.toFloat().coerceAtLeast(1f)
-            val targetHeight = (targetWidth * aspectRatio).toInt().coerceIn(targetWidth, targetWidth * 2)
-
-            val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            canvas.drawColor(Color.WHITE)
-
-            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-
-            // Cache in memory
-            memoryCache.put(cacheKey, bitmap)
-
-            // Persist to L2 Disk Cache asynchronously
-            if (diskCacheFile != null) {
-                saveToDiskCache(bitmap, diskCacheFile)
-            }
-
-            bitmap
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to render thumbnail for ${file.name}", e)
-            null
-        } finally {
             try {
-                page?.close()
+                pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+                renderer = PdfRenderer(pfd)
+
+                if (renderer.pageCount <= 0) {
+                    return@withPermit null
+                }
+
+                page = renderer.openPage(0)
+                val aspectRatio = page.height.toFloat() / page.width.toFloat().coerceAtLeast(1f)
+                val targetHeight = (targetWidth * aspectRatio).toInt().coerceIn(targetWidth, targetWidth * 2)
+
+                val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.RGB_565)
+                val canvas = Canvas(bitmap)
+                canvas.drawColor(Color.WHITE)
+
+                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+
+                // Cache in memory
+                memoryCache.put(cacheKey, bitmap)
+
+                // Persist to L2 Disk Cache asynchronously
+                if (diskCacheFile != null) {
+                    saveToDiskCache(bitmap, diskCacheFile)
+                }
+
+                bitmap
             } catch (e: Exception) {
-                Log.w(TAG, "Error closing PdfRenderer.Page", e)
-            }
-            try {
-                renderer?.close()
-            } catch (e: Exception) {
-                Log.w(TAG, "Error closing PdfRenderer", e)
-            }
-            try {
-                pfd?.close()
-            } catch (e: Exception) {
-                Log.w(TAG, "Error closing ParcelFileDescriptor", e)
+                Log.e(TAG, "Failed to render thumbnail for ${file.name}", e)
+                null
+            } finally {
+                try {
+                    page?.close()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error closing PdfRenderer.Page", e)
+                }
+                try {
+                    renderer?.close()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error closing PdfRenderer", e)
+                }
+                try {
+                    pfd?.close()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error closing ParcelFileDescriptor", e)
+                }
             }
         }
     }

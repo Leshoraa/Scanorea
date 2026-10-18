@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.RotateRight
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -78,21 +80,16 @@ fun EditorTopBar(
     onDeleteCurrentPage: () -> Unit,
     isComparing: Boolean = false,
     onCompareChange: (Boolean) -> Unit = {},
+    canUndo: Boolean = false,
+    onUndoClick: () -> Unit = {},
+    canRedo: Boolean = false,
+    onRedoClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var isMenuVisible by remember { mutableStateOf(false) }
 
     TopAppBar(
         modifier = modifier,
-        navigationIcon = {
-            IconButton(onClick = onBackClick) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back to Home",
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        },
         title = {
             Column(
                 modifier = Modifier
@@ -131,6 +128,30 @@ fun EditorTopBar(
                     imageVector = Icons.Filled.GridView,
                     contentDescription = "Grid Overview",
                     tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            // Sequential Adjustment Undo Button
+            IconButton(
+                onClick = onUndoClick,
+                enabled = canUndo
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Undo,
+                    contentDescription = "Undo page adjustment",
+                    tint = if (canUndo) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                )
+            }
+
+            // Sequential Adjustment Redo Button
+            IconButton(
+                onClick = onRedoClick,
+                enabled = canRedo
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Redo,
+                    contentDescription = "Redo page adjustment",
+                    tint = if (canRedo) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 )
             }
 

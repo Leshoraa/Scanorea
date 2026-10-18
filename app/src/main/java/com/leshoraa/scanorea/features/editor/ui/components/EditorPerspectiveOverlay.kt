@@ -33,11 +33,11 @@ import com.leshoraa.scanorea.features.editor.domain.model.CornerHandle
 import com.leshoraa.scanorea.features.editor.domain.model.DocumentQuad
 import kotlin.math.hypot
 
-private val CORNER_PIN_OUTER_RADIUS = 16.dp
-private val CORNER_PIN_INNER_RADIUS = 6.dp
-private val CORNER_PIN_ACTIVE_RADIUS = 22.dp
-private val CORNER_TOUCH_THRESHOLD = 44.dp
-private val BORDER_STROKE_WIDTH = 2.5.dp
+private val CORNER_PIN_RADIUS = 6.dp
+private val CORNER_PIN_ACTIVE_RADIUS = 7.5.dp
+private val CORNER_PIN_ACTIVE_HALO_RADIUS = 12.dp
+private val CORNER_TOUCH_THRESHOLD = 38.dp
+private val BORDER_STROKE_WIDTH = 2.dp
 
 /**
  * Interactive overlay allowing users to view and manually adjust the 4 corner pins
@@ -174,34 +174,43 @@ private fun DrawScope.drawCornerPin(
     primaryColor: Color,
     surfaceColor: Color
 ) {
-    val outerRadius = if (isActive) CORNER_PIN_ACTIVE_RADIUS.toPx() else CORNER_PIN_OUTER_RADIUS.toPx()
-    val innerRadius = CORNER_PIN_INNER_RADIUS.toPx()
+    if (isActive) {
+        // Subtle outer active halo glow
+        drawCircle(
+            color = primaryColor.copy(alpha = 0.22f),
+            radius = CORNER_PIN_ACTIVE_HALO_RADIUS.toPx(),
+            center = center
+        )
+    } else {
+        // Subtle drop shadow in resting state
+        drawCircle(
+            color = Color.Black.copy(alpha = 0.20f),
+            radius = CORNER_PIN_RADIUS.toPx(),
+            center = center + Offset(0f, 1.dp.toPx())
+        )
+    }
 
-    // Outer halo
-    drawCircle(
-        color = primaryColor.copy(alpha = if (isActive) 0.35f else 0.22f),
-        radius = outerRadius,
-        center = center
-    )
+    val pinRadius = if (isActive) CORNER_PIN_ACTIVE_RADIUS.toPx() else CORNER_PIN_RADIUS.toPx()
 
-    // Main pin circle
-    drawCircle(
-        color = primaryColor,
-        radius = 11.dp.toPx(),
-        center = center
-    )
-
-    // Inner white dot
+    // Clean white inner fill
     drawCircle(
         color = Color.White,
-        radius = innerRadius,
+        radius = pinRadius,
         center = center
     )
 
-    // Center focal point
+    // Sleek primary border outline
     drawCircle(
         color = primaryColor,
-        radius = 2.5.dp.toPx(),
+        radius = pinRadius,
+        center = center,
+        style = Stroke(width = if (isActive) 2.dp.toPx() else 1.8.dp.toPx())
+    )
+
+    // Precision center target dot
+    drawCircle(
+        color = primaryColor,
+        radius = if (isActive) 2.dp.toPx() else 1.5.dp.toPx(),
         center = center
     )
 }

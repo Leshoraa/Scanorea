@@ -81,4 +81,99 @@ class DocumentQuadTest {
         assertEquals(800, dimensions.width)
         assertEquals(800, dimensions.height)
     }
+
+    @Test
+    fun rotateClockwise_rotatesCornersCorrectly() {
+        val quad = DocumentQuad(
+            topLeftX = 0.1f, topLeftY = 0.2f,
+            topRightX = 0.8f, topRightY = 0.2f,
+            bottomRightX = 0.8f, bottomRightY = 0.9f,
+            bottomLeftX = 0.1f, bottomLeftY = 0.9f
+        )
+        val rotated = quad.rotateClockwise()
+
+        // Clockwise maps (x, y) to (1 - y, x), cycling BL -> TL, TL -> TR, TR -> BR, BR -> BL
+        assertEquals(0.1f, rotated.topLeftX, 1e-4f)
+        assertEquals(0.1f, rotated.topLeftY, 1e-4f)
+        assertEquals(0.8f, rotated.topRightX, 1e-4f)
+        assertEquals(0.1f, rotated.topRightY, 1e-4f)
+        assertEquals(0.8f, rotated.bottomRightX, 1e-4f)
+        assertEquals(0.8f, rotated.bottomRightY, 1e-4f)
+        assertEquals(0.1f, rotated.bottomLeftX, 1e-4f)
+        assertEquals(0.8f, rotated.bottomLeftY, 1e-4f)
+        assertTrue(rotated.isValidConvex())
+    }
+
+    @Test
+    fun rotateCounterClockwise_rotatesCornersCorrectly() {
+        val quad = DocumentQuad(
+            topLeftX = 0.1f, topLeftY = 0.2f,
+            topRightX = 0.8f, topRightY = 0.2f,
+            bottomRightX = 0.8f, bottomRightY = 0.9f,
+            bottomLeftX = 0.1f, bottomLeftY = 0.9f
+        )
+        val rotated = quad.rotateCounterClockwise()
+
+        // Counter-clockwise maps (x, y) to (y, 1 - x), cycling TR -> TL, BR -> TR, BL -> BR, TL -> BL
+        assertEquals(0.2f, rotated.topLeftX, 1e-4f)
+        assertEquals(0.2f, rotated.topLeftY, 1e-4f)
+        assertEquals(0.9f, rotated.topRightX, 1e-4f)
+        assertEquals(0.2f, rotated.topRightY, 1e-4f)
+        assertEquals(0.9f, rotated.bottomRightX, 1e-4f)
+        assertEquals(0.9f, rotated.bottomRightY, 1e-4f)
+        assertEquals(0.2f, rotated.bottomLeftX, 1e-4f)
+        assertEquals(0.9f, rotated.bottomLeftY, 1e-4f)
+        assertTrue(rotated.isValidConvex())
+    }
+
+    @Test
+    fun rotateClockwise_fourTimesReturnsToOriginal() {
+        val quad = DocumentQuad(
+            topLeftX = 0.15f, topLeftY = 0.18f,
+            topRightX = 0.82f, topRightY = 0.22f,
+            bottomRightX = 0.79f, bottomRightY = 0.88f,
+            bottomLeftX = 0.12f, bottomLeftY = 0.85f
+        )
+        val fullTurn = quad
+            .rotateClockwise()
+            .rotateClockwise()
+            .rotateClockwise()
+            .rotateClockwise()
+
+        assertEquals(quad.topLeftX, fullTurn.topLeftX, 1e-4f)
+        assertEquals(quad.topLeftY, fullTurn.topLeftY, 1e-4f)
+        assertEquals(quad.topRightX, fullTurn.topRightX, 1e-4f)
+        assertEquals(quad.topRightY, fullTurn.topRightY, 1e-4f)
+        assertEquals(quad.bottomRightX, fullTurn.bottomRightX, 1e-4f)
+        assertEquals(quad.bottomRightY, fullTurn.bottomRightY, 1e-4f)
+        assertEquals(quad.bottomLeftX, fullTurn.bottomLeftX, 1e-4f)
+        assertEquals(quad.bottomLeftY, fullTurn.bottomLeftY, 1e-4f)
+    }
+
+    @Test
+    fun rotateClockwiseThenCounterClockwise_returnsToOriginal() {
+        val quad = DocumentQuad(
+            topLeftX = 0.12f, topLeftY = 0.14f,
+            topRightX = 0.85f, topRightY = 0.16f,
+            bottomRightX = 0.88f, bottomRightY = 0.92f,
+            bottomLeftX = 0.08f, bottomLeftY = 0.89f
+        )
+        val reverted = quad.rotateClockwise().rotateCounterClockwise()
+
+        assertEquals(quad.topLeftX, reverted.topLeftX, 1e-4f)
+        assertEquals(quad.topLeftY, reverted.topLeftY, 1e-4f)
+        assertEquals(quad.topRightX, reverted.topRightX, 1e-4f)
+        assertEquals(quad.topRightY, reverted.topRightY, 1e-4f)
+        assertEquals(quad.bottomRightX, reverted.bottomRightX, 1e-4f)
+        assertEquals(quad.bottomRightY, reverted.bottomRightY, 1e-4f)
+        assertEquals(quad.bottomLeftX, reverted.bottomLeftX, 1e-4f)
+        assertEquals(quad.bottomLeftY, reverted.bottomLeftY, 1e-4f)
+    }
+
+    @Test
+    fun rotate_defaultQuadStaysDefault() {
+        val defaultQuad = DocumentQuad.DEFAULT
+        assertTrue(defaultQuad.rotateClockwise().isDefault)
+        assertTrue(defaultQuad.rotateCounterClockwise().isDefault)
+    }
 }

@@ -1,38 +1,18 @@
 package com.leshoraa.scanorea.features.editor.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation
 import kotlin.math.hypot
@@ -106,7 +86,7 @@ object AnnotationLayerHelper {
         handle: AnnotationResizeHandle,
         deltaX: Float,
         deltaY: Float,
-        minSize: Float = 0.02f
+        minSize: Float = 0.005f
     ): Rect {
         return when (handle) {
             AnnotationResizeHandle.BODY -> {
@@ -206,31 +186,38 @@ object AnnotationLayerHelper {
         val x = touchPos.x
         val y = touchPos.y
 
-        // 1. Check 4 corners
-        if (hypot(x - screenLeft, y - screenTop) < cornerHitRadius) return AnnotationResizeHandle.TOP_LEFT
-        if (hypot(x - screenRight, y - screenTop) < cornerHitRadius) return AnnotationResizeHandle.TOP_RIGHT
-        if (hypot(x - screenLeft, y - screenBottom) < cornerHitRadius) return AnnotationResizeHandle.BOTTOM_LEFT
-        if (hypot(x - screenRight, y - screenBottom) < cornerHitRadius) return AnnotationResizeHandle.BOTTOM_RIGHT
+        val boxW = screenRight - screenLeft
+        val boxH = screenBottom - screenTop
+        val effectiveCornerRadius = min(cornerHitRadius, min(boxW, boxH) * 0.45f)
+        val effectiveEdgeRadius = min(edgeHitRadius, min(boxW, boxH) * 0.35f)
 
-        // 2. Check 4 edges
-        val edgePadding = 12f
-        if (hypot(x - screenMidX, y - screenTop) < edgeHitRadius ||
-            (y in (screenTop - edgeHitRadius)..(screenTop + edgeHitRadius) && x in (screenLeft + edgePadding)..(screenRight - edgePadding))
+        // Check 4 corners with scaled hit threshold
+        if (hypot(x - screenLeft, y - screenTop) < effectiveCornerRadius) return AnnotationResizeHandle.TOP_LEFT
+        if (hypot(x - screenRight, y - screenTop) < effectiveCornerRadius) return AnnotationResizeHandle.TOP_RIGHT
+        if (hypot(x - screenLeft, y - screenBottom) < effectiveCornerRadius) return AnnotationResizeHandle.BOTTOM_LEFT
+        if (hypot(x - screenRight, y - screenBottom) < effectiveCornerRadius) return AnnotationResizeHandle.BOTTOM_RIGHT
+
+        // Check 4 edges (prioritizing midpoint handles)
+        val edgePaddingX = min(12f, boxW * 0.25f)
+        val edgePaddingY = min(12f, boxH * 0.25f)
+
+        if (hypot(x - screenMidX, y - screenTop) < effectiveEdgeRadius ||
+            (kotlin.math.abs(y - screenTop) < effectiveEdgeRadius && x in (screenLeft + edgePaddingX)..(screenRight - edgePaddingX))
         ) return AnnotationResizeHandle.TOP_EDGE
 
-        if (hypot(x - screenMidX, y - screenBottom) < edgeHitRadius ||
-            (y in (screenBottom - edgeHitRadius)..(screenBottom + edgeHitRadius) && x in (screenLeft + edgePadding)..(screenRight - edgePadding))
+        if (hypot(x - screenMidX, y - screenBottom) < effectiveEdgeRadius ||
+            (kotlin.math.abs(y - screenBottom) < effectiveEdgeRadius && x in (screenLeft + edgePaddingX)..(screenRight - edgePaddingX))
         ) return AnnotationResizeHandle.BOTTOM_EDGE
 
-        if (hypot(x - screenLeft, y - screenMidY) < edgeHitRadius ||
-            (x in (screenLeft - edgeHitRadius)..(screenLeft + edgeHitRadius) && y in (screenTop + edgePadding)..(screenBottom - edgePadding))
+        if (hypot(x - screenLeft, y - screenMidY) < effectiveEdgeRadius ||
+            (kotlin.math.abs(x - screenLeft) < effectiveEdgeRadius && y in (screenTop + edgePaddingY)..(screenBottom - edgePaddingY))
         ) return AnnotationResizeHandle.LEFT_EDGE
 
-        if (hypot(x - screenRight, y - screenMidY) < edgeHitRadius ||
-            (x in (screenRight - edgeHitRadius)..(screenRight + edgeHitRadius) && y in (screenTop + edgePadding)..(screenBottom - edgePadding))
+        if (hypot(x - screenRight, y - screenMidY) < effectiveEdgeRadius ||
+            (kotlin.math.abs(x - screenRight) < effectiveEdgeRadius && y in (screenTop + edgePaddingY)..(screenBottom - edgePaddingY))
         ) return AnnotationResizeHandle.RIGHT_EDGE
 
-        // 3. Check body
+        // Check body
         if (x in screenLeft..screenRight && y in screenTop..screenBottom) {
             return AnnotationResizeHandle.BODY
         }
@@ -241,20 +228,19 @@ object AnnotationLayerHelper {
 
 /**
  * Interactive visual layer overlay for selected markup boxes.
- * Draws a dashed bounding box, corner nodes, edge resize bars, and a floating action pill.
+ * Draws a subtle dashed bounding box, sleek corner nodes, compact edge resize bars, and a floating action pill.
  */
 @Composable
 fun EditorAnnotationLayerOverlay(
     annotation: PageAnnotation,
     canvasWidth: Float,
     canvasHeight: Float,
-    onDelete: () -> Unit,
-    onDeselect: () -> Unit,
+    onDelete: () -> Unit = {},
+    onDeselect: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val bounds = AnnotationLayerHelper.getNormalizedBounds(annotation) ?: return
     val primaryColor = MaterialTheme.colorScheme.primary
-    val surfaceColor = MaterialTheme.colorScheme.surfaceContainerLowest
     val density = LocalDensity.current
 
     val screenLeft = bounds.left * canvasWidth
@@ -266,29 +252,25 @@ fun EditorAnnotationLayerOverlay(
     val screenMidX = (screenLeft + screenRight) / 2f
     val screenMidY = (screenTop + screenBottom) / 2f
 
-    val cornerRadiusPx = with(density) { 6.dp.toPx() }
-    val edgePillW = with(density) { 16.dp.toPx() }
-    val edgePillH = with(density) { 4.5.dp.toPx() }
-    val strokeWidthPx = with(density) { 1.5.dp.toPx() }
-
-    val toolbarWPx = with(density) { 84.dp.toPx() }
-    val toolbarHPx = with(density) { 36.dp.toPx() }
-    val toolbarMarginPx = with(density) { 8.dp.toPx() }
+    val cornerRadiusPx = with(density) { 4.5.dp.toPx() }
+    val edgePillW = with(density) { 11.dp.toPx() }
+    val edgePillH = with(density) { 3.2.dp.toPx() }
+    val strokeWidthPx = with(density) { 1.dp.toPx() }
 
     Box(modifier = modifier.fillMaxSize()) {
         // Visual bounding box & resize handles canvas
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val dashEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f), 0f)
+            val dashEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f), 0f)
 
-            // 1. Dashed selection bounding box
+            // Dashed selection bounding box (translucent, subtle)
             drawRect(
-                color = primaryColor,
+                color = primaryColor.copy(alpha = 0.55f),
                 topLeft = Offset(screenLeft, screenTop),
                 size = Size(boxWidth, boxHeight),
                 style = Stroke(width = strokeWidthPx, pathEffect = dashEffect)
             )
 
-            // 2. Corner circular nodes (Surface fill + primary border)
+            // Corner circular nodes (filled green with subtle halo)
             val cornerPositions = listOf(
                 Offset(screenLeft, screenTop),
                 Offset(screenRight, screenTop),
@@ -297,29 +279,31 @@ fun EditorAnnotationLayerOverlay(
             )
 
             cornerPositions.forEach { center ->
-                drawCircle(color = Color.Black.copy(alpha = 0.25f), radius = cornerRadiusPx + 1f, center = center + Offset(0f, 1f))
-                drawCircle(color = surfaceColor, radius = cornerRadiusPx, center = center)
-                drawCircle(color = primaryColor, radius = cornerRadiusPx, center = center, style = Stroke(width = 2.dp.toPx()))
+                // Outer soft halo
+                drawCircle(
+                    color = primaryColor.copy(alpha = 0.22f),
+                    radius = cornerRadiusPx + with(density) { 2.5.dp.toPx() },
+                    center = center
+                )
+                // Solid green fill
+                drawCircle(
+                    color = primaryColor,
+                    radius = cornerRadiusPx,
+                    center = center
+                )
             }
 
-            // 3. Edge midpoint grab bars (Pill bars)
+            // Edge midpoint grab bars (Pill bars - filled green)
             // Top and Bottom edge bars (horizontal)
             listOf(
                 Offset(screenMidX - edgePillW / 2f, screenTop - edgePillH / 2f),
                 Offset(screenMidX - edgePillW / 2f, screenBottom - edgePillH / 2f)
             ).forEach { topLeft ->
                 drawRoundRect(
-                    color = surfaceColor,
-                    topLeft = topLeft,
-                    size = Size(edgePillW, edgePillH),
-                    cornerRadius = CornerRadius(edgePillH / 2f, edgePillH / 2f)
-                )
-                drawRoundRect(
                     color = primaryColor,
                     topLeft = topLeft,
                     size = Size(edgePillW, edgePillH),
-                    cornerRadius = CornerRadius(edgePillH / 2f, edgePillH / 2f),
-                    style = Stroke(width = 1.5.dp.toPx())
+                    cornerRadius = CornerRadius(edgePillH / 2f, edgePillH / 2f)
                 )
             }
 
@@ -329,76 +313,11 @@ fun EditorAnnotationLayerOverlay(
                 Offset(screenRight - edgePillH / 2f, screenMidY - edgePillW / 2f)
             ).forEach { topLeft ->
                 drawRoundRect(
-                    color = surfaceColor,
+                    color = primaryColor,
                     topLeft = topLeft,
                     size = Size(edgePillH, edgePillW),
                     cornerRadius = CornerRadius(edgePillH / 2f, edgePillH / 2f)
                 )
-                drawRoundRect(
-                    color = primaryColor,
-                    topLeft = topLeft,
-                    size = Size(edgePillH, edgePillW),
-                    cornerRadius = CornerRadius(edgePillH / 2f, edgePillH / 2f),
-                    style = Stroke(width = 1.5.dp.toPx())
-                )
-            }
-        }
-
-        // 4. Floating Action Mini Toolbar (Delete & Done)
-        // Position above the box if room allows; otherwise place below
-        val toolbarOffsetY = if (screenTop > toolbarHPx + toolbarMarginPx) {
-            (screenTop - toolbarHPx - toolbarMarginPx).roundToInt()
-        } else {
-            (screenBottom + toolbarMarginPx).roundToInt()
-        }
-        val toolbarOffsetX = (screenMidX - toolbarWPx / 2f)
-            .coerceIn(4f, (canvasWidth - toolbarWPx - 4f).coerceAtLeast(4f))
-            .roundToInt()
-
-        Surface(
-            modifier = Modifier
-                .offset { IntOffset(toolbarOffsetX, toolbarOffsetY) },
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shadowElevation = 3.dp,
-            tonalElevation = 2.dp
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                // Delete button
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .clip(CircleShape)
-                        .clickable(onClick = onDelete),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Delete,
-                        contentDescription = "Delete markup layer",
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(17.dp)
-                    )
-                }
-
-                // Done / Deselect button
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .clip(CircleShape)
-                        .clickable(onClick = onDeselect),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Check,
-                        contentDescription = "Done adjusting markup layer",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(17.dp)
-                    )
-                }
             }
         }
     }

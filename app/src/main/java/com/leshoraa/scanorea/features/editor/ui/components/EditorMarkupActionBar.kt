@@ -23,17 +23,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 /**
- * Strategic floating top action bar for Undo, Redo, and Clear operations in Markup mode.
+ * Strategic floating top action bar for Undo, Redo, and selective layer deletion in Markup mode.
  * Placed at the top center of the canvas viewport so it is always accessible and never scrolled away.
  */
 @Composable
 fun EditorMarkupActionBar(
     canUndo: Boolean,
     canRedo: Boolean,
-    hasAnnotations: Boolean = canUndo,
+    hasSelectedAnnotation: Boolean = false,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
-    onClearAll: () -> Unit,
+    onDeleteSelected: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -85,16 +85,16 @@ fun EditorMarkupActionBar(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
             )
 
-            // Clear All Action
+            // Delete Selected Layer Action
             IconButton(
-                onClick = onClearAll,
-                enabled = hasAnnotations,
+                onClick = onDeleteSelected,
+                enabled = hasSelectedAnnotation,
                 modifier = Modifier.size(38.dp)
             ) {
                 Icon(
                     imageVector = Icons.Filled.Delete,
-                    contentDescription = "Clear All",
-                    tint = if (hasAnnotations) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                    contentDescription = "Delete Selected Layer",
+                    tint = if (hasSelectedAnnotation) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                     modifier = Modifier.size(20.dp)
                 )
             }

@@ -416,6 +416,8 @@ class RecentPdfsRepository(
             emptyMap()
         }
 
+        val entitiesToUpsert = mutableListOf<RecentPdfEntity>()
+
         val pdfList = pdfFiles.map { file ->
             val path = file.absolutePath
             existingFilePaths.add(path)
@@ -461,9 +463,9 @@ class RecentPdfsRepository(
                 }
             }
 
-            // Sync into Room DB if not present or changed
+            // Collect entities needing sync into batch list for atomic Room DB upsert
             if (currentDao != null && (dbEntity == null || dbEntity.lastModified != lastModified || dbEntity.fileSizeBytes != sizeBytes)) {
-                currentDao.upsertPdf(
+                entitiesToUpsert.add(
                     RecentPdfEntity(
                         filePath = path,
                         fileName = file.name,
@@ -476,11 +478,6 @@ class RecentPdfsRepository(
                         customTitle = dbEntity?.customTitle
                     )
                 )
-            }
-
-            // Pre-generate thumbnail into cache in background without blocking repository query
-            CoroutineScope(Dispatchers.IO).launch {
-                PdfThumbnailLoader.pregenerateThumbnail(file, context.cacheDir)
             }
 
             if (existing != null &&
@@ -505,6 +502,15 @@ class RecentPdfsRepository(
                 newPdf
             }
         }.sortedByDescending { it.lastModifiedMillis }
+
+        // Batch upsert unsynced or modified entities atomically
+        if (currentDao != null && entitiesToUpsert.isNotEmpty()) {
+            try {
+                currentDao.upsertPdfs(entitiesToUpsert)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to batch upsert PDFs to Room", e)
+            }
+        }
 
         // Clean up metadata keys and Room records for removed files
         if (currentDao != null) {

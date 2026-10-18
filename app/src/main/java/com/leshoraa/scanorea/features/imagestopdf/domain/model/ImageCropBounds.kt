@@ -32,6 +32,30 @@ data class ImageCropBounds(
     val heightFraction: Float
         get() = (bottom - top).coerceAtLeast(0.01f)
 
+    /**
+     * Rotates the normalized crop rectangle 90 degrees clockwise.
+     */
+    fun rotateClockwise(): ImageCropBounds {
+        if (isDefault) return this
+        val newLeft = (1.0f - bottom).coerceIn(0.0f, 1.0f)
+        val newTop = left.coerceIn(0.0f, 1.0f)
+        val newRight = (1.0f - top).coerceIn(0.0f, 1.0f)
+        val newBottom = right.coerceIn(0.0f, 1.0f)
+        return ofClamped(newLeft, newTop, newRight, newBottom)
+    }
+
+    /**
+     * Rotates the normalized crop rectangle 90 degrees counter-clockwise.
+     */
+    fun rotateCounterClockwise(): ImageCropBounds {
+        if (isDefault) return this
+        val newLeft = top.coerceIn(0.0f, 1.0f)
+        val newTop = (1.0f - right).coerceIn(0.0f, 1.0f)
+        val newRight = bottom.coerceIn(0.0f, 1.0f)
+        val newBottom = (1.0f - left).coerceIn(0.0f, 1.0f)
+        return ofClamped(newLeft, newTop, newRight, newBottom)
+    }
+
     companion object {
         val DEFAULT = ImageCropBounds()
 

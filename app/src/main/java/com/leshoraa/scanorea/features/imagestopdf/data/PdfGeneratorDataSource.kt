@@ -54,7 +54,8 @@ class PdfGeneratorDataSource(
                     brightness = imagePage.brightness,
                     rotationDegrees = imagePage.rotationDegrees,
                     cropBounds = imagePage.cropBounds,
-                    perspectiveQuad = imagePage.perspectiveQuad
+                    perspectiveQuad = imagePage.perspectiveQuad,
+                    sharpness = imagePage.sharpness
                 )
 
                 try {

@@ -19,10 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import com.leshoraa.scanorea.core.designsystem.ContainedLoadingIndicator
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ConversionProgress
 
 /**
- * Non-cancellable dialog displaying progress while generating the PDF document.
+ * Non-cancellable dialog displaying progress while generating the PDF document,
+ * featuring the Material 3 Expressive contained loading indicator.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +52,10 @@ fun ConversionProgressDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
+                ContainedLoadingIndicator(
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
                 Text(
                     text = "Generating PDF...",
                     style = MaterialTheme.typography.titleMedium,
@@ -62,7 +68,7 @@ fun ConversionProgressDialog(
                 if (progress != null && progress.totalPages > 0) {
                     LinearProgressIndicator(
                         progress = { progress.progressFraction },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))

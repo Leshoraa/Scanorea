@@ -58,11 +58,12 @@ object PerspectiveWarpCalculator {
             return sourceBitmap
         }
 
+        val preferredConfig = sourceBitmap.config ?: Bitmap.Config.ARGB_8888
         val outputBitmap = try {
             Bitmap.createBitmap(
                 targetDimensions.width,
                 targetDimensions.height,
-                Bitmap.Config.ARGB_8888
+                preferredConfig
             )
         } catch (_: OutOfMemoryError) {
             return sourceBitmap

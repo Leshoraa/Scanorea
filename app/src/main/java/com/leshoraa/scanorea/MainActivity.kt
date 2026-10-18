@@ -8,6 +8,11 @@ import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.leshoraa.scanorea.app.ui.MainScreen
 import com.leshoraa.scanorea.core.designsystem.ScanoreaTheme
@@ -35,16 +40,28 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ScanoreaTheme {
-                val viewModel: ImagesToPdfViewModel = viewModel(
-                    factory = ImagesToPdfViewModel.provideFactory(this)
-                )
-                val recentPdfsViewModel: com.leshoraa.scanorea.features.recentpdfs.ui.RecentPdfsViewModel = viewModel(
-                    factory = com.leshoraa.scanorea.features.recentpdfs.ui.RecentPdfsViewModel.provideFactory(this)
-                )
-                MainScreen(
-                    viewModel = viewModel,
-                    recentPdfsViewModel = recentPdfsViewModel
-                )
+                val isDark = isSystemInDarkTheme()
+                val mainActivityBgColor = if (isDark) {
+                    MaterialTheme.colorScheme.surfaceContainer
+                } else {
+                    MaterialTheme.colorScheme.surface
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = mainActivityBgColor
+                ) {
+                    val viewModel: ImagesToPdfViewModel = viewModel(
+                        factory = ImagesToPdfViewModel.provideFactory(this)
+                    )
+                    val recentPdfsViewModel: com.leshoraa.scanorea.features.recentpdfs.ui.RecentPdfsViewModel = viewModel(
+                        factory = com.leshoraa.scanorea.features.recentpdfs.ui.RecentPdfsViewModel.provideFactory(this)
+                    )
+                    MainScreen(
+                        viewModel = viewModel,
+                        recentPdfsViewModel = recentPdfsViewModel
+                    )
+                }
             }
         }
     }

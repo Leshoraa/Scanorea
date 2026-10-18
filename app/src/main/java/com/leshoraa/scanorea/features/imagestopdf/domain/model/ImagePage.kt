@@ -39,6 +39,7 @@ data class ImagePage(
     val height: Int = 0,
     val initialContrast: Float = 1.0f,
     val initialBrightness: Float = 0.0f,
+    val sharpness: Float = 0.0f,
     val annotations: List<PageAnnotation> = emptyList()
 ) {
     /**

@@ -1,6 +1,7 @@
 package com.leshoraa.scanorea.features.editor.domain.model
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Contrast
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -10,5 +11,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
  */
 enum class AdjustmentTool(val displayName: String, val icon: ImageVector) {
     CONTRAST("Contrast", Icons.Filled.Contrast),
-    BRIGHTNESS("Brightness", Icons.Filled.Brightness6)
+    BRIGHTNESS("Brightness", Icons.Filled.Brightness6),
+    SHARPNESS("Sharpness", Icons.Filled.AutoFixHigh)
 }

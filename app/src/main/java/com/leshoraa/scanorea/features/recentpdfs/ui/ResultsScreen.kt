@@ -2,6 +2,7 @@ package com.leshoraa.scanorea.features.recentpdfs.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +50,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.leshoraa.scanorea.core.designsystem.ContainedLoadingIndicator
+import com.leshoraa.scanorea.core.designsystem.RecentPdfSkeletonCard
 import com.leshoraa.scanorea.features.recentpdfs.domain.model.RecentPdf
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.AllFoldersBottomSheet
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.CreateFolderDialog
@@ -92,6 +95,7 @@ fun ResultsScreen(
     onRenameCategory: (String, String) -> Unit,
     onDeleteCategory: (String) -> Unit,
     onReorderPinnedFolders: (List<String>) -> Unit = {},
+    isLoading: Boolean = false,
     modifier: Modifier = Modifier,
     onAssignCategory: ((File, String?) -> Unit)? = null
 ) {
@@ -175,7 +179,11 @@ fun ResultsScreen(
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                containerColor = if (isSystemInDarkTheme()) {
+                    MaterialTheme.colorScheme.surfaceContainer
+                } else {
+                    MaterialTheme.colorScheme.surface
+                }
             )
         )
 
@@ -272,7 +280,36 @@ fun ResultsScreen(
             }
         }
 
-        if (filteredPdfs.isEmpty()) {
+        if (isLoading && recentPdfs.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    ContainedLoadingIndicator(
+                        modifier = Modifier.padding(top = 16.dp, bottom = 12.dp)
+                    )
+                    Text(
+                        text = "Loading documents...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(count = 5) {
+                            RecentPdfSkeletonCard()
+                        }
+                    }
+                }
+            }
+        } else if (filteredPdfs.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()

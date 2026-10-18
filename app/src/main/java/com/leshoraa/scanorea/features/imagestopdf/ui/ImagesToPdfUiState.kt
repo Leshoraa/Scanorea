@@ -33,6 +33,8 @@ data class ImagesToPdfUiState(
     val destinationFolderDisplayName: String = "Internal: Scanorea/pdfs",
     val carouselPageIndex: Int = 0,
     val redoAnnotationsMap: Map<String, List<com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation>> = emptyMap(),
+    val undoPageHistoryMap: Map<String, List<ImagePage>> = emptyMap(),
+    val redoPageHistoryMap: Map<String, List<ImagePage>> = emptyMap(),
     val selectedFolders: List<String> = emptyList()
 ) {
     val hasPages: Boolean
@@ -45,8 +47,16 @@ data class ImagesToPdfUiState(
         get() = pages.getOrNull(carouselPageIndex.coerceIn(0, (pages.size - 1).coerceAtLeast(0)))
 
     fun canUndoAnnotation(pageId: String): Boolean =
-        pages.find { it.id == pageId }?.annotations?.isNotEmpty() == true
+        (undoPageHistoryMap[pageId]?.isNotEmpty() == true) ||
+        (pages.find { it.id == pageId }?.annotations?.isNotEmpty() == true)
 
     fun canRedoAnnotation(pageId: String): Boolean =
-        redoAnnotationsMap[pageId]?.isNotEmpty() == true
+        (redoPageHistoryMap[pageId]?.isNotEmpty() == true) ||
+        (redoAnnotationsMap[pageId]?.isNotEmpty() == true)
+
+    fun canUndo(pageId: String): Boolean =
+        (undoPageHistoryMap[pageId]?.isNotEmpty() == true) || canUndoAnnotation(pageId)
+
+    fun canRedo(pageId: String): Boolean =
+        (redoPageHistoryMap[pageId]?.isNotEmpty() == true) || canRedoAnnotation(pageId)
 }

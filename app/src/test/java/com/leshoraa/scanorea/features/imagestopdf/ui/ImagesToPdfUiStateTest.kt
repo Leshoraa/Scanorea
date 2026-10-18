@@ -80,4 +80,29 @@ class ImagesToPdfUiStateTest {
         assertFalse(state.canRedoAnnotation("p2"))
         assertFalse(state.canRedoAnnotation("p_unknown"))
     }
+
+    @Test
+    fun canUndoAndCanRedo_reflectPageHistoryState() {
+        val dummyUri = android.net.TestUri("content://media/1")
+        val page = ImagePage(id = "p1", uri = dummyUri)
+
+        val emptyState = ImagesToPdfUiState()
+        assertFalse(emptyState.canUndo("p1"))
+        assertFalse(emptyState.canRedo("p1"))
+
+        val stateWithUndo = ImagesToPdfUiState(
+            pages = listOf(page),
+            undoPageHistoryMap = mapOf("p1" to listOf(page))
+        )
+        assertTrue(stateWithUndo.canUndo("p1"))
+        assertFalse(stateWithUndo.canRedo("p1"))
+
+        val stateWithRedo = ImagesToPdfUiState(
+            pages = listOf(page),
+            redoPageHistoryMap = mapOf("p1" to listOf(page))
+        )
+        assertFalse(stateWithRedo.canUndo("p1"))
+        assertTrue(stateWithRedo.canRedo("p1"))
+        assertTrue(stateWithRedo.canRedoAnnotation("p1"))
+    }
 }

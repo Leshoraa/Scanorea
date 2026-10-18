@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
@@ -76,7 +77,8 @@ fun EditorCropPanel(
     stagedPerspectiveQuad: DocumentQuad = DocumentQuad.DEFAULT,
     onCropBoundsChange: (ImageCropBounds) -> Unit,
     onRotatePage: () -> Unit,
-    onResetCrop: () -> Unit,
+    onRotatePageLeft: () -> Unit = {},
+    onResetCrop: () -> Unit = {},
     onResetPerspective: () -> Unit = {},
     onApplyCrop: () -> Unit = {},
     onPreviousPage: () -> Unit,
@@ -285,63 +287,40 @@ fun EditorCropPanel(
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.RotateRight,
-                            contentDescription = "Rotate",
+                            contentDescription = "Rotate right",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Rotate (${page.rotationDegrees}°)",
+                            text = "Rotate Right",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
-                    val isResetEnabled = if (cropPanelMode == CropPanelMode.PERSPECTIVE) {
-                        !stagedPerspectiveQuad.isDefault
-                    } else {
-                        !stagedCropBounds.isDefault
-                    }
-
                     FilledTonalButton(
-                        onClick = {
-                            if (cropPanelMode == CropPanelMode.PERSPECTIVE) {
-                                onResetPerspective()
-                            } else {
-                                onRatioSelected(CropAspectRatio.FREE)
-                                onResetCrop()
-                            }
-                        },
-                        enabled = isResetEnabled,
+                        onClick = onRotatePageLeft,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f)
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                         ),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                         modifier = Modifier.height(38.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.RestartAlt,
-                            contentDescription = "Reset Crop",
-                            modifier = Modifier.size(18.dp),
-                            tint = if (isResetEnabled) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            }
+                            imageVector = Icons.AutoMirrored.Filled.RotateLeft,
+                            contentDescription = "Rotate left",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Reset",
+                            text = "Rotate Left",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (isResetEnabled) {
-                                MaterialTheme.colorScheme.onSurface
-                            } else {
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            }
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
