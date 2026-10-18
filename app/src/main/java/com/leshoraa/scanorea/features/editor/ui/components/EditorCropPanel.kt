@@ -1,6 +1,5 @@
 package com.leshoraa.scanorea.features.editor.ui.components
 
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,7 +19,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -44,9 +42,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.features.editor.domain.model.DocumentQuad
@@ -84,8 +79,6 @@ fun EditorCropPanel(
     onResetCrop: () -> Unit,
     onResetPerspective: () -> Unit = {},
     onApplyCrop: () -> Unit = {},
-    isComparing: Boolean = false,
-    onCompareChange: (Boolean) -> Unit = {},
     onPreviousPage: () -> Unit,
     onNextPage: () -> Unit,
     onMovePage: (sourceIndex: Int, targetIndex: Int) -> Unit,
@@ -249,14 +242,14 @@ fun EditorCropPanel(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Row 2: Action Controls & Page Navigation
+        // Row 2: Action Controls & Page Navigation (Arrows pinned outside scroll, rectangular buttons scrollable in center)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Left fixed arrow (Previous page)
             FilledTonalIconButton(
                 onClick = onPreviousPage,
                 enabled = currentPageIndex > 0 && !isReordering,
@@ -269,138 +262,20 @@ fun EditorCropPanel(
                 )
             }
 
-            FilledTonalButton(
-                onClick = onRotatePage,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                ),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                modifier = Modifier.height(38.dp)
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Scrollable container for rectangular action buttons
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.RotateRight,
-                    contentDescription = "Rotate",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Rotate (${page.rotationDegrees}°)",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            val isResetEnabled = if (cropPanelMode == CropPanelMode.PERSPECTIVE) {
-                !stagedPerspectiveQuad.isDefault
-            } else {
-                !stagedCropBounds.isDefault
-            }
-
-            FilledTonalButton(
-                onClick = {
-                    if (cropPanelMode == CropPanelMode.PERSPECTIVE) {
-                        onResetPerspective()
-                    } else {
-                        onRatioSelected(CropAspectRatio.FREE)
-                        onResetCrop()
-                    }
-                },
-                enabled = isResetEnabled,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f)
-                ),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                modifier = Modifier.height(38.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.RestartAlt,
-                    contentDescription = "Reset Crop",
-                    modifier = Modifier.size(18.dp),
-                    tint = if (isResetEnabled) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    }
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Reset",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isResetEnabled) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    }
-                )
-            }
-
-            val haptic = LocalHapticFeedback.current
-
-            FilledTonalButton(
-                onClick = {},
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = if (isComparing) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerHigh
-                    },
-                    contentColor = if (isComparing) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    }
-                ),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                modifier = Modifier
-                    .height(38.dp)
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onPress = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onCompareChange(true)
-                                try {
-                                    tryAwaitRelease()
-                                } finally {
-                                    onCompareChange(false)
-                                }
-                            }
-                        )
-                    }
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Compare,
-                    contentDescription = "Hold to compare original",
-                    modifier = Modifier.size(18.dp),
-                    tint = if (isComparing) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.primary
-                    }
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Compare",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isComparing) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    }
-                )
-            }
-
-            if (totalPages > 1) {
-                Box {
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     FilledTonalButton(
-                        onClick = { if (!isReordering) isPagePickerVisible = true },
+                        onClick = onRotatePage,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.filledTonalButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -409,54 +284,132 @@ fun EditorCropPanel(
                         modifier = Modifier.height(38.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.SwapHoriz,
-                            contentDescription = "Move to page",
+                            imageVector = Icons.AutoMirrored.Filled.RotateRight,
+                            contentDescription = "Rotate",
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "${currentPageIndex + 1} / $totalPages",
+                            text = "Rotate (${page.rotationDegrees}°)",
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
-                    DropdownMenu(
-                        expanded = isPagePickerVisible,
-                        onDismissRequest = { isPagePickerVisible = false }
+                    val isResetEnabled = if (cropPanelMode == CropPanelMode.PERSPECTIVE) {
+                        !stagedPerspectiveQuad.isDefault
+                    } else {
+                        !stagedCropBounds.isDefault
+                    }
+
+                    FilledTonalButton(
+                        onClick = {
+                            if (cropPanelMode == CropPanelMode.PERSPECTIVE) {
+                                onResetPerspective()
+                            } else {
+                                onRatioSelected(CropAspectRatio.FREE)
+                                onResetCrop()
+                            }
+                        },
+                        enabled = isResetEnabled,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f)
+                        ),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.height(38.dp)
                     ) {
-                        Text(
-                            text = "Move this page to:",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        Icon(
+                            imageVector = Icons.Filled.RestartAlt,
+                            contentDescription = "Reset Crop",
+                            modifier = Modifier.size(18.dp),
+                            tint = if (isResetEnabled) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            }
                         )
-                        for (targetIndex in 0 until totalPages) {
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        text = if (targetIndex == currentPageIndex) {
-                                            "Page ${targetIndex + 1} (Current)"
-                                        } else {
-                                            "Page ${targetIndex + 1}"
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Reset",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isResetEnabled) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                            }
+                        )
+                    }
+
+                    if (totalPages > 1) {
+                        Box {
+                            FilledTonalButton(
+                                onClick = { if (!isReordering) isPagePickerVisible = true },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                                ),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                modifier = Modifier.height(38.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.SwapHoriz,
+                                    contentDescription = "Move to page",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "${currentPageIndex + 1} / $totalPages",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = isPagePickerVisible,
+                                onDismissRequest = { isPagePickerVisible = false }
+                            ) {
+                                Text(
+                                    text = "Move this page to:",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                )
+                                for (targetIndex in 0 until totalPages) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = if (targetIndex == currentPageIndex) {
+                                                    "Page ${targetIndex + 1} (Current)"
+                                                } else {
+                                                    "Page ${targetIndex + 1}"
+                                                },
+                                                fontWeight = if (targetIndex == currentPageIndex) FontWeight.Bold else FontWeight.Normal
+                                            )
                                         },
-                                        fontWeight = if (targetIndex == currentPageIndex) FontWeight.Bold else FontWeight.Normal
+                                        enabled = targetIndex != currentPageIndex,
+                                        onClick = {
+                                            isPagePickerVisible = false
+                                            onMovePage(currentPageIndex, targetIndex)
+                                        }
                                     )
-                                },
-                                enabled = targetIndex != currentPageIndex,
-                                onClick = {
-                                    isPagePickerVisible = false
-                                    onMovePage(currentPageIndex, targetIndex)
                                 }
-                            )
+                            }
                         }
                     }
                 }
             }
 
+            Spacer(modifier = Modifier.width(6.dp))
+
+            // Right fixed arrow (Next page)
             FilledTonalIconButton(
                 onClick = onNextPage,
                 enabled = currentPageIndex < totalPages - 1 && !isReordering,

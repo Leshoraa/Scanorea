@@ -119,15 +119,8 @@ fun EditorWorkspace(
     var originalCropBoundsOnEnter by remember { mutableStateOf(ImageCropBounds.DEFAULT) }
     var originalPerspectiveQuadOnEnter by remember { mutableStateOf(DocumentQuad.DEFAULT) }
     var isAutoDetectingPerspective by remember { mutableStateOf(false) }
-    var localIsComparing by remember { mutableStateOf(false) }
-    val effectiveIsComparing = isComparing || localIsComparing
-    val effectiveOnCompareChange: (Boolean) -> Unit = { active ->
-        localIsComparing = active
-        onCompareChange(active)
-    }
 
     LaunchedEffect(activeCategory, pagerState.currentPage) {
-        localIsComparing = false
         onCompareChange(false)
         if (activeCategory == EditorCategory.CROP) {
             val curr = pages.getOrNull(pagerState.currentPage)
@@ -238,7 +231,7 @@ fun EditorWorkspace(
             movingTargetIndex = movingTargetIndex,
             liftProgress = liftAnim.value,
             isCropMode = activeCategory == EditorCategory.CROP,
-            isComparing = effectiveIsComparing,
+            isComparing = isComparing,
             cropPanelMode = cropPanelMode,
             cropAspectRatio = selectedCropRatio,
             stagedCropBounds = stagedCropBounds,
@@ -322,8 +315,6 @@ fun EditorWorkspace(
                                     stagedPerspectiveQuad = DocumentQuad.DEFAULT
                                 },
                                 onApplyCrop = handleApplyCrop,
-                                isComparing = effectiveIsComparing,
-                                onCompareChange = effectiveOnCompareChange,
                                 onPreviousPage = {
                                     coroutineScope.launch {
                                         if (pagerState.currentPage > 0) {

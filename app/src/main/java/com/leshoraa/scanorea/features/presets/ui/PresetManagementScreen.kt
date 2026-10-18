@@ -1,6 +1,5 @@
 package com.leshoraa.scanorea.features.presets.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -433,11 +432,11 @@ private fun PresetEditDialog(
                     val tokens = listOf("{DD:MM:YYYY}", "{YYYY}", "{MM}", "{DD}")
                     items(tokens) { token ->
                         Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            modifier = Modifier.clickable {
+                            onClick = {
                                 template += token
-                            }
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh
                         ) {
                             Text(
                                 text = "+ $token",

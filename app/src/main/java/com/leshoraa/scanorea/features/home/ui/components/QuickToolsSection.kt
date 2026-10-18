@@ -1,6 +1,5 @@
 package com.leshoraa.scanorea.features.home.ui.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -70,9 +69,8 @@ fun QuickToolsSection(
         ) {
             // Gallery Quick Card
             Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable(onClick = onGalleryClick),
+                onClick = onGalleryClick,
+                modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
@@ -111,9 +109,8 @@ fun QuickToolsSection(
 
             // Camera Quick Card
             Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable(onClick = onCameraClick),
+                onClick = onCameraClick,
+                modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLowest

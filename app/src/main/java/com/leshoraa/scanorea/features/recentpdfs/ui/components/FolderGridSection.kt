@@ -10,9 +10,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -771,6 +769,8 @@ private fun FolderGridCard(
     val haptic = LocalHapticFeedback.current
 
     Surface(
+        onClick = onClick,
+        enabled = !isAnyItemDragging && !isSettling,
         shape = RoundedCornerShape(CARD_CORNER_RADIUS),
         color = containerColor,
         contentColor = contentColor,
@@ -836,8 +836,6 @@ private fun FolderGridCard(
                     Modifier
                 }
             )
-            .clip(RoundedCornerShape(CARD_CORNER_RADIUS))
-            .clickable(enabled = !isAnyItemDragging && !isSettling, onClick = onClick)
     ) {
         val hasOptionsMenu = onUnpin != null || (isCustomFolder && (onRename != null || onDelete != null))
 

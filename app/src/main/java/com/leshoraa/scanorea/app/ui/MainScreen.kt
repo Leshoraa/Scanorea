@@ -83,8 +83,8 @@ fun MainScreen(
     var captureSourceSheetTitle by remember { mutableStateOf<String?>(null) }
     var isComparingOriginal by remember { mutableStateOf(false) }
 
-    LaunchedEffect(tabPagerState.currentPage) {
-        val tab = tabs[tabPagerState.currentPage]
+    LaunchedEffect(tabPagerState.settledPage) {
+        val tab = tabs[tabPagerState.settledPage]
         if (tab == MainNavTab.RESULTS || tab == MainNavTab.HOME) {
             recentPdfsViewModel.loadRecentPdfs()
         }
@@ -227,7 +227,7 @@ fun MainScreen(
             if (!uiState.hasPages) {
                 HorizontalPager(
                     state = tabPagerState,
-                    userScrollEnabled = tabPagerState.currentPage != MainNavTab.RESULTS.ordinal,
+                    beyondViewportPageCount = 1,
                     modifier = Modifier.fillMaxSize()
                 ) { pageIndex ->
                     when (tabs[pageIndex]) {

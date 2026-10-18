@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -37,10 +38,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Compare
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -85,7 +95,10 @@ fun EditorTopBar(
         },
         title = {
             Column(
-                modifier = Modifier.clickable(onClick = onRenameClick)
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onRenameClick)
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -123,10 +136,34 @@ fun EditorTopBar(
 
             // Hold-to-Compare Button (shows original unedited photo while held)
             val haptic = LocalHapticFeedback.current
+            val compareScale by animateFloatAsState(
+                targetValue = if (isComparing) 0.88f else 1.0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                ),
+                label = "compareScale"
+            )
+            val compareContainerColor by animateColorAsState(
+                targetValue = if (isComparing) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                animationSpec = tween(durationMillis = 150),
+                label = "compareContainer"
+            )
+            val compareIconTint by animateColorAsState(
+                targetValue = if (isComparing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                animationSpec = tween(durationMillis = 150),
+                label = "compareTint"
+            )
+
             Box(
                 modifier = Modifier
                     .size(48.dp)
+                    .graphicsLayer {
+                        scaleX = compareScale
+                        scaleY = compareScale
+                    }
                     .clip(CircleShape)
+                    .background(compareContainerColor)
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onPress = {
@@ -145,11 +182,7 @@ fun EditorTopBar(
                 Icon(
                     imageVector = Icons.Filled.Compare,
                     contentDescription = "Hold to compare original",
-                    tint = if (isComparing) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    }
+                    tint = compareIconTint
                 )
             }
 

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
@@ -318,8 +319,9 @@ fun OrganizeDocumentBottomSheet(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
                     .clickable { onCreateNewFolder() }
-                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                    .padding(vertical = 12.dp, horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -369,6 +371,7 @@ fun OrganizeDocumentBottomSheet(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
                                 .clickable {
                                     selectedFolders = if (isChecked) {
                                         selectedFolders - category
@@ -376,7 +379,7 @@ fun OrganizeDocumentBottomSheet(
                                         selectedFolders + category
                                     }
                                 }
-                                .padding(vertical = 6.dp, horizontal = 4.dp),
+                                .padding(vertical = 6.dp, horizontal = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(

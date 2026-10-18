@@ -757,7 +757,7 @@ fun EditorCanvasPager(
                                                 perspectiveQuad = effectivePerspectiveQuad
                                             )
                                         )
-                                        .crossfade(false)
+                                        .crossfade(true)
                                         .build()
                                 }
                                 AsyncImage(
@@ -775,7 +775,11 @@ fun EditorCanvasPager(
                                 )
 
                                 // Annotations Overlay (committed annotations + live drawing preview)
-                                if (!isComparingThisPage) {
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = !isComparingThisPage,
+                                    enter = fadeIn(tween(150)),
+                                    exit = fadeOut(tween(150))
+                                ) {
                                     val displayAnnotations = if (liveManipulatedAnnotation != null && isCurrentFocusedPage) {
                                         page.annotations.map { if (it.id == liveManipulatedAnnotation?.id) liveManipulatedAnnotation!! else it }
                                     } else {
@@ -850,8 +854,8 @@ fun EditorCanvasPager(
                     // Floating "ORIGINAL" badge when holding to compare
                     androidx.compose.animation.AnimatedVisibility(
                         visible = isComparingThisPage,
-                        enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(120)),
-                        exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)),
+                        enter = fadeIn(tween(160)) + scaleIn(initialScale = 0.82f, animationSpec = tween(160)),
+                        exit = fadeOut(tween(140)) + scaleOut(targetScale = 0.82f, animationSpec = tween(140)),
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .padding(top = 16.dp)
@@ -885,7 +889,7 @@ fun EditorCanvasPager(
         }
 
         // Floating Top Markup Action Bar (Undo, Redo, Clear All)
-        AnimatedVisibility(
+        androidx.compose.animation.AnimatedVisibility(
             visible = isAnnotateMode,
             enter = fadeIn(tween(180)) + slideInVertically(tween(220)) { -it / 2 },
             exit = fadeOut(tween(150)) + slideOutVertically(tween(180)) { -it / 2 },

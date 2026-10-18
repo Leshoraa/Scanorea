@@ -1,6 +1,5 @@
 package com.leshoraa.scanorea.features.editor.ui.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -262,16 +261,15 @@ fun EditorAdjustPanel(
                 AdjustmentTool.BRIGHTNESS -> "${if (page.brightness.toInt() > 0) "+" else ""}${page.brightness.toInt()}"
             }
             Surface(
+                onClick = {
+                    when (activeTool) {
+                        AdjustmentTool.CONTRAST -> onAdjustmentChange(1.0f, page.brightness)
+                        AdjustmentTool.BRIGHTNESS -> onAdjustmentChange(page.contrast, 0.0f)
+                    }
+                },
                 shape = RoundedCornerShape(8.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier
-                    .clickable {
-                        when (activeTool) {
-                            AdjustmentTool.CONTRAST -> onAdjustmentChange(1.0f, page.brightness)
-                            AdjustmentTool.BRIGHTNESS -> onAdjustmentChange(page.contrast, 0.0f)
-                        }
-                    }
-                    .padding(1.dp)
+                modifier = Modifier.padding(1.dp)
             ) {
                 Text(
                     text = valueText,

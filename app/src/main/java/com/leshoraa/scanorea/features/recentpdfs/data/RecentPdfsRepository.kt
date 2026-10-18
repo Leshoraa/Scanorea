@@ -478,8 +478,10 @@ class RecentPdfsRepository(
                 )
             }
 
-            // Pre-generate thumbnail into cache in background if not already cached
-            PdfThumbnailLoader.pregenerateThumbnail(file, context.cacheDir)
+            // Pre-generate thumbnail into cache in background without blocking repository query
+            CoroutineScope(Dispatchers.IO).launch {
+                PdfThumbnailLoader.pregenerateThumbnail(file, context.cacheDir)
+            }
 
             if (existing != null &&
                 existing.lastModifiedMillis == lastModified &&

@@ -1,6 +1,5 @@
 package com.leshoraa.scanorea.features.recentpdfs.ui.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,9 +60,8 @@ fun RecentPdfItemCard(
     var isOptionsMenuVisible by remember { mutableStateOf(false) }
 
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onPdfClick(recent.file) },
+        onClick = { onPdfClick(recent.file) },
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLowest

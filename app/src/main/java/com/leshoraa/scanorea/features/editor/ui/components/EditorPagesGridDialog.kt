@@ -5,7 +5,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -241,6 +240,12 @@ fun EditorPagesGridDialog(
                         }
 
                         Card(
+                            onClick = {
+                                val selIndex = localPages.indexOfFirst { it.id == page.id }.takeIf { it != -1 } ?: currentIndex
+                                onPageSelected(selIndex)
+                                onDismissRequest()
+                            },
+                            enabled = draggedKey == null,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(0.72f)
@@ -332,11 +337,6 @@ fun EditorPagesGridDialog(
                                             draggedItemSize = Size.Zero
                                         }
                                     )
-                                }
-                                .clickable(enabled = draggedKey == null) {
-                                    val selIndex = localPages.indexOfFirst { it.id == page.id }.takeIf { it != -1 } ?: currentIndex
-                                    onPageSelected(selIndex)
-                                    onDismissRequest()
                                 },
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(
@@ -402,13 +402,13 @@ fun EditorPagesGridDialog(
                     // Add Page Card Item
                     item {
                         Card(
+                            onClick = {
+                                onAddPagesClick()
+                                onDismissRequest()
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(0.72f)
-                                .clickable {
-                                    onAddPagesClick()
-                                    onDismissRequest()
-                                },
+                                .aspectRatio(0.72f),
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
