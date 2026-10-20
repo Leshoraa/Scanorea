@@ -86,7 +86,12 @@ fun MainScreen(
 
     LaunchedEffect(tabPagerState.settledPage) {
         val tab = tabs[tabPagerState.settledPage]
-        if ((tab == MainNavTab.RESULTS || tab == MainNavTab.HOME) && recentPdfsUiState.recentPdfs.isEmpty()) {
+        // Only trigger a load when navigating to data-dependent tabs and the list is empty.
+        // RecentPdfsViewModel already loads on init; this only covers the case where
+        // the user reaches these tabs before the initial load completes.
+        if (recentPdfsUiState.recentPdfs.isEmpty() &&
+            (tab == MainNavTab.RESULTS || tab == MainNavTab.HOME)
+        ) {
             recentPdfsViewModel.loadRecentPdfs()
         }
     }
@@ -239,7 +244,7 @@ fun MainScreen(
             if (!uiState.hasPages) {
                 HorizontalPager(
                     state = tabPagerState,
-                    beyondViewportPageCount = 1,
+                    beyondViewportPageCount = 0,
                     modifier = Modifier.fillMaxSize()
                 ) { pageIndex ->
                     when (tabs[pageIndex]) {

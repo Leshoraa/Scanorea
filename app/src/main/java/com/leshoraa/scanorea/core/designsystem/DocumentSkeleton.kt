@@ -23,30 +23,25 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 /**
  * Applies an animated shimmering gradient placeholder to a component while data is being fetched.
+ *
+ * Accepts a pre-computed [translateAnim] value so that multiple skeleton items within the same
+ * composable scope share a single [InfiniteTransition], reducing the number of concurrent
+ * animators and avoiding unnecessary recomposition overhead.
  */
 @Composable
-fun Modifier.skeletonShimmer(): Modifier {
-    val transition = rememberInfiniteTransition(label = "skeletonShimmerTransition")
-    val translateAnim by transition.animateFloat(
-        initialValue = -300f,
-        targetValue = 900f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1100, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmerTranslation"
-    )
-
+fun Modifier.skeletonShimmer(translateAnim: Float): Modifier {
     val baseColor = MaterialTheme.colorScheme.surfaceContainerHigh
     val highlightColor = MaterialTheme.colorScheme.surfaceContainerHighest
 
@@ -60,10 +55,35 @@ fun Modifier.skeletonShimmer(): Modifier {
 }
 
 /**
+ * Remembers a shared shimmer translation animation value.
+ *
+ * Callers that render multiple skeleton items should call this once at the parent level
+ * and pass [translateAnim] down to each [skeletonShimmer] call to avoid creating multiple
+ * independent [InfiniteTransition] instances.
+ */
+@Composable
+fun rememberShimmerTranslation(): State<Float> {
+    val transition = rememberInfiniteTransition(label = "skeletonShimmerTransition")
+    return transition.animateFloat(
+        initialValue = -300f,
+        targetValue = 900f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1100, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmerTranslation"
+    )
+}
+
+/**
  * Skeleton placeholder item reflecting the exact structure of a recent PDF document card.
+ *
+ * Accepts a [translateAnim] produced by [rememberShimmerTranslation] so that a list of
+ * skeleton cards all animate in sync from a single shared transition.
  */
 @Composable
 fun RecentPdfSkeletonCard(
+    translateAnim: Float,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -85,7 +105,7 @@ fun RecentPdfSkeletonCard(
                 modifier = Modifier
                     .size(width = 46.dp, height = 56.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .skeletonShimmer()
+                    .skeletonShimmer(translateAnim)
             )
 
             Spacer(modifier = Modifier.width(14.dp))
@@ -97,7 +117,7 @@ fun RecentPdfSkeletonCard(
                         .fillMaxWidth(0.68f)
                         .height(16.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .skeletonShimmer()
+                        .skeletonShimmer(translateAnim)
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -108,7 +128,7 @@ fun RecentPdfSkeletonCard(
                         .fillMaxWidth(0.38f)
                         .height(11.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .skeletonShimmer()
+                        .skeletonShimmer(translateAnim)
                 )
             }
 
@@ -119,7 +139,7 @@ fun RecentPdfSkeletonCard(
                 modifier = Modifier
                     .size(28.dp)
                     .clip(CircleShape)
-                    .skeletonShimmer()
+                    .skeletonShimmer(translateAnim)
             )
         }
     }
@@ -127,9 +147,13 @@ fun RecentPdfSkeletonCard(
 
 /**
  * Skeleton placeholder representing the 2x2 pinned folder grid while loading categories.
+ *
+ * Accepts a [translateAnim] produced by [rememberShimmerTranslation] to synchronize
+ * with sibling skeleton animations.
  */
 @Composable
 fun FolderGridSkeleton(
+    translateAnim: Float,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -153,7 +177,7 @@ fun FolderGridSkeleton(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(64.dp)
-                        .skeletonShimmer()
+                        .skeletonShimmer(translateAnim)
                 )
             }
         }

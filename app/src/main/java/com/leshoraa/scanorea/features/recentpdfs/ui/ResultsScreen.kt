@@ -57,6 +57,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.core.designsystem.ContainedLoadingIndicator
 import com.leshoraa.scanorea.core.designsystem.RecentPdfSkeletonCard
+import com.leshoraa.scanorea.core.designsystem.rememberShimmerTranslation
 import com.leshoraa.scanorea.features.recentpdfs.domain.model.RecentPdf
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.AllFoldersBottomSheet
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.CreateFolderDialog
@@ -314,6 +315,7 @@ fun ResultsScreen(
         }
 
         if (isLoading && recentPdfs.isEmpty()) {
+            val shimmerTranslation by rememberShimmerTranslation()
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -337,7 +339,7 @@ fun ResultsScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(count = 5) {
-                            RecentPdfSkeletonCard()
+                            RecentPdfSkeletonCard(translateAnim = shimmerTranslation)
                         }
                     }
                 }

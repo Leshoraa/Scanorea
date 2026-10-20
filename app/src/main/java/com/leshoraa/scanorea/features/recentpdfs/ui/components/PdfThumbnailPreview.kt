@@ -13,6 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,6 +22,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.leshoraa.scanorea.core.designsystem.rememberShimmerTranslation
 import com.leshoraa.scanorea.core.designsystem.skeletonShimmer
 import com.leshoraa.scanorea.features.recentpdfs.data.PdfThumbnailLoader
 import java.io.File
@@ -28,6 +30,11 @@ import java.io.File
 /**
  * Renders an asynchronous 1-page visual preview thumbnail of a [file].
  * Displays a fluid skeleton shimmer while loading and falls back to a document icon if unreadable.
+ *
+ * Creates its own shimmer transition because it may be used standalone (e.g. in a single-item
+ * context). When many of these appear together in a list, callers should be aware that each
+ * instance runs its own transition; however, since Compose coalesces frame scheduling,
+ * the overhead is minimal compared to the async thumbnail I/O.
  */
 @Composable
 fun PdfThumbnailPreview(
@@ -65,11 +72,12 @@ fun PdfThumbnailPreview(
                     .clip(RoundedCornerShape(8.dp))
             )
         } else {
+            val shimmerTranslation by rememberShimmerTranslation()
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .fillMaxSize()
-                    .skeletonShimmer()
+                    .skeletonShimmer(shimmerTranslation)
             ) {
                 Icon(
                     imageVector = Icons.Filled.Description,
