@@ -42,7 +42,7 @@ fun EditorFiltersPanel(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             ImageFilterType.entries.forEach { filter ->
@@ -63,8 +63,7 @@ fun EditorFiltersPanel(
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
-                },
-                modifier = Modifier.padding(start = 4.dp)
+                }
             )
         }
     }
@@ -81,7 +80,7 @@ private fun FilterBox(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = modifier.padding(horizontal = 4.dp)
+        modifier = modifier
     ) {
         Text(
             text = title,

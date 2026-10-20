@@ -32,12 +32,15 @@ enum class ImageFilterType(val label: String, val shortName: String) {
                 }
             }
             BLACK_AND_WHITE -> {
-                // High-contrast luminance thresholding to eliminate paper shadows and sharpen ink
-                val scale = 2.2f * contrast
+                // Keep midtones anchored so increasing contrast does not blow faint
+                // ink into the paper. The base scale is applied around mid-gray (128)
+                // instead of using a fixed offset, which keeps text legible while
+                // paper remains white.
+                val scale = 2.0f * contrast
+                val offset = 128f - 128f * scale + brightness
                 val r = 0.2126f * scale
                 val g = 0.7152f * scale
                 val b = 0.0722f * scale
-                val offset = -120f + brightness
 
                 ColorMatrix(
                     floatArrayOf(

@@ -250,8 +250,10 @@ fun RenameFolderDialog(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OrganizeDocumentBottomSheet(
-    pdf: RecentPdf,
+private fun OrganizeFoldersBottomSheet(
+    title: String,
+    subtitle: String,
+    initialFolders: Set<String>,
     categories: List<String>,
     onConfirmFolders: (List<String>) -> Unit,
     onDismiss: () -> Unit,
@@ -259,8 +261,8 @@ fun OrganizeDocumentBottomSheet(
     modifier: Modifier = Modifier
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var selectedFolders by remember(pdf, categories) {
-        mutableStateOf(pdf.folders.toSet())
+    var selectedFolders by remember(initialFolders) {
+        mutableStateOf(initialFolders)
     }
 
     ModalBottomSheet(
@@ -298,13 +300,13 @@ fun OrganizeDocumentBottomSheet(
                 Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.folder_organize_title),
+                        text = title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = pdf.name,
+                        text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -443,6 +445,59 @@ fun OrganizeDocumentBottomSheet(
             }
         }
     }
+}
+
+/**
+ * Organizes one document across folders.
+ */
+@Composable
+fun OrganizeDocumentBottomSheet(
+    pdf: RecentPdf,
+    categories: List<String>,
+    onConfirmFolders: (List<String>) -> Unit,
+    onDismiss: () -> Unit,
+    onCreateNewFolder: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OrganizeFoldersBottomSheet(
+        title = stringResource(R.string.folder_organize_title),
+        subtitle = pdf.name,
+        initialFolders = pdf.folders.toSet(),
+        categories = categories,
+        onConfirmFolders = onConfirmFolders,
+        onDismiss = onDismiss,
+        onCreateNewFolder = onCreateNewFolder,
+        modifier = modifier
+    )
+}
+
+/**
+ * Adds selected folders to several documents at once. Existing folders on each
+ * document are kept, so a batch organize never removes organization.
+ */
+@Composable
+fun OrganizeSelectionBottomSheet(
+    selectedCount: Int,
+    categories: List<String>,
+    onConfirmFolders: (List<String>) -> Unit,
+    onDismiss: () -> Unit,
+    onCreateNewFolder: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    OrganizeFoldersBottomSheet(
+        title = "Add to Folders",
+        subtitle = if (selectedCount == 1) {
+            "1 document selected"
+        } else {
+            "$selectedCount documents selected"
+        },
+        initialFolders = emptySet(),
+        categories = categories,
+        onConfirmFolders = onConfirmFolders,
+        onDismiss = onDismiss,
+        onCreateNewFolder = onCreateNewFolder,
+        modifier = modifier
+    )
 }
 
 

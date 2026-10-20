@@ -219,7 +219,7 @@ fun SettingsScreen(
                 }
             }
 
-            // Group 4: About
+            // Group 5: About
             Column {
                 StockSectionHeader(title = "ABOUT")
                 Spacer(modifier = Modifier.height(6.dp))

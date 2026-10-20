@@ -95,11 +95,6 @@ fun ConversionOptionsBottomSheet(
     onToggleFolder: (String) -> Unit = {},
     onCreateNewFolder: (String) -> Unit = {}
 ) {
-    var isPresetsDropdownExpanded by remember { mutableStateOf(false) }
-    var isSavePresetDialogVisible by remember { mutableStateOf(false) }
-    var isCreateFolderDialogVisible by remember { mutableStateOf(false) }
-    var newPresetName by remember { mutableStateOf("") }
-
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
@@ -107,11 +102,73 @@ fun ConversionOptionsBottomSheet(
         tonalElevation = 0.dp,
         modifier = modifier
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-        ) {
+        ConversionOptionsContent(
+            options = options,
+            pageCount = pageCount,
+            presets = presets,
+            destinationFolderDisplayName = destinationFolderDisplayName,
+            onFileNameChange = onFileNameChange,
+            onPageSizeChange = onPageSizeChange,
+            pages = pages,
+            onOrientationChange = onOrientationChange,
+            onCompressionProfileChange = onCompressionProfileChange,
+            onPresetSelected = onPresetSelected,
+            onSaveNewPreset = onSaveNewPreset,
+            onDeletePreset = onDeletePreset,
+            onChangeFolderClick = onChangeFolderClick,
+            onConvertClick = onConvertClick,
+            categories = categories,
+            selectedFolders = selectedFolders,
+            onToggleFolder = onToggleFolder,
+            onCreateNewFolder = onCreateNewFolder
+        )
+    }
+}
+
+/**
+ * Reusable PDF conversion options content shared by the modal sheet and the
+ * first-launch guide preview. Keeping this in one place ensures the guide always
+ * mirrors the real export UI instead of drifting into a separate mockup.
+ */
+@Composable
+fun ConversionOptionsContent(
+    options: PdfConversionOptions,
+    pageCount: Int,
+    presets: List<ConversionPreset>,
+    destinationFolderDisplayName: String,
+    onFileNameChange: (String) -> Unit,
+    onPageSizeChange: (PdfPageSize) -> Unit,
+    pages: List<ImagePage> = emptyList(),
+    onOrientationChange: (PdfPageOrientation) -> Unit,
+    onCompressionProfileChange: (CompressionProfile) -> Unit,
+    onPresetSelected: (ConversionPreset) -> Unit,
+    onSaveNewPreset: (String, String) -> Unit,
+    onDeletePreset: (String) -> Unit,
+    onChangeFolderClick: () -> Unit,
+    onConvertClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    categories: List<String> = emptyList(),
+    selectedFolders: List<String> = emptyList(),
+    onToggleFolder: (String) -> Unit = {},
+    onCreateNewFolder: (String) -> Unit = {},
+    applyNavigationBarsPadding: Boolean = true
+) {
+    var isPresetsDropdownExpanded by remember { mutableStateOf(false) }
+    var isSavePresetDialogVisible by remember { mutableStateOf(false) }
+    var isCreateFolderDialogVisible by remember { mutableStateOf(false) }
+    var newPresetName by remember { mutableStateOf("") }
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (applyNavigationBarsPadding) {
+                    Modifier.navigationBarsPadding()
+                } else {
+                    Modifier
+                }
+            )
+    ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -510,7 +567,6 @@ fun ConversionOptionsBottomSheet(
                 }
             }
         }
-    }
 
     // Save Preset Dialog
     if (isSavePresetDialogVisible) {

@@ -61,6 +61,8 @@ fun MainScreen(
     recentPdfsViewModel: RecentPdfsViewModel = viewModel(
         factory = RecentPdfsViewModel.provideFactory(LocalContext.current)
     ),
+    pendingEntry: AppEntryRequest? = null,
+    onEntryConsumed: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -97,6 +99,37 @@ fun MainScreen(
     }
 
     val launchers = rememberMainScreenLaunchers(viewModel, context)
+
+    LaunchedEffect(pendingEntry) {
+        val entry = pendingEntry ?: return@LaunchedEffect
+
+        isPresetManagerVisible = false
+        isPagesGridVisible = false
+        isRenameDialogOpen = false
+        isDiscardDialogVisible = false
+        captureSourceSheetTitle = null
+        viewModel.closePdfViewer()
+
+        when {
+            entry.imageUris.isNotEmpty() -> {
+                viewModel.addImages(entry.imageUris, context.contentResolver)
+            }
+
+            entry.pdfUri != null -> {
+                viewModel.openPdfFromExternalUri(
+                    uri = entry.pdfUri,
+                    contentResolver = context.contentResolver,
+                    cacheDir = context.cacheDir
+                )
+            }
+
+            entry.action == AppEntryAction.SCAN_DOCUMENT -> launchers.launchCamera()
+            entry.action == AppEntryAction.IMPORT_PHOTOS -> launchers.launchPhotoPicker()
+            entry.action == AppEntryAction.OPEN_PDF -> launchers.launchOpenPdf()
+        }
+
+        onEntryConsumed()
+    }
 
     LaunchedEffect(uiState.errorMessage) {
         val message = uiState.errorMessage
@@ -293,6 +326,7 @@ fun MainScreen(
                                 onTogglePinFolder = { recentPdfsViewModel.togglePinFolder(it) },
                                 onPdfClick = { viewModel.openPdfInViewer(it) },
                                 onShareClick = { PdfDocumentSharer.share(context, it) },
+                                onShareMultiple = { files -> PdfDocumentSharer.shareMultiple(context, files) },
                                 onDeleteClick = { recentPdfsViewModel.deletePdf(it) },
                                 onToggleFavorite = { recentPdfsViewModel.toggleFavorite(it) },
                                 onAssignFolders = { file, folders -> recentPdfsViewModel.updatePdfFolders(file, folders) },

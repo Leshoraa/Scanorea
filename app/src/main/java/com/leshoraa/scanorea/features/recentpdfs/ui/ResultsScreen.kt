@@ -1,5 +1,6 @@
 package com.leshoraa.scanorea.features.recentpdfs.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -24,13 +25,18 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,9 +49,11 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import com.leshoraa.scanorea.features.recentpdfs.data.RecentPdfsRepository
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,6 +72,7 @@ import com.leshoraa.scanorea.features.recentpdfs.ui.components.CreateFolderDialo
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.DeleteFolderConfirmationDialog
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.FolderGridSection
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.OrganizeDocumentBottomSheet
+import com.leshoraa.scanorea.features.recentpdfs.ui.components.OrganizeSelectionBottomSheet
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.RecentPdfItemCard
 import com.leshoraa.scanorea.features.recentpdfs.ui.components.RenameFolderDialog
 import java.io.File
@@ -94,6 +103,7 @@ fun ResultsScreen(
     onTogglePinFolder: (String) -> Unit = {},
     onPdfClick: (File) -> Unit,
     onShareClick: (File) -> Unit,
+    onShareMultiple: (List<File>) -> Unit = {},
     onDeleteClick: (File) -> Unit,
     onToggleFavorite: (File) -> Unit,
     onAssignFolders: (File, List<String>) -> Unit,
@@ -118,6 +128,37 @@ fun ResultsScreen(
     var folderToRename by remember { mutableStateOf<String?>(null) }
     var documentToMove by remember { mutableStateOf<RecentPdf?>(null) }
     var folderToDelete by remember { mutableStateOf<String?>(null) }
+    var selectedPaths by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var isBatchDeleteDialogVisible by remember { mutableStateOf(false) }
+    var isBatchOrganizeVisible by remember { mutableStateOf(false) }
+
+    val selectedPdfs = remember(recentPdfs, selectedPaths) {
+        recentPdfs.filter { selectedPaths.contains(it.file.absolutePath) }
+    }
+    val isSelectionMode = selectedPaths.isNotEmpty()
+
+    BackHandler(enabled = isSelectionMode) {
+        selectedPaths = emptySet()
+    }
+
+    LaunchedEffect(recentPdfs) {
+        if (selectedPaths.isNotEmpty()) {
+            val availablePaths = recentPdfs.mapTo(mutableSetOf()) { it.file.absolutePath }
+            val retainedPaths = selectedPaths.intersect(availablePaths)
+            if (retainedPaths != selectedPaths) {
+                selectedPaths = retainedPaths
+            }
+        }
+    }
+
+    val toggleSelection: (RecentPdf) -> Unit = { pdf ->
+        val path = pdf.file.absolutePath
+        selectedPaths = if (selectedPaths.contains(path)) {
+            selectedPaths - path
+        } else {
+            selectedPaths + path
+        }
+    }
 
     val filteredPdfs = remember(recentPdfs, searchQuery, isSortDescending, currentFilter) {
         var list = when (val filter = currentFilter) {
@@ -141,59 +182,118 @@ fun ResultsScreen(
         modifier = modifier.fillMaxSize()
     ) {
         // Results Top Bar
-        TopAppBar(
-            title = {
-                Text(
-                    text = "Results",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            actions = {
-                IconButton(onClick = { isSearchActive = !isSearchActive }) {
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = "Search"
+        if (isSelectionMode) {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "${selectedPdfs.size} selected",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
-                }
-
-                Box {
-                    IconButton(onClick = { isOptionsMenuVisible = true }) {
+                },
+                navigationIcon = {
+                    IconButton(onClick = { selectedPaths = emptySet() }) {
                         Icon(
-                            imageVector = Icons.Filled.MoreVert,
-                            contentDescription = "More options"
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Clear selection"
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = { onShareMultiple(selectedPdfs.map { it.file }) },
+                        enabled = selectedPdfs.isNotEmpty()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Share,
+                            contentDescription = "Share selected documents"
                         )
                     }
 
-                    DropdownMenu(
-                        expanded = isOptionsMenuVisible,
-                        onDismissRequest = { isOptionsMenuVisible = false }
+                    IconButton(
+                        onClick = { isBatchOrganizeVisible = true },
+                        enabled = selectedPdfs.isNotEmpty()
                     ) {
-                        DropdownMenuItem(
-                            text = { Text(if (isSortDescending) "Sort by Name (A-Z)" else "Sort by Newest First") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Sort,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            },
-                            onClick = {
-                                isOptionsMenuVisible = false
-                                isSortDescending = !isSortDescending
-                            }
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.DriveFileMove,
+                            contentDescription = "Organize selected documents"
                         )
                     }
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = if (isSystemInDarkTheme()) {
-                    MaterialTheme.colorScheme.surfaceContainer
-                } else {
-                    MaterialTheme.colorScheme.surface
-                }
+
+                    IconButton(
+                        onClick = { isBatchDeleteDialogVisible = true },
+                        enabled = selectedPdfs.isNotEmpty()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = "Delete selected documents",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = if (isSystemInDarkTheme()) {
+                        MaterialTheme.colorScheme.surfaceContainer
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    }
+                )
             )
-        )
+        } else {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Results",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                actions = {
+                    IconButton(onClick = { isSearchActive = !isSearchActive }) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "Search"
+                        )
+                    }
+
+                    Box {
+                        IconButton(onClick = { isOptionsMenuVisible = true }) {
+                            Icon(
+                                imageVector = Icons.Filled.MoreVert,
+                                contentDescription = "More options"
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = isOptionsMenuVisible,
+                            onDismissRequest = { isOptionsMenuVisible = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(if (isSortDescending) "Sort by Name (A-Z)" else "Sort by Newest First") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Sort,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                onClick = {
+                                    isOptionsMenuVisible = false
+                                    isSortDescending = !isSortDescending
+                                }
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = if (isSystemInDarkTheme()) {
+                        MaterialTheme.colorScheme.surfaceContainer
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    }
+                )
+            )
+        }
 
         val pullToRefreshState = rememberPullToRefreshState()
 
@@ -221,98 +321,100 @@ fun ResultsScreen(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Search Bar (shown when toggled)
-                if (isSearchActive) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("Search results...") },
-                singleLine = true,
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Filled.Search,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(
-                                imageVector = Icons.Filled.Clear,
-                                contentDescription = "Clear search",
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                },
-                shape = RoundedCornerShape(16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
-            )
-        }
-
-        // 2x2 Google Photos Style Pinned Folders Grid & Other Card
-        FolderGridSection(
-            pinnedFolders = pinnedFolders,
-            recentPdfs = recentPdfs,
-            totalFoldersCount = categories.size,
-            currentFilter = currentFilter,
-            onSelectFilter = { currentFilter = it },
-            onOpenAllFolders = { isAllFoldersSheetVisible = true },
-            onRenameFolder = { folderToRename = it },
-            onDeleteFolder = { folderToDelete = it },
-            onUnpinFolder = onTogglePinFolder,
-            onReorderPinnedFolders = onReorderPinnedFolders
-        )
-
-        // Active Filter Banner (shown when filtered by Favorites or Category, with clear button)
-        if (currentFilter !is DocumentFilter.All) {
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    val filterLabel = when (val filter = currentFilter) {
-                        is DocumentFilter.Favorites -> "Filter: Favorites"
-                        is DocumentFilter.Category -> "Folder: ${filter.name}"
-                        is DocumentFilter.All -> ""
-                    }
-                    Text(
-                        text = "$filterLabel (${filteredPdfs.size} files)",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-
-                    IconButton(
-                        onClick = { currentFilter = DocumentFilter.All },
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Clear,
-                            contentDescription = "Clear filter",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
+                if (!isSelectionMode) {
+                    // Search Bar (shown when toggled)
+                    if (isSearchActive) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text("Search results...") },
+                            singleLine = true,
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Filled.Search,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { searchQuery = "" }) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Clear,
+                                            contentDescription = "Clear search",
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp)
                         )
                     }
+
+                    // 2x2 Google Photos Style Pinned Folders Grid & Other Card
+                    FolderGridSection(
+                        pinnedFolders = pinnedFolders,
+                        recentPdfs = recentPdfs,
+                        totalFoldersCount = categories.size,
+                        currentFilter = currentFilter,
+                        onSelectFilter = { currentFilter = it },
+                        onOpenAllFolders = { isAllFoldersSheetVisible = true },
+                        onRenameFolder = { folderToRename = it },
+                        onDeleteFolder = { folderToDelete = it },
+                        onUnpinFolder = onTogglePinFolder,
+                        onReorderPinnedFolders = onReorderPinnedFolders
+                    )
+
+                    // Active Filter Banner (shown when filtered by Favorites or Category, with clear button)
+                    if (currentFilter !is DocumentFilter.All) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                val filterLabel = when (val filter = currentFilter) {
+                                    is DocumentFilter.Favorites -> "Filter: Favorites"
+                                    is DocumentFilter.Category -> "Folder: ${filter.name}"
+                                    is DocumentFilter.All -> ""
+                                }
+                                Text(
+                                    text = "$filterLabel (${filteredPdfs.size} files)",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+
+                                IconButton(
+                                    onClick = { currentFilter = DocumentFilter.All },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Clear,
+                                        contentDescription = "Clear filter",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
-            }
-        }
 
         if (isLoading && recentPdfs.isEmpty()) {
             val shimmerTranslation by rememberShimmerTranslation()
@@ -421,6 +523,7 @@ fun ResultsScreen(
                     key = { it.file.absolutePath },
                     contentType = { "recent_pdf_item" }
                 ) { recent ->
+                    val path = recent.file.absolutePath
                     RecentPdfItemCard(
                         recent = recent,
                         onPdfClick = onPdfClick,
@@ -429,7 +532,19 @@ fun ResultsScreen(
                         onToggleFavorite = onToggleFavorite,
                         onMoveToFolderClick = {
                             documentToMove = recent
-                        }
+                        },
+                        onLongClick = {
+                            selectedPaths = if (selectedPaths.isEmpty()) {
+                                setOf(path)
+                            } else if (selectedPaths.contains(path)) {
+                                selectedPaths - path
+                            } else {
+                                selectedPaths + path
+                            }
+                        },
+                        isSelectionMode = isSelectionMode,
+                        isSelected = selectedPaths.contains(path),
+                        onToggleSelection = { toggleSelection(recent) }
                     )
                 }
             }
@@ -448,7 +563,9 @@ fun ResultsScreen(
                     val updatedFolders = (doc.folders + name).distinct()
                     documentToMove = doc.copy(folders = updatedFolders)
                 } ?: run {
-                    currentFilter = DocumentFilter.Category(name)
+                    if (selectedPaths.isEmpty()) {
+                        currentFilter = DocumentFilter.Category(name)
+                    }
                 }
             },
             onDismiss = { isCreateFolderDialogVisible = false }
@@ -467,6 +584,84 @@ fun ResultsScreen(
             onDismiss = { documentToMove = null },
             onCreateNewFolder = {
                 isCreateFolderDialogVisible = true
+            }
+        )
+    }
+
+    if (isBatchOrganizeVisible) {
+        OrganizeSelectionBottomSheet(
+            selectedCount = selectedPdfs.size,
+            categories = categories,
+            onConfirmFolders = { selectedFolders ->
+                if (selectedFolders.isNotEmpty()) {
+                    selectedPdfs.forEach { pdf ->
+                        onAssignFolders(
+                            pdf.file,
+                            (pdf.folders + selectedFolders).distinct()
+                        )
+                    }
+                }
+                selectedPaths = emptySet()
+                isBatchOrganizeVisible = false
+            },
+            onDismiss = { isBatchOrganizeVisible = false },
+            onCreateNewFolder = {
+                isCreateFolderDialogVisible = true
+            }
+        )
+    }
+
+    if (isBatchDeleteDialogVisible) {
+        val selectedCount = selectedPdfs.size
+        AlertDialog(
+            onDismissRequest = { isBatchDeleteDialogVisible = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(28.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = if (selectedCount == 1) {
+                        "Delete document?"
+                    } else {
+                        "Delete $selectedCount documents?"
+                    },
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            },
+            text = {
+                Text(
+                    text = "This action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        selectedPdfs.forEach { pdf ->
+                            onDeleteClick(pdf.file)
+                        }
+                        selectedPaths = emptySet()
+                        isBatchDeleteDialogVisible = false
+                    }
+                ) {
+                    Text(
+                        text = "Delete",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { isBatchDeleteDialogVisible = false }) {
+                    Text("Cancel")
+                }
             }
         )
     }

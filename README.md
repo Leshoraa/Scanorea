@@ -7,7 +7,7 @@ Scanorea is a modern Android application for converting batches of photos into h
 - **Flexible Photo Import**: Import multiple photos seamlessly via Android Photo Picker or directly capture pages with the camera without requiring runtime storage permissions.
 - **Single-Image Carousel Workspace**: Swipe through pages one at a time using `HorizontalPager` with real-time hardware-accelerated preview, page reordering (`<-` / `->`), and individual page deletion.
 - **Document Scanner Filters with Fine-Tuning**:
-  - *Instant B&W on Import*: Automatically applies high-contrast black-and-white thresholding (`contrast = 2.2f`, `offset = -120f`) to remove paper shadows, yellowing, and ambient gradients.
+  - *Instant B&W on Import*: Automatically applies midtone-anchored, high-contrast black-and-white thresholding to remove paper shadows while keeping faint text legible.
   - *Per-Page Sharpness & Brightness*: Dedicated sliders for Sharpness/Contrast (0.5x - 2.5x) and Brightness (-50 to +50) with quick reset.
   - *Interactive Filter Chips*: Quick-switch chips for Original Color, B&W Document, Grayscale, Magic Color (Enhanced), and a "To All" batch action.
 - **4-Corner Perspective Correction & Auto Paper Detection**:

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:targetApi="25">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_scan"
+        android:shortcutLongLabel="@string/shortcut_scan_long"
+        android:shortcutShortLabel="@string/shortcut_scan_short"
+        android:shortcutId="scan_document">
+        <intent
+            android:action="com.leshoraa.scanorea.action.SCAN_DOCUMENT"
+            android:targetClass="com.leshoraa.scanorea.MainActivity"
+            android:targetPackage="com.leshoraa.scanorea" />
+    </shortcut>
+
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_import"
+        android:shortcutLongLabel="@string/shortcut_import_long"
+        android:shortcutShortLabel="@string/shortcut_import_short"
+        android:shortcutId="import_photos">
+        <intent
+            android:action="com.leshoraa.scanorea.action.IMPORT_PHOTOS"
+            android:targetClass="com.leshoraa.scanorea.MainActivity"
+            android:targetPackage="com.leshoraa.scanorea" />
+    </shortcut>
+
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_pdf"
+        android:shortcutLongLabel="@string/shortcut_open_pdf_long"
+        android:shortcutShortLabel="@string/shortcut_open_pdf_short"
+        android:shortcutId="open_pdf">
+        <intent
+            android:action="com.leshoraa.scanorea.action.OPEN_PDF"
+            android:targetClass="com.leshoraa.scanorea.MainActivity"
+            android:targetPackage="com.leshoraa.scanorea" />
+    </shortcut>
+</shortcuts>

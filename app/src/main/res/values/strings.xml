@@ -33,4 +33,12 @@
     <string name="add_pages_camera">Take Photo with Camera</string>
     <string name="add_pages_gallery">Choose from Gallery</string>
     <string name="convert_to_pdf">Convert to PDF</string>
+
+    <!-- Launcher Shortcuts -->
+    <string name="shortcut_scan_short">Scan</string>
+    <string name="shortcut_scan_long">Scan a document</string>
+    <string name="shortcut_import_short">Import</string>
+    <string name="shortcut_import_long">Import photos</string>
+    <string name="shortcut_open_pdf_short">Open PDF</string>
+    <string name="shortcut_open_pdf_long">Open a PDF document</string>
 </resources>

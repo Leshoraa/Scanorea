@@ -172,7 +172,7 @@ private val privacyPolicySections = listOf(
     ),
     LegalSection(
         title = "2. Zero Cloud Collection & 100% On-Device Processing",
-        content = "All image processing operations—including camera capture, edge detection, perspective distortion adjustments, cropping, color filter matrix computations, page reordering, and PDF file rendering—are executed entirely within your device's local memory and internal application storage. Scanorea operates no external document processing servers, uploads zero files to the cloud, and never transmits your documents."
+        content = "All image processing operations, including camera capture, edge detection, perspective distortion adjustments, cropping, color filter matrix computations, page reordering, and PDF file rendering, are executed entirely within your device's local memory and internal application storage. Scanorea operates no external document processing servers, uploads zero files to the cloud, and never transmits your documents."
     ),
     LegalSection(
         title = "3. Data We Do NOT Collect",

@@ -1,5 +1,8 @@
 package com.leshoraa.scanorea.features.recentpdfs.ui.components
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +25,7 @@ import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -36,6 +40,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,6 +54,7 @@ import java.io.File
 /**
  * Reusable single PDF item card with metadata display and overflow action menu.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RecentPdfItemCard(
     recent: RecentPdf,
@@ -55,18 +63,45 @@ fun RecentPdfItemCard(
     onDeleteClick: (File) -> Unit,
     modifier: Modifier = Modifier,
     onToggleFavorite: ((File) -> Unit)? = null,
-    onMoveToFolderClick: ((File) -> Unit)? = null
+    onMoveToFolderClick: ((File) -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onToggleSelection: (() -> Unit)? = null
 ) {
     var isOptionsMenuVisible by remember { mutableStateOf(false) }
+    val cardShape = RoundedCornerShape(16.dp)
+    val cardBorder = if (isSelected) {
+        BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+    } else {
+        null
+    }
 
     Card(
-        onClick = { onPdfClick(recent.file) },
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(cardShape)
+            .combinedClickable(
+                onClick = {
+                    if (isSelectionMode && onToggleSelection != null) {
+                        onToggleSelection()
+                    } else {
+                        onPdfClick(recent.file)
+                    }
+                },
+                onLongClick = onLongClick
+            )
+            .semantics { selected = isSelected },
+        shape = cardShape,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+            containerColor = if (isSelected) {
+                MaterialTheme.colorScheme.secondaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLowest
+            }
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = cardBorder
     ) {
         Row(
             modifier = Modifier
@@ -150,121 +185,129 @@ fun RecentPdfItemCard(
                 }
             }
 
-            if (onToggleFavorite != null) {
-                IconButton(
-                    onClick = { onToggleFavorite(recent.file) },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = if (recent.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
-                        contentDescription = if (recent.isFavorite) "Remove from favorites" else "Add to favorites",
-                        tint = if (recent.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Box {
-                IconButton(
-                    onClick = { isOptionsMenuVisible = true },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.MoreVert,
-                        contentDescription = "Options",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
+            if (isSelectionMode) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = null,
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            } else {
+                if (onToggleFavorite != null) {
+                    IconButton(
+                        onClick = { onToggleFavorite(recent.file) },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (recent.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                            contentDescription = if (recent.isFavorite) "Remove from favorites" else "Add to favorites",
+                            tint = if (recent.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
 
-                DropdownMenu(
-                    expanded = isOptionsMenuVisible,
-                    onDismissRequest = { isOptionsMenuVisible = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Open in Viewer") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Filled.Visibility,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        onClick = {
-                            isOptionsMenuVisible = false
-                            onPdfClick(recent.file)
-                        }
-                    )
+                Box {
+                    IconButton(
+                        onClick = { isOptionsMenuVisible = true },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = "Options",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
 
-                    DropdownMenuItem(
-                        text = { Text("Share") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Filled.Share,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        onClick = {
-                            isOptionsMenuVisible = false
-                            onShareClick(recent.file)
-                        }
-                    )
-
-                    if (onMoveToFolderClick != null) {
+                    DropdownMenu(
+                        expanded = isOptionsMenuVisible,
+                        onDismissRequest = { isOptionsMenuVisible = false }
+                    ) {
                         DropdownMenuItem(
-                            text = { Text("Organize") },
+                            text = { Text("Open in Viewer") },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.DriveFileMove,
+                                    imageVector = Icons.Filled.Visibility,
                                     contentDescription = null,
                                     modifier = Modifier.size(20.dp)
                                 )
                             },
                             onClick = {
                                 isOptionsMenuVisible = false
-                                onMoveToFolderClick(recent.file)
+                                onPdfClick(recent.file)
                             }
                         )
-                    }
 
-                    if (onToggleFavorite != null) {
                         DropdownMenuItem(
-                            text = { Text(if (recent.isFavorite) "Remove from Favorites" else "Add to Favorites") },
+                            text = { Text("Share") },
                             leadingIcon = {
                                 Icon(
-                                    imageVector = if (recent.isFavorite) Icons.Filled.StarBorder else Icons.Filled.Star,
+                                    imageVector = Icons.Filled.Share,
                                     contentDescription = null,
                                     modifier = Modifier.size(20.dp)
                                 )
                             },
                             onClick = {
                                 isOptionsMenuVisible = false
-                                onToggleFavorite(recent.file)
+                                onShareClick(recent.file)
+                            }
+                        )
+
+                        if (onMoveToFolderClick != null) {
+                            DropdownMenuItem(
+                                text = { Text("Organize") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.DriveFileMove,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                onClick = {
+                                    isOptionsMenuVisible = false
+                                    onMoveToFolderClick(recent.file)
+                                }
+                            )
+                        }
+
+                        if (onToggleFavorite != null) {
+                            DropdownMenuItem(
+                                text = { Text(if (recent.isFavorite) "Remove from Favorites" else "Add to Favorites") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = if (recent.isFavorite) Icons.Filled.StarBorder else Icons.Filled.Star,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                },
+                                onClick = {
+                                    isOptionsMenuVisible = false
+                                    onToggleFavorite(recent.file)
+                                }
+                            )
+                        }
+
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = "Delete",
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Filled.Delete,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            onClick = {
+                                isOptionsMenuVisible = false
+                                onDeleteClick(recent.file)
                             }
                         )
                     }
-
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = "Delete",
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Filled.Delete,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        },
-                        onClick = {
-                            isOptionsMenuVisible = false
-                            onDeleteClick(recent.file)
-                        }
-                    )
                 }
             }
         }
