@@ -34,6 +34,7 @@ Scanorea is a modern Android application for converting batches of photos into h
   - Full-featured `AllFoldersBottomSheet` displaying document counts, pin/unpin toggles (max 3 pinned limit), folder creation, renaming, and deletion.
   - Access, preview, share, and manage previously converted PDFs directly from the dashboard with category filtering.
 - **Dynamic Material You Design**: Fully adapts to Android 12+ system wallpaper color accents (Monet engine) with support for Dark Theme and edge-to-edge system navigation.
+- **System-Colored App Icon and Launch Splash**: Android 12+ uses the wallpaper-derived neutral and accent palette for both the adaptive launcher icon and launch splash, including light/dark variants. Android 13+ themed icons tint the monochrome layer, while older versions use the app's brand fallback colors.
 
 ## Architecture
 Scanorea strictly adheres to the **Deep Module**, **Feature Boundary**, and **Clean Architecture** guidelines:

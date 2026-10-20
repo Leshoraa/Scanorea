@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Splash variant of the Material Symbols Rounded insert_drive_file glyph.
+    The fill resolves to the system accent palette on Android 12+ and to the brand fallback below it.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:scaleX="0.0625"
+        android:scaleY="0.0625"
+        android:translateX="24"
+        android:translateY="24">
+        <group android:translateY="960">
+            <path
+                android:fillColor="@color/splash_icon"
+                android:pathData="M240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h287q16 0 30.5 6t25.5 17l194 194q11 11 17 25.5t6 30.5v447q0 33-23.5 56.5T720-80H240Zm280-560q0 17 11.5 28.5T560-600h160L520-800v160Z" />
+        </group>
+    </group>
+
+</vector>

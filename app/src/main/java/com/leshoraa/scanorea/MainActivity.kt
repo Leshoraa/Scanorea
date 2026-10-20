@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.leshoraa.scanorea.app.ui.MainScreen
 import com.leshoraa.scanorea.core.designsystem.ScanoreaTheme
@@ -31,6 +32,7 @@ class MainActivity : ComponentActivity() {
     private var themeObserver: ContentObserver? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 

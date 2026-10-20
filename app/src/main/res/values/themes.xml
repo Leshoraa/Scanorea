@@ -1,9 +1,11 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.Scanorea" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
-    </style>
+<resources>
+    <style name="Base.Theme.Scanorea" parent="Theme.Material3.DayNight.NoActionBar" />
 
     <style name="Theme.Scanorea" parent="Base.Theme.Scanorea" />
+
+    <style name="Theme.Scanorea.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_file</item>
+        <item name="postSplashScreenTheme">@style/Theme.Scanorea</item>
+    </style>
 </resources>

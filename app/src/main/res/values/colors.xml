@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-        Fallback palette for launchers that cannot apply the system themed icon.
-        Android 13+ launchers tint the monochrome layer with the wallpaper-derived scheme instead.
+        Default palette for Android 11 and below, where the wallpaper-derived system palette is unavailable.
+        Android 12+ overrides these colors from values-v31; Android 13+ themed icons tint the monochrome layer.
     -->
     <color name="ic_launcher_background">#1A201A</color>
     <color name="ic_launcher_foreground">#A3D397</color>
+
+    <!-- Aliases keep the splash palette in sync with the launcher icon in every configuration. -->
+    <color name="splash_background">@color/ic_launcher_background</color>
+    <color name="splash_icon">@color/ic_launcher_foreground</color>
 </resources>
