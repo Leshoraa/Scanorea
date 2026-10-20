@@ -13,8 +13,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,36 +22,44 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.leshoraa.scanorea.core.designsystem.rememberShimmerTranslation
-import com.leshoraa.scanorea.core.designsystem.skeletonShimmer
 import com.leshoraa.scanorea.features.recentpdfs.data.PdfThumbnailLoader
 import java.io.File
 
 /**
  * Renders an asynchronous 1-page visual preview thumbnail of a [file].
- * Displays a fluid skeleton shimmer while loading and falls back to a document icon if unreadable.
+ * Displays a static placeholder while loading and falls back to a document icon if unreadable.
  *
- * Creates its own shimmer transition because it may be used standalone (e.g. in a single-item
- * context). When many of these appear together in a list, callers should be aware that each
- * instance runs its own transition; however, since Compose coalesces frame scheduling,
- * the overhead is minimal compared to the async thumbnail I/O.
+ * [lastModifiedMillis] must come from [com.leshoraa.scanorea.features.recentpdfs.domain.model.RecentPdf]
+ * metadata so composing the item does not perform a disk stat on the main thread.
+ *
+ * The placeholder is intentionally static: a shimmer per visible item keeps an animation
+ * running for every uncached row, which competes with PDF decoding while the list scrolls.
  */
 @Composable
 fun PdfThumbnailPreview(
     file: File,
+    lastModifiedMillis: Long,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val thumbnailState = produceState<Bitmap?>(
-        initialValue = null,
-        key1 = file.absolutePath,
-        key2 = file.lastModified()
-    ) {
-        value = PdfThumbnailLoader.loadFirstPageThumbnail(
+    val cachedThumbnail = remember(file.absolutePath, lastModifiedMillis) {
+        PdfThumbnailLoader.getCachedThumbnail(
             file = file,
-            targetWidth = 140,
-            diskCacheDir = context.cacheDir
+            lastModifiedMillis = lastModifiedMillis
         )
+    }
+    val thumbnailState = produceState<Bitmap?>(
+        initialValue = cachedThumbnail,
+        key1 = file.absolutePath,
+        key2 = lastModifiedMillis
+    ) {
+        if (value == null) {
+            value = PdfThumbnailLoader.loadFirstPageThumbnail(
+                file = file,
+                diskCacheDir = context.cacheDir,
+                lastModifiedMillis = lastModifiedMillis
+            )
+        }
     }
 
     val thumbnail = thumbnailState.value
@@ -72,12 +80,9 @@ fun PdfThumbnailPreview(
                     .clip(RoundedCornerShape(8.dp))
             )
         } else {
-            val shimmerTranslation by rememberShimmerTranslation()
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .skeletonShimmer(shimmerTranslation)
+                modifier = Modifier.fillMaxSize()
             ) {
                 Icon(
                     imageVector = Icons.Filled.Description,

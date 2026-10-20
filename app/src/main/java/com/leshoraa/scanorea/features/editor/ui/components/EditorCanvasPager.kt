@@ -4,11 +4,10 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
@@ -60,6 +59,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.animation.core.animateFloatAsState
@@ -124,6 +124,7 @@ fun EditorCanvasPager(
     onUndoAnnotation: () -> Unit = {},
     onRedoAnnotation: () -> Unit = {},
     onClearAnnotations: () -> Unit = {},
+    onAddPagesClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -145,6 +146,14 @@ fun EditorCanvasPager(
             modifier = Modifier.fillMaxSize(),
             userScrollEnabled = !isReordering && !isCropMode && !isAnnotateMode && (activeZoomScale <= 1.05f)
         ) { pageIndex ->
+            if (pageIndex == pages.size) {
+                EditorAddPageSlot(
+                    onClick = onAddPagesClick,
+                    modifier = Modifier.fillMaxSize()
+                )
+                return@HorizontalPager
+            }
+
             val page = pages.getOrNull(pageIndex) ?: return@HorizontalPager
             val isBeingMoved = isReordering && page.id == movingPage?.id
             val isCurrentFocusedPage = pageIndex == pagerState.currentPage
@@ -266,14 +275,22 @@ fun EditorCanvasPager(
                         availableW to availableH
                     }
 
+                    // Compare must reveal the original instantly; resizing is only
+                    // animated for normal crop/rotation changes.
+                    val canvasResizeSpec = if (isComparingThisPage) {
+                        snap<Dp>()
+                    } else {
+                        tween(durationMillis = 280, easing = FastOutSlowInEasing)
+                    }
+
                     val animFittedW by animateDpAsState(
                         targetValue = fittedW,
-                        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+                        animationSpec = canvasResizeSpec,
                         label = "canvasFittedW"
                     )
                     val animFittedH by animateDpAsState(
                         targetValue = fittedH,
-                        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+                        animationSpec = canvasResizeSpec,
                         label = "canvasFittedH"
                     )
 
@@ -779,8 +796,8 @@ fun EditorCanvasPager(
                                     page.perspectiveQuad
                                 }
 
-                                var lastSuccessfulPainter by remember(page.id, effectiveCropBounds) { mutableStateOf<Painter?>(null) }
-                                var lastPainterOrientation by remember(page.id, effectiveCropBounds) { mutableFloatStateOf(targetContinuousDegrees) }
+                                var lastSuccessfulPainter by remember(page.id) { mutableStateOf<Painter?>(null) }
+                                var lastPainterOrientation by remember(page.id) { mutableFloatStateOf(targetContinuousDegrees) }
 
                                 val imageRequest = remember(context, page.uri, page.rotationDegrees, effectiveCropBounds, effectivePerspectiveQuad, page.sharpness) {
                                     ImageRequest.Builder(context)
@@ -846,11 +863,7 @@ fun EditorCanvasPager(
                                 }
 
                                 // Annotations Overlay (committed annotations + live drawing preview)
-                                androidx.compose.animation.AnimatedVisibility(
-                                    visible = !isComparingThisPage,
-                                    enter = fadeIn(tween(150)),
-                                    exit = fadeOut(tween(150))
-                                ) {
+                                if (!isComparingThisPage) {
                                     val displayAnnotations = if (liveManipulatedAnnotation != null && isCurrentFocusedPage) {
                                         currentPageAnnotations.map { if (it.id == liveManipulatedAnnotation?.id) liveManipulatedAnnotation!! else it }
                                     } else {
@@ -922,21 +935,18 @@ fun EditorCanvasPager(
                         onResetZoom = { animateZoom(1f, Offset.Zero) }
                     )
 
-                    // Floating "ORIGINAL" badge when holding to compare
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = isComparingThisPage,
-                        enter = fadeIn(tween(160)) + scaleIn(initialScale = 0.82f, animationSpec = tween(160)),
-                        exit = fadeOut(tween(140)) + scaleOut(targetScale = 0.82f, animationSpec = tween(140)),
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = 16.dp)
-                            .zIndex(30f)
-                    ) {
+                    // Floating "ORIGINAL" badge when holding to compare.
+                    // Rendered immediately with no enter/exit animation.
+                    if (isComparingThisPage) {
                         Surface(
                             color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.88f),
                             contentColor = MaterialTheme.colorScheme.inverseOnSurface,
                             shape = RoundedCornerShape(12.dp),
-                            shadowElevation = 4.dp
+                            shadowElevation = 4.dp,
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = 16.dp)
+                                .zIndex(30f)
                         ) {
                             Text(
                                 text = "ORIGINAL",

@@ -94,17 +94,27 @@ fun EditorWorkspace(
     onClearAnnotations: (pageId: String) -> Unit = {},
     onCancel: () -> Unit,
     onOpenOptionsSheet: () -> Unit,
+    onAddPagesClick: () -> Unit = {},
     isComparing: Boolean = false,
     onCompareChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (pages.isEmpty()) return
 
+    val isAddPageVisible = pagerState.currentPage >= pages.size
     val currentPageIndex = pagerState.currentPage.coerceIn(0, pages.size - 1)
-    val currentPage = pages.getOrNull(currentPageIndex)
+    val currentPage = if (isAddPageVisible) null else pages.getOrNull(currentPageIndex)
 
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+
+    // Keep the pager in range when pages are deleted while the add-page slot is visible.
+    LaunchedEffect(pages.size) {
+        val lastAvailablePage = pages.size
+        if (pagerState.currentPage > lastAvailablePage) {
+            pagerState.scrollToPage(lastAvailablePage.coerceAtLeast(0))
+        }
+    }
 
     var activeCategory by remember { mutableStateOf(EditorCategory.FILTERS) }
 
@@ -291,6 +301,7 @@ fun EditorWorkspace(
             onUndoAnnotation = { currentPage?.let { onUndoAnnotation(it.id) } },
             onRedoAnnotation = { currentPage?.let { onRedoAnnotation(it.id) } },
             onClearAnnotations = { currentPage?.let { onClearAnnotations(it.id) } },
+            onAddPagesClick = onAddPagesClick,
             modifier = Modifier.weight(1f)
         )
 
@@ -393,15 +404,17 @@ fun EditorWorkspace(
         }
 
         // Category Tab Bar
-        EditorCategoryTabBar(
-            selectedCategory = activeCategory,
-            onCategorySelected = { targetCategory ->
-                if (activeCategory == EditorCategory.CROP && targetCategory != EditorCategory.CROP) {
-                    handleApplyCrop()
+        if (currentPage != null) {
+            EditorCategoryTabBar(
+                selectedCategory = activeCategory,
+                onCategorySelected = { targetCategory ->
+                    if (activeCategory == EditorCategory.CROP && targetCategory != EditorCategory.CROP) {
+                        handleApplyCrop()
+                    }
+                    activeCategory = targetCategory
                 }
-                activeCategory = targetCategory
-            }
-        )
+            )
+        }
 
         // Bottom Action Bar
         EditorBottomActionBar(

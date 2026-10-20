@@ -76,6 +76,7 @@ fun RecentPdfItemCard(
         ) {
             PdfThumbnailPreview(
                 file = recent.file,
+                lastModifiedMillis = recent.lastModifiedMillis,
                 modifier = Modifier.size(width = 46.dp, height = 56.dp)
             )
 

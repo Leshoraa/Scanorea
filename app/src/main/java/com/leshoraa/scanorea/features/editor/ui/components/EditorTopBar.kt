@@ -40,11 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.shape.CircleShape
@@ -52,7 +47,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Compare
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -155,56 +149,47 @@ fun EditorTopBar(
                 )
             }
 
-            // Hold-to-Compare Button (shows original unedited photo while held)
-            val haptic = LocalHapticFeedback.current
-            val compareScale by animateFloatAsState(
-                targetValue = if (isComparing) 0.88f else 1.0f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                    stiffness = Spring.StiffnessMedium
-                ),
-                label = "compareScale"
-            )
-            val compareContainerColor by animateColorAsState(
-                targetValue = if (isComparing) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                animationSpec = tween(durationMillis = 150),
-                label = "compareContainer"
-            )
-            val compareIconTint by animateColorAsState(
-                targetValue = if (isComparing) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                animationSpec = tween(durationMillis = 150),
-                label = "compareTint"
-            )
+            // Hold-to-Compare Button (shows original unedited photo while held).
+            // No scale/color animation so the original appears immediately on press.
+            if (hasCurrentPage) {
+                val haptic = LocalHapticFeedback.current
+                val compareContainerColor = if (isComparing) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    Color.Transparent
+                }
+                val compareIconTint = if (isComparing) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
 
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .graphicsLayer {
-                        scaleX = compareScale
-                        scaleY = compareScale
-                    }
-                    .clip(CircleShape)
-                    .background(compareContainerColor)
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onPress = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                onCompareChange(true)
-                                try {
-                                    tryAwaitRelease()
-                                } finally {
-                                    onCompareChange(false)
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(compareContainerColor)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onPress = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onCompareChange(true)
+                                    try {
+                                        tryAwaitRelease()
+                                    } finally {
+                                        onCompareChange(false)
+                                    }
                                 }
-                            }
-                        )
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Compare,
-                    contentDescription = "Hold to compare original",
-                    tint = compareIconTint
-                )
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Compare,
+                        contentDescription = "Hold to compare original",
+                        tint = compareIconTint
+                    )
+                }
             }
 
             // 3-dots Overflow Menu

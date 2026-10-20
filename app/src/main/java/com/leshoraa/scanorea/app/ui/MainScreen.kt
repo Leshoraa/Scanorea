@@ -108,7 +108,12 @@ fun MainScreen(
 
     val pagerState = rememberPagerState(
         initialPage = 0,
-        pageCount = { uiState.pages.size }
+        pageCount = {
+            // Always append one extra carousel page as an "Add Page" slot while
+            // the document has pages. It is not part of the document page list.
+            val pageCount = uiState.pages.size
+            if (pageCount > 0) pageCount + 1 else 0
+        }
     )
 
     // Full-screen native PDF viewer
@@ -140,7 +145,7 @@ fun MainScreen(
     } else if (tabPagerState.currentPage != 0) {
         BackHandler {
             coroutineScope.launch {
-                tabPagerState.animateScrollToPage(0)
+                tabPagerState.scrollToPage(0)
             }
         }
     }
@@ -215,7 +220,7 @@ fun MainScreen(
                             selected = isSelected,
                             onClick = {
                                 coroutineScope.launch {
-                                    tabPagerState.animateScrollToPage(tab.ordinal)
+                                    tabPagerState.scrollToPage(tab.ordinal)
                                 }
                             },
                             icon = {
@@ -256,12 +261,12 @@ fun MainScreen(
                                 onCameraClick = { launchers.launchCamera() },
                                 onSeeAllToolsClick = {
                                     coroutineScope.launch {
-                                        tabPagerState.animateScrollToPage(MainNavTab.TOOLS.ordinal)
+                                        tabPagerState.scrollToPage(MainNavTab.TOOLS.ordinal)
                                     }
                                 },
                                 onSeeAllResultsClick = {
                                     coroutineScope.launch {
-                                        tabPagerState.animateScrollToPage(MainNavTab.RESULTS.ordinal)
+                                        tabPagerState.scrollToPage(MainNavTab.RESULTS.ordinal)
                                     }
                                 },
                                 onPdfClick = { viewModel.openPdfInViewer(it) },
@@ -388,6 +393,7 @@ fun MainScreen(
                     },
                     onCancel = { isDiscardDialogVisible = true },
                     onOpenOptionsSheet = { viewModel.showOptionsBottomSheet(true) },
+                    onAddPagesClick = { captureSourceSheetTitle = "Add Pages" },
                     isComparing = isComparingOriginal,
                     onCompareChange = { isComparingOriginal = it }
                 )
@@ -414,7 +420,7 @@ fun MainScreen(
         onOpenPdfInViewer = { viewModel.openPdfInViewer(it) },
         onNavigateToResults = {
             coroutineScope.launch {
-                tabPagerState.animateScrollToPage(MainNavTab.RESULTS.ordinal)
+                tabPagerState.scrollToPage(MainNavTab.RESULTS.ordinal)
             }
         },
         context = context
