@@ -20,17 +20,31 @@ object DocumentSharpnessFilter {
         val height = input.height
         if (width < 3 || height < 3) return input
 
-        val safeInput = if (input.config == Bitmap.Config.HARDWARE) {
-            input.copy(Bitmap.Config.ARGB_8888, false) ?: return input
-        } else {
-            input
+        val safeInput = try {
+            if (input.isRecycled) return input
+            if (input.config != Bitmap.Config.ARGB_8888) {
+                input.copy(Bitmap.Config.ARGB_8888, false) ?: input
+            } else {
+                input
+            }
+        } catch (_: Throwable) {
+            return input
         }
 
         val pixels = IntArray(width * height)
-        safeInput.getPixels(pixels, 0, width, 0, 0, width, height)
+        try {
+            safeInput.getPixels(pixels, 0, width, 0, 0, width, height)
+        } catch (_: Throwable) {
+            try {
+                val copy = input.copy(Bitmap.Config.ARGB_8888, false) ?: return input
+                copy.getPixels(pixels, 0, width, 0, 0, width, height)
+            } catch (_: Throwable) {
+                return input
+            }
+        }
 
         val outputPixels = IntArray(width * height)
-        val strength = sharpness * 3.2f
+        val strength = sharpness * 4.5f
         val samplingStep = (minOf(width, height) / 450).coerceIn(1, 3)
 
         // Precompute perceptual luminance for all pixels to process edges in luminance domain
@@ -61,7 +75,7 @@ object DocumentSharpnessFilter {
                 if (diff == 0) {
                     outputPixels[idx] = pixels[idx]
                 } else {
-                    val boost = (diff * strength).coerceIn(-72f, 72f)
+                    val boost = (diff * strength).coerceIn(-100f, 100f)
                     val origColor = pixels[idx]
                     val a = (origColor shr 24) and 0xFF
                     val r = (((origColor shr 16) and 0xFF) + boost).roundToInt().coerceIn(0, 255)

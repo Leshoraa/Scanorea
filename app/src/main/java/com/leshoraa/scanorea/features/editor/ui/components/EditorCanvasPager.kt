@@ -779,8 +779,8 @@ fun EditorCanvasPager(
                                     page.perspectiveQuad
                                 }
 
-                                var lastSuccessfulPainter by remember(page.id) { mutableStateOf<Painter?>(null) }
-                                var lastPainterOrientation by remember(page.id) { mutableFloatStateOf(targetContinuousDegrees) }
+                                var lastSuccessfulPainter by remember(page.id, effectiveCropBounds) { mutableStateOf<Painter?>(null) }
+                                var lastPainterOrientation by remember(page.id, effectiveCropBounds) { mutableFloatStateOf(targetContinuousDegrees) }
 
                                 val imageRequest = remember(context, page.uri, page.rotationDegrees, effectiveCropBounds, effectivePerspectiveQuad, page.sharpness) {
                                     ImageRequest.Builder(context)

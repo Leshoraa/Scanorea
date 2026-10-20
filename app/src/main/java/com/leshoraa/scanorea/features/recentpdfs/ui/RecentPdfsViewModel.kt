@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.leshoraa.scanorea.features.recentpdfs.data.PdfThumbnailLoader
 import com.leshoraa.scanorea.features.recentpdfs.data.RecentPdfsRepository
 import com.leshoraa.scanorea.features.recentpdfs.domain.model.RecentPdf
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +22,8 @@ data class RecentPdfsUiState(
     val recentPdfs: List<RecentPdf> = emptyList(),
     val categories: List<String> = emptyList(),
     val pinnedFolders: List<String> = RecentPdfsRepository.DEFAULT_PINNED_FOLDERS,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false
 )
 
 /**
@@ -53,6 +55,28 @@ class RecentPdfsViewModel(
                     categories = categories,
                     pinnedFolders = pinnedFolders,
                     isLoading = false
+                )
+            }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            val startTime = System.currentTimeMillis()
+            val recents = recentPdfsRepository.getRecentPdfs()
+            val categories = recentPdfsRepository.getCategories()
+            val pinnedFolders = recentPdfsRepository.getPinnedFolders()
+            val elapsed = System.currentTimeMillis() - startTime
+            if (elapsed < 500) {
+                delay(500 - elapsed)
+            }
+            _uiState.update {
+                it.copy(
+                    recentPdfs = recents,
+                    categories = categories,
+                    pinnedFolders = pinnedFolders,
+                    isRefreshing = false
                 )
             }
         }

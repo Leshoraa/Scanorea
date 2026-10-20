@@ -262,7 +262,9 @@ fun MainScreen(
                                 onPdfClick = { viewModel.openPdfInViewer(it) },
                                 onShareClick = { PdfDocumentSharer.share(context, it) },
                                 onDeleteClick = { recentPdfsViewModel.deletePdf(it) },
-                                onToggleFavorite = { recentPdfsViewModel.toggleFavorite(it) }
+                                onToggleFavorite = { recentPdfsViewModel.toggleFavorite(it) },
+                                isRefreshing = recentPdfsUiState.isRefreshing,
+                                onRefresh = { recentPdfsViewModel.refresh() }
                             )
                         }
 
@@ -288,7 +290,9 @@ fun MainScreen(
                                 onRenameCategory = { oldName, newName -> recentPdfsViewModel.renameCategory(oldName, newName) },
                                 onDeleteCategory = { recentPdfsViewModel.deleteCategory(it) },
                                 onReorderPinnedFolders = { recentPdfsViewModel.setPinnedFolders(it) },
-                                isLoading = recentPdfsUiState.isLoading
+                                isLoading = recentPdfsUiState.isLoading,
+                                isRefreshing = recentPdfsUiState.isRefreshing,
+                                onRefresh = { recentPdfsViewModel.refresh() }
                             )
                         }
 
@@ -377,7 +381,7 @@ fun MainScreen(
                     onClearAnnotations = { pageId ->
                         viewModel.clearPageAnnotations(pageId)
                     },
-                    onCancel = { viewModel.clearAllPages() },
+                    onCancel = { isDiscardDialogVisible = true },
                     onOpenOptionsSheet = { viewModel.showOptionsBottomSheet(true) },
                     isComparing = isComparingOriginal,
                     onCompareChange = { isComparingOriginal = it }

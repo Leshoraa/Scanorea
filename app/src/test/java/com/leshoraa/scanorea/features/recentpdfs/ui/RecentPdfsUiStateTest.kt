@@ -17,6 +17,7 @@ class RecentPdfsUiStateTest {
         assertTrue(state.categories.isEmpty())
         assertEquals(listOf("Favorites", "Work", "Study", "Personal", "Projects"), state.pinnedFolders)
         assertFalse(state.isLoading)
+        assertFalse(state.isRefreshing)
     }
 
     @Test
@@ -24,10 +25,12 @@ class RecentPdfsUiStateTest {
         val state = RecentPdfsUiState(
             categories = listOf("Work", "Personal"),
             pinnedFolders = listOf("Work"),
-            isLoading = true
+            isLoading = true,
+            isRefreshing = true
         )
         assertEquals(listOf("Work", "Personal"), state.categories)
         assertEquals(listOf("Work"), state.pinnedFolders)
         assertTrue(state.isLoading)
+        assertTrue(state.isRefreshing)
     }
 }

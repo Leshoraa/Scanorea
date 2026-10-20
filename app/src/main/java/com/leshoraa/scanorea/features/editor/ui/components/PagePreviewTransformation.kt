@@ -56,10 +56,13 @@ class PagePreviewTransformation(
             val srcY = (cropBounds.top * warped.height).toInt().coerceIn(0, warped.height - 1)
             val srcW = ((cropBounds.right - cropBounds.left) * warped.width).toInt().coerceIn(1, warped.width - srcX)
             val srcH = ((cropBounds.bottom - cropBounds.top) * warped.height).toInt().coerceIn(1, warped.height - srcY)
-            val cropBmp = Bitmap.createBitmap(warped, srcX, srcY, srcW, srcH)
-            if (cropBmp != input && cropBmp != warped) {
-                intermediateBitmaps.add(cropBmp)
-            }
+            val cropBmp = Bitmap.createBitmap(srcW, srcH, Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(cropBmp)
+            val srcRect = android.graphics.Rect(srcX, srcY, srcX + srcW, srcY + srcH)
+            val dstRect = android.graphics.Rect(0, 0, srcW, srcH)
+            val paint = android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG or android.graphics.Paint.ANTI_ALIAS_FLAG)
+            canvas.drawBitmap(warped, srcRect, dstRect, paint)
+            intermediateBitmaps.add(cropBmp)
             cropBmp
         } else {
             warped

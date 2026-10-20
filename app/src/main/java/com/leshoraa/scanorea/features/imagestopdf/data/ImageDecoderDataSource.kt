@@ -9,6 +9,7 @@ import android.net.Uri
 import android.graphics.Canvas
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
+import android.graphics.Rect
 import com.leshoraa.scanorea.core.filter.DocumentSharpnessFilter
 import com.leshoraa.scanorea.core.filter.ImageFilterType
 import com.leshoraa.scanorea.features.editor.domain.PerspectiveWarpCalculator
@@ -99,8 +100,13 @@ class ImageDecoderDataSource(private val context: Context) {
             val srcY = (cropBounds.top * warpedBitmap.height).toInt().coerceIn(0, warpedBitmap.height - 1)
             val srcW = ((cropBounds.right - cropBounds.left) * warpedBitmap.width).toInt().coerceIn(1, warpedBitmap.width - srcX)
             val srcH = ((cropBounds.bottom - cropBounds.top) * warpedBitmap.height).toInt().coerceIn(1, warpedBitmap.height - srcY)
-            val cropped = Bitmap.createBitmap(warpedBitmap, srcX, srcY, srcW, srcH)
-            if (cropped != warpedBitmap) {
+            val cropped = Bitmap.createBitmap(srcW, srcH, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(cropped)
+            val srcRect = Rect(srcX, srcY, srcX + srcW, srcY + srcH)
+            val dstRect = Rect(0, 0, srcW, srcH)
+            val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
+            canvas.drawBitmap(warpedBitmap, srcRect, dstRect, paint)
+            if (warpedBitmap != orientedBitmap && !warpedBitmap.isRecycled) {
                 warpedBitmap.recycle()
             }
             cropped

@@ -16,8 +16,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Clear
@@ -96,6 +101,8 @@ fun ResultsScreen(
     onDeleteCategory: (String) -> Unit,
     onReorderPinnedFolders: (List<String>) -> Unit = {},
     isLoading: Boolean = false,
+    isRefreshing: Boolean = false,
+    onRefresh: () -> Unit = {},
     modifier: Modifier = Modifier,
     onAssignCategory: ((File, String?) -> Unit)? = null
 ) {
@@ -187,8 +194,34 @@ fun ResultsScreen(
             )
         )
 
-        // Search Bar (shown when toggled)
-        if (isSearchActive) {
+        val pullToRefreshState = rememberPullToRefreshState()
+
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            state = pullToRefreshState,
+            modifier = Modifier.fillMaxSize(),
+            indicator = {
+                if (pullToRefreshState.distanceFraction > 0f || isRefreshing) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .graphicsLayer {
+                                val pullDistance = (pullToRefreshState.distanceFraction.coerceIn(0f, 1f) * 80.dp.toPx()) - 56.dp.toPx()
+                                translationY = if (isRefreshing) 16.dp.toPx() else pullDistance
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        ContainedLoadingIndicator()
+                    }
+                }
+            }
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Search Bar (shown when toggled)
+                if (isSearchActive) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
@@ -313,6 +346,7 @@ fun ResultsScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -399,6 +433,8 @@ fun ResultsScreen(
             }
         }
     }
+}
+}
 
     if (isCreateFolderDialogVisible) {
         CreateFolderDialog(
