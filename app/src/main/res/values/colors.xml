@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Fallback palette for launchers that cannot apply the system themed icon.
+        Android 13+ launchers tint the monochrome layer with the wallpaper-derived scheme instead.
+    -->
+    <color name="ic_launcher_background">#1A201A</color>
+    <color name="ic_launcher_foreground">#A3D397</color>
+</resources>

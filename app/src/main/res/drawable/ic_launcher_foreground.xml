@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Adaptive icon foreground: PDF document symbol.
-    Uses white fill so Android launcher can tint it via the monochrome layer (Material You / Monet)
-    when the user applies a themed icon on Android 13+.
+    Adaptive icon foreground: Material Symbols Rounded insert_drive_file (filled).
+    The 960-unit symbol is scaled and centered so the glyph stays inside the adaptive icon safe zone.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
@@ -10,44 +9,16 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Document body with folded top-right corner -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M32,16 L64,16 L76,28 L76,92 Q76,94 74,94 L34,94 Q32,94 32,92 Z" />
-
-    <!-- Folded corner crease -->
-    <path
-        android:fillColor="#CCCCCC"
-        android:pathData="M64,16 L64,28 L76,28 Z" />
-
-    <!-- PDF badge background: red rounded rect -->
-    <path
-        android:fillColor="#E53935"
-        android:pathData="M36,54 Q36,51 39,51 L69,51 Q72,51 72,54 L72,69 Q72,72 69,72 L39,72 Q36,72 36,69 Z" />
-
-    <!-- Letter P in badge -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M41,57 L41,67 L43,67 L43,63.5 L45.2,63.5 Q48.2,63.5 48.2,60.25 Q48.2,57 45.2,57 Z
-            M43,58.7 L44.8,58.7 Q46.2,58.7 46.2,60.25 Q46.2,61.8 44.8,61.8 L43,61.8 Z" />
-
-    <!-- Letter D in badge -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M50,57 L50,67 L52.8,67 Q56.8,67 56.8,62 Q56.8,57 52.8,57 Z
-            M52,58.7 L52.6,58.7 Q54.8,58.7 54.8,62 Q54.8,65.3 52.6,65.3 L52,65.3 Z" />
-
-    <!-- Letter F in badge -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M59,57 L59,67 L61,67 L61,63.2 L64.5,63.2 L64.5,61.5 L61,61.5 L61,58.7 L65,58.7 L65,57 Z" />
-
-    <!-- Document lines above badge (simulating text content) -->
-    <path
-        android:fillColor="#CCCCCC"
-        android:pathData="M38,44 L70,44 Q71,44 71,45 L71,46.5 Q71,47.5 70,47.5 L38,47.5 Q37,47.5 37,46.5 L37,45 Q37,44 38,44 Z" />
-    <path
-        android:fillColor="#CCCCCC"
-        android:pathData="M38,35 L70,35 Q71,35 71,36 L71,37.5 Q71,38.5 70,38.5 L38,38.5 Q37,38.5 37,37.5 L37,36 Q37,35 38,35 Z" />
+    <group
+        android:scaleX="0.05"
+        android:scaleY="0.05"
+        android:translateX="30"
+        android:translateY="30">
+        <group android:translateY="960">
+            <path
+                android:fillColor="@color/ic_launcher_foreground"
+                android:pathData="M240-80q-33 0-56.5-23.5T160-160v-640q0-33 23.5-56.5T240-880h287q16 0 30.5 6t25.5 17l194 194q11 11 17 25.5t6 30.5v447q0 33-23.5 56.5T720-80H240Zm280-560q0 17 11.5 28.5T560-600h160L520-800v160Z" />
+        </group>
+    </group>
 
 </vector>
