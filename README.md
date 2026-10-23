@@ -1,276 +1,80 @@
 # Scanorea
 
-## Overview
-Scanorea is a modern Android application for converting batches of photos into high-quality PDF documents quickly, safely, and efficiently. Built with Jetpack Compose and Material You (Material 3 Dynamic Color), Scanorea provides an in-app native PDF viewer, professional document scanning filters (such as high-contrast B&W thresholding), intelligent auto-compression profiles with predictive size estimations, and flexible Storage Access Framework (SAF) folder export, all while preserving user privacy and preventing Out-Of-Memory errors on high-resolution camera photos.
+Turn messy photos into clean, professional PDFs in seconds. Completely offline, private, and lightweight.
 
-## Features
-- **Flexible Photo Import**: Import multiple photos seamlessly via Android Photo Picker or directly capture pages with the camera without requiring runtime storage permissions.
-- **Single-Image Carousel Workspace**: Swipe through pages one at a time using `HorizontalPager` with real-time hardware-accelerated preview, page reordering (`<-` / `->`), and individual page deletion.
-- **Document Scanner Filters with Fine-Tuning**:
-  - *Instant B&W on Import*: Automatically applies midtone-anchored, high-contrast black-and-white thresholding to remove paper shadows while keeping faint text legible.
-  - *Per-Page Sharpness & Brightness*: Dedicated sliders for Sharpness/Contrast (0.5x - 2.5x) and Brightness (-50 to +50) with quick reset.
-  - *Interactive Filter Chips*: Quick-switch chips for Original Color, B&W Document, Grayscale, Magic Color (Enhanced), and a "To All" batch action.
-- **4-Corner Perspective Correction & Auto Paper Detection**:
-  - *Automatic Edge Detection*: Analyzes document luminosity gradients to locate 4 paper corners automatically without external heavyweight dependencies.
-  - *Interactive Manual Adjustment*: Visual overlay with 4 touch-draggable corner pins, geometric convex validation, and haptic feedback.
-  - *Hardware-Accelerated Homography*: Real-time perspective unwarping using projective matrix mapping and bilinear anti-aliased bitmap shaders.
-- **Conversion Presets with Automated Date Tokens**:
-  - Save, load, and manage conversion presets (paper size, orientation, compression, name template).
-  - Dynamic date token evaluation: templates like `Rendra_23.XX.XXXX_Aljabar_{DD:MM:YYYY}` automatically evaluate `{DD:MM:YYYY}` to today's date (e.g., `21-09-2026`).
-- **Smart Auto-Compression Profiles**: Choose optimal file sizes with real-time estimated file sizes before conversion:
-  - *Auto Balanced* (~250 KB/page): Recommended for general sharing and archiving.
-  - *Small File* (~100 KB/page): Highly compressed for email attachments and messaging.
-  - *High Quality* (~500 KB/page): Balanced detail for clear reading.
-  - *Maximum / Original* (~1.5 MB/page): Preserves full pixel resolution.
-- **Built-in Native PDF Viewer**:
-  - Tight 8.dp page spacing with realistic paper drop shadows.
-  - Interactive touch-draggable Fast-Scroller thumb and track with `.systemGestureExclusion()` to prevent edge back gesture conflicts.
-  - Dynamic page-under-scrollbar detection: automatically updates the page indicator (`1 / N` -> `2 / N`) based on whichever paper sheet is currently intersecting the scrollbar thumb.
-  - Smooth pinch-to-zoom and pan gestures using Android's native `android.graphics.pdf.PdfRenderer`.
-- **Custom Save Location (SAF)**: Choose a custom destination folder via Storage Access Framework (`OpenDocumentTree`) in the conversion options sheet or use "Save As" in the viewer.
-- **Recent Documents Dashboard with Pinned Folders Grid**:
-  - Google Photos-style 3x2 grid featuring up to 5 pinned categories plus an "Other" entry for complete folder management.
-  - Default pinned categories (`Favorites`, `Work`, `Study`) out of the box for immediate utility.
-  - Full-featured `AllFoldersBottomSheet` displaying document counts, pin/unpin toggles (max 5 pinned limit), folder creation, renaming, and deletion.
-  - Access, preview, share, and manage previously converted PDFs directly from the dashboard with category filtering.
-- **Dynamic Material You Design**: Fully adapts to Android 12+ system wallpaper color accents (Monet engine) with support for Dark Theme and edge-to-edge system navigation.
-- **System-Colored App Icon and Launch Splash**: Android 12+ uses the wallpaper-derived neutral and accent palette for both the adaptive launcher icon and launch splash, including light/dark variants. Android 13+ themed icons tint the monochrome layer, while older versions use the app's brand fallback colors.
+---
 
-## Architecture
-Scanorea strictly adheres to the **Deep Module**, **Feature Boundary**, and **Clean Architecture** guidelines:
-- **Presentation Layer (UI)**: Pure Jetpack Compose components organized by feature boundaries (`app/ui/`, `features/home/ui/`, `features/editor/ui/`, `features/pdfviewer/ui/`, `features/recentpdfs/ui/`, `features/tools/ui/`, `features/settings/ui/`).
-- **Domain Layer**: Clean, pure Kotlin business models and repository contracts (`features/*/domain/`).
-- **Data Layer**: Concrete data sources, repositories, and platform integrations (`features/*/data/`).
-- **Core Layer**: Shared cross-cutting concerns (`core/common/`, `core/designsystem/`, `core/filter/`, `core/format/`, `core/share/`).
+## What is Scanorea?
 
-## Project Structure
-```
-Scanorea/
-├── app/
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/com/leshoraa/scanorea/
-│   │   │   │   ├── app/
-│   │   │   │   │   ├── navigation/
-│   │   │   │   │   │   └── MainNavTab.kt
-│   │   │   │   │   └── ui/
-│   │   │   │   │       └── MainScreen.kt
-│   │   │   │   ├── core/
-│   │   │   │   │   ├── common/
-│   │   │   │   │   │   └── ResourceResult.kt
-│   │   │   │   │   ├── designsystem/
-│   │   │   │   │   │   ├── Color.kt
-│   │   │   │   │   │   ├── Theme.kt
-│   │   │   │   │   │   └── Type.kt
-│   │   │   │   │   ├── filter/
-│   │   │   │   │   │   ├── ImageAnalyzer.kt
-│   │   │   │   │   │   └── ImageFilterType.kt
-│   │   │   │   │   ├── format/
-│   │   │   │   │   │   ├── DateTimeFormatter.kt
-│   │   │   │   │   │   └── FileSizeFormatter.kt
-│   │   │   │   │   └── share/
-│   │   │   │   │       └── PdfDocumentSharer.kt
-│   │   │   │   ├── features/
-│   │   │   │   │   ├── editor/
-│   │   │   │   │   │   ├── domain/
-│   │   │   │   │   │   │   ├── CropGestureCalculator.kt
-│   │   │   │   │   │   │   ├── DocumentCornerDetector.kt
-│   │   │   │   │   │   │   ├── PerspectiveWarpCalculator.kt
-│   │   │   │   │   │   │   └── model/
-│   │   │   │   │   │   │       ├── AdjustmentTool.kt
-│   │   │   │   │   │   │       ├── DocumentQuad.kt
-│   │   │   │   │   │   │       ├── EditorCategory.kt
-│   │   │   │   │   │   │       ├── HsvColor.kt
-│   │   │   │   │   │   │       └── PageAnnotation.kt
-│   │   │   │   │   │   └── ui/
-│   │   │   │   │   │       ├── components/
-│   │   │   │   │   │       │   ├── DiscardChangesDialog.kt
-│   │   │   │   │   │       │   ├── EditorAdjustPanel.kt
-│   │   │   │   │   │       │   ├── EditorAnnotatePanel.kt
-│   │   │   │   │   │       │   ├── EditorBottomActionBar.kt
-│   │   │   │   │   │       │   ├── EditorCanvasBadges.kt
-│   │   │   │   │   │       │   ├── EditorCanvasPager.kt
-│   │   │   │   │   │       │   ├── EditorCategoryTabBar.kt
-│   │   │   │   │   │       │   ├── EditorColorPickerDialog.kt
-│   │   │   │   │   │       │   ├── EditorCropOverlay.kt
-│   │   │   │   │   │       │   ├── EditorCropPanel.kt
-│   │   │   │   │   │       │   ├── EditorFiltersPanel.kt
-│   │   │   │   │   │       │   ├── EditorPagesGridDialog.kt
-│   │   │   │   │   │       │   ├── EditorPerspectiveOverlay.kt
-│   │   │   │   │   │       │   ├── EditorReorderLiftedCard.kt
-│   │   │   │   │   │       │   ├── PagePreviewTransformation.kt
-│   │   │   │   │   │       │   └── RenameDocumentDialog.kt
-│   │   │   │   │   │       └── EditorWorkspace.kt
-│   │   │   │   │   ├── home/
-│   │   │   │   │   │   └── ui/
-│   │   │   │   │   │       ├── components/
-│   │   │   │   │   │       │   ├── HomeHeroBanner.kt
-│   │   │   │   │   │       │   └── QuickToolsSection.kt
-│   │   │   │   │   │       └── HomeScreen.kt
-│   │   │   │   │   ├── imagestopdf/
-│   │   │   │   │   │   ├── data/
-│   │   │   │   │   │   │   ├── ImageDecoderDataSource.kt
-│   │   │   │   │   │   │   ├── PdfGeneratorDataSource.kt
-│   │   │   │   │   │   │   └── repository/
-│   │   │   │   │   │   │       └── PdfConversionRepositoryImpl.kt
-│   │   │   │   │   │   ├── domain/
-│   │   │   │   │   │   │   ├── model/
-│   │   │   │   │   │   │   │   ├── CompressionProfile.kt
-│   │   │   │   │   │   │   │   ├── ConversionProgress.kt
-│   │   │   │   │   │   │   │   ├── ImageCropBounds.kt
-│   │   │   │   │   │   │   │   ├── ImagePage.kt
-│   │   │   │   │   │   │   │   ├── PdfConversionOptions.kt
-│   │   │   │   │   │   │   │   ├── PdfConversionResult.kt
-│   │   │   │   │   │   │   │   ├── PdfPageOrientation.kt
-│   │   │   │   │   │   │   │   └── PdfPageSize.kt
-│   │   │   │   │   │   │   └── repository/
-│   │   │   │   │   │   │       └── PdfConversionRepository.kt
-│   │   │   │   │   │   └── ui/
-│   │   │   │   │   │       ├── components/
-│   │   │   │   │   │       │   ├── CaptureSourceBottomSheet.kt
-│   │   │   │   │   │       │   ├── ConversionOptionsBottomSheet.kt
-│   │   │   │   │   │       │   ├── ConversionProgressDialog.kt
-│   │   │   │   │   │       │   └── ConversionSuccessDialog.kt
-│   │   │   │   │   │       ├── ImagesToPdfUiState.kt
-│   │   │   │   │   │       └── ImagesToPdfViewModel.kt
-│   │   │   │   │   ├── pdfviewer/
-│   │   │   │   │   │   ├── data/
-│   │   │   │   │   │   │   └── PdfRendererDataSource.kt
-│   │   │   │   │   │   ├── domain/
-│   │   │   │   │   │   │   └── PdfScrollCalculator.kt
-│   │   │   │   │   │   └── ui/
-│   │   │   │   │   │       ├── components/
-│   │   │   │   │   │       │   └── PdfFastScroller.kt
-│   │   │   │   │   │       └── PdfViewerScreen.kt
-│   │   │   │   │   ├── presets/
-│   │   │   │   │   │   ├── data/
-│   │   │   │   │   │   │   └── PresetRepository.kt
-│   │   │   │   │   │   ├── domain/
-│   │   │   │   │   │   │   ├── TemplateDateEvaluator.kt
-│   │   │   │   │   │   │   └── model/
-│   │   │   │   │   │   │       └── ConversionPreset.kt
-│   │   │   │   │   │   └── ui/
-│   │   │   │   │   │       └── PresetManagementScreen.kt
-│   │   │   │   │   ├── recentpdfs/
-│   │   │   │   │   │   ├── data/
-│   │   │   │   │   │   │   ├── PdfThumbnailLoader.kt
-│   │   │   │   │   │   │   └── RecentPdfsRepository.kt
-│   │   │   │   │   │   ├── domain/model/
-│   │   │   │   │   │   │   └── RecentPdf.kt
-│   │   │   │   │   │   └── ui/
-│   │   │   │   │   │       ├── components/
-│   │   │   │   │   │       │   ├── AllFoldersBottomSheet.kt
-│   │   │   │   │   │       │   ├── DocumentFolderDialogs.kt
-│   │   │   │   │   │       │   ├── FolderGridDragCalculator.kt
-│   │   │   │   │   │       │   ├── FolderGridSection.kt
-│   │   │   │   │   │       │   ├── PdfThumbnailPreview.kt
-│   │   │   │   │   │       │   └── RecentPdfItemCard.kt
-│   │   │   │   │   │       ├── RecentPdfsSection.kt
-│   │   │   │   │   │       ├── RecentPdfsViewModel.kt
-│   │   │   │   │   │       └── ResultsScreen.kt
-│   │   │   │   │   ├── settings/
-│   │   │   │   │   │   ├── data/
-│   │   │   │   │   │   │   └── SettingsRepository.kt
-│   │   │   │   │   │   └── ui/
-│   │   │   │   │   │       └── SettingsScreen.kt
-│   │   │   │   │   └── tools/
-│   │   │   │   │       └── ui/
-│   │   │   │   │           └── ToolsScreen.kt
-│   │   │   │   └── MainActivity.kt
-│   │   │   ├── res/
-│   │   │   │   └── xml/
-│   │   │   │       └── file_paths.xml
-│   │   │   └── AndroidManifest.xml
-│   │   └── test/
-│   │       └── java/com/leshoraa/scanorea/
-│   └── build.gradle.kts
-├── docs/
-│   └── adr/
-│       ├── 0001-images-to-pdf-architecture.md
-│       ├── 0002-perspective-correction-and-corner-detection.md
-│       ├── 0003-pinned-folders-grid-navigation.md
-│       └── 0004-folder-lifecycle-and-viewmodel-boundary-refactor.md
-├── gradle/
-│   └── libs.versions.toml
-├── AI_RULES.md
-└── README.md
-```
+Scanorea is a modern Android document scanner and PDF maker built with Jetpack Compose. If you need to snap a few pages of notes, receipts, or contracts and turn them into a clean, easy-to-read PDF without dealing with intrusive ads, subscriptions, or cloud uploads, Scanorea is built for you.
 
-## Requirements
-- Android Studio Ladybug (2024.2) / Meerkat (2024.3) or newer.
-- JDK 17 or newer (e.g., Android Studio bundled JBR).
-- Android SDK 37 (compileSdk & targetSdk), minSdk 24 (Android 7.0 Nougat and above).
+Everything runs directly on your phone. No accounts. No tracking. Zero internet access required.
 
-## Installation
-Clone the repository and open it in Android Studio:
+---
+
+## Visual Tour
+
+<p align="center">
+  <img src="screenshots/home.png" width="23%" alt="Home Dashboard" />
+  <img src="screenshots/editor.png" width="23%" alt="Document Editor" />
+  <img src="screenshots/results.png" width="23%" alt="Organized Results" />
+  <img src="screenshots/viewer.png" width="23%" alt="Built-in PDF Viewer" />
+</p>
+
+---
+
+## Why You Will Love It
+
+### Total Privacy by Default
+Scanorea does not even declare the internet permission. Your personal documents and scans never leave your device.
+
+### Automatic Folder Organization
+Whenever you convert a document, Scanorea automatically creates a Scanorea folder inside your device Documents directory (`Documents/Scanorea/`). You can also pick any custom folder using the system folder picker.
+
+### Smart Document Filters
+Turn dark, shadowed paper photos into crisp black-and-white documents with one tap. Choose between B&W, Grayscale, Magic Color, or keep the original photo. Fine-tune brightness and contrast per page whenever you need extra clarity.
+
+### Built-in Native PDF Viewer
+Read and inspect your created PDFs right inside the app. Enjoy smooth pinch-to-zoom, instant page scrubbing with a dedicated fast scroller, and quick sharing.
+
+### Featherweight and Fast
+The entire app weighs under 3 MB thanks to strict R8 optimization. It launches instantly and runs smoothly without draining your battery or hogging storage.
+
+---
+
+## How It Works
+
+1. **Pick or Snap**: Choose photos from your gallery or take new pictures with your camera.
+2. **Tweak and Filter**: Crop, reorder pages, adjust contrast, and apply document filters.
+3. **Save and Share**: Select your preferred paper size (A4, Letter) and compression quality, then hit Convert. Your PDF is instantly saved to `Documents/Scanorea` and ready to view or share.
+
+---
+
+## Download
+
+Get the latest signed APK directly from the GitHub Releases page:
+
+- [Download Latest APK](https://github.com/Leshoraa/Scanorea/releases/latest)
+
+Compatible with Android 8.0 (API 26) and newer, with full support for Android 12+ Material You dynamic theming.
+
+---
+
+## Building from Source
+
+If you want to build the project yourself using Android Studio or Gradle:
+
 ```bash
-git clone <repository-url>
+# Clone the repository
+git clone https://github.com/Leshoraa/Scanorea.git
 cd Scanorea
+
+# Run unit tests
+./gradlew testDebugUnitTest
+
+# Build debug APK
+./gradlew assembleDebug
+
+# Build optimized release APK
+./gradlew assembleRelease
 ```
-
-## Configuration
-All file sharing paths are configured in `app/src/main/res/xml/file_paths.xml` and wired to Android's `FileProvider` in `AndroidManifest.xml`. No external API keys or cloud tokens are required; all processing runs 100% locally on the device.
-
-## Usage
-1. Launch Scanorea on your device.
-2. Tap **Add Photos** or **Camera** to import images into your document workspace.
-3. Every page automatically defaults to high-contrast **B&W** mode. Swipe across pages in the Carousel workspace, reorder pages with `<-` / `->`, or delete individual pages.
-4. Fine-tune contrast/sharpness and brightness with sliders, or switch filters (Color, B&W, Gray, Enhanced).
-5. Tap the floating **Convert to PDF** button.
-6. In the conversion options sheet, pick or save a Preset (with automatic date tokens like `{DD:MM:YYYY}`), choose paper size, compression profile, and choose a custom destination folder via Storage Access Framework (`OpenDocumentTree`).
-7. Tap **Convert to PDF** to create the document.
-8. Preview pages in the native viewer with tight 8.dp page gaps and a scrollbar counter, or share via the system share sheet.
-
-## Development
-This project uses Kotlin 2.0.21 and Jetpack Compose with Gradle 9.5 and Android Gradle Plugin 9.3.3.
-
-Compile Kotlin code:
-```bash
-JAVA_HOME=/opt/android-studio/jbr ./gradlew compileDebugKotlin
-```
-
-## Testing
-Run the local unit test suite (160 tests):
-```bash
-JAVA_HOME=/opt/android-studio/jbr ./gradlew testDebugUnitTest
-```
-
-Run instrumented tests (Room database in-memory DAO tests on emulator or connected device):
-```bash
-JAVA_HOME=/opt/android-studio/jbr ./gradlew connectedDebugAndroidTest
-```
-
-## Build
-Generate a debug APK:
-```bash
-JAVA_HOME=/opt/android-studio/jbr ./gradlew assembleDebug
-```
-
-Generate a signed release APK (with R8 code shrinking and resource optimization):
-```bash
-JAVA_HOME=/opt/android-studio/jbr ./gradlew assembleRelease
-```
-The signed release APK will be generated at `app/build/outputs/apk/release/app-release.apk`.
-
-## Deployment
-Install directly onto a connected physical Android device or emulator via ADB:
-```bash
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
-Launch the main activity:
-```bash
-adb shell am start -n com.leshoraa.scanorea/.MainActivity
-```
-
-## Troubleshooting
-- **High memory usage on low-RAM devices**: Choose the *Small File* or *Auto Balanced* compression profile to constrain maximum bitmap dimensions during two-pass decoding.
-- **ColorMatrix filter appearance**: For dark shadows on scanned physical documents, ensure the page has good initial lighting; the *B&W Doc* filter applies a high-contrast offset (`-120f`) and contrast multiplier (`2.2f`) to cleanly separate ink from paper.
-
-## Known Limitations
-- Password encryption and digital signature embedding are not supported because native `android.graphics.pdf.PdfDocument` is focused on raster-to-vector page output.
-- Input formats are restricted to formats supported by Android's `BitmapFactory` (JPEG, PNG, WEBP, HEIC).
-
-## Architecture Decisions
-- [ADR 0001: Architecture for Images to PDF Conversion and Jetpack Compose UI](docs/adr/0001-images-to-pdf-architecture.md)
-- [ADR 0002: 4-Corner Perspective Correction and Paper Corner Detection Architecture](docs/adr/0002-perspective-correction-and-corner-detection.md)
-- [ADR 0003: Pinned Folders 2x2 Grid Navigation and Categorization Architecture](docs/adr/0003-pinned-folders-grid-navigation.md)
