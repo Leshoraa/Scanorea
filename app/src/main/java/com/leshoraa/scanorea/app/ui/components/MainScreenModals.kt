@@ -126,7 +126,10 @@ fun MainScreenModals(
 
     // 4. Progress Dialog during PDF generation
     if (uiState.isConverting) {
-        ConversionProgressDialog(progress = uiState.conversionProgress)
+        ConversionProgressDialog(
+            progress = uiState.conversionProgress,
+            onCancel = { viewModel.cancelConversion() }
+        )
     }
 
     // 5. Success Dialog on conversion completion

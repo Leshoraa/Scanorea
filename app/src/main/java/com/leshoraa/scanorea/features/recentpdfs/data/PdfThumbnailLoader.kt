@@ -2,7 +2,6 @@ package com.leshoraa.scanorea.features.recentpdfs.data
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.os.Build
@@ -54,8 +53,8 @@ object PdfThumbnailLoader {
      * Pre-generates the scaled L2 disk cache (.webp) in the background so that
      * when the document list is presented, thumbnail loading is instantaneous.
      */
-    suspend fun pregenerateThumbnail(file: File, diskCacheDir: File? = null) {
-        loadFirstPageThumbnail(file = file, diskCacheDir = diskCacheDir)
+    suspend fun pregenerateThumbnail(file: File, diskCacheDir: File? = null, lastModifiedMillis: Long? = null) {
+        loadFirstPageThumbnail(file = file, diskCacheDir = diskCacheDir, lastModifiedMillis = lastModifiedMillis)
     }
 
     /**
@@ -104,7 +103,7 @@ object PdfThumbnailLoader {
         if (diskCacheFile != null && diskCacheFile.exists() && diskCacheFile.length() > 0L) {
             try {
                 val decodeOptions = BitmapFactory.Options().apply {
-                    inPreferredConfig = Bitmap.Config.RGB_565
+                    inPreferredConfig = Bitmap.Config.ARGB_8888
                 }
                 val diskBitmap = BitmapFactory.decodeFile(diskCacheFile.absolutePath, decodeOptions)
                 if (diskBitmap != null) {
@@ -136,11 +135,10 @@ object PdfThumbnailLoader {
 
                 page = renderer.openPage(0)
                 val aspectRatio = page.height.toFloat() / page.width.toFloat().coerceAtLeast(1f)
-                val targetHeight = (targetWidth * aspectRatio).toInt().coerceIn(targetWidth, targetWidth * 2)
+                val targetHeight = (targetWidth * aspectRatio).toInt().coerceAtLeast(1)
 
-                val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.RGB_565)
-                val canvas = Canvas(bitmap)
-                canvas.drawColor(Color.WHITE)
+                val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
+                bitmap.eraseColor(Color.WHITE)
 
                 page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
 
@@ -176,7 +174,7 @@ object PdfThumbnailLoader {
         }
     }
 
-    private fun memoryCacheKey(
+    internal fun memoryCacheKey(
         file: File,
         lastModifiedMillis: Long,
         targetWidth: Int

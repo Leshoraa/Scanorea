@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
+import com.leshoraa.scanorea.features.imagestopdf.domain.PdfFileNameResolver
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ConversionProgress
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImagePage
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfConversionOptions
@@ -38,7 +39,13 @@ class PdfGeneratorDataSource(
             outputDirectory.mkdirs()
         }
 
-        val destinationFile = File(outputDirectory, options.sanitizedFileName())
+        val existingNames = outputDirectory.list()?.toList() ?: emptyList()
+        val uniqueName = PdfFileNameResolver.resolveUnique(
+            desiredName = options.fileName,
+            existingNames = existingNames,
+            fallbackTimestampMillis = System.currentTimeMillis()
+        )
+        val destinationFile = File(outputDirectory, uniqueName)
         val pdfDocument = PdfDocument()
 
         try {
@@ -87,6 +94,11 @@ class PdfGeneratorDataSource(
             }
 
             return destinationFile
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            if (destinationFile.exists()) {
+                destinationFile.delete()
+            }
+            throw ce
         } catch (e: Exception) {
             if (destinationFile.exists()) {
                 destinationFile.delete()

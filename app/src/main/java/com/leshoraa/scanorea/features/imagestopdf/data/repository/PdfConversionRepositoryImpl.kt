@@ -43,6 +43,7 @@ class PdfConversionRepositoryImpl(
             )
 
             // If a custom destination folder was chosen via SAF, export a copy there
+            var exportFailureMessage: String? = null
             if (destinationFolderUri != null) {
                 try {
                     val treeDoc = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, destinationFolderUri)
@@ -53,11 +54,19 @@ class PdfConversionRepositoryImpl(
                                 java.io.FileInputStream(generatedFile).use { input ->
                                     input.copyTo(out)
                                 }
+                            } ?: run {
+                                exportFailureMessage = "Could not open stream for destination folder."
                             }
+                        } else {
+                            exportFailureMessage = "Could not create file in destination folder."
                         }
+                    } else {
+                        exportFailureMessage = "Destination folder is not writable or access was revoked."
                     }
-                } catch (_: Exception) {
-                    // Gracefully fallback to internal copy if SAF tree write fails
+                } catch (ce: kotlinx.coroutines.CancellationException) {
+                    throw ce
+                } catch (e: Exception) {
+                    exportFailureMessage = e.localizedMessage ?: "SAF write error"
                 }
             }
 
@@ -71,10 +80,13 @@ class PdfConversionRepositoryImpl(
                 file = generatedFile,
                 contentUri = contentUri,
                 pageCount = pages.size,
-                fileSizeBytes = generatedFile.length()
+                fileSizeBytes = generatedFile.length(),
+                exportFailureMessage = exportFailureMessage
             )
 
             emit(ResourceResult.Success(result))
+        } catch (ce: kotlinx.coroutines.CancellationException) {
+            throw ce
         } catch (oom: OutOfMemoryError) {
             emit(
                 ResourceResult.Error(

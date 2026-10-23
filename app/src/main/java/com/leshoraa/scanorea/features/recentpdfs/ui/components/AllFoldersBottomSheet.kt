@@ -183,6 +183,7 @@ fun AllFoldersBottomSheet(
                             pdf.folders.any { it.equals(category, ignoreCase = true) }
                         }
                         val isPinned = pinnedFolders.any { it.equals(category, ignoreCase = true) }
+                        val pinLimitReached = !isPinned && pinnedFolders.size >= 5
                         val isSelected = currentFilter is DocumentFilter.Category &&
                                 currentFilter.name.equals(category, ignoreCase = true)
 
@@ -193,6 +194,7 @@ fun AllFoldersBottomSheet(
                             isSelected = isSelected,
                             showPin = true,
                             isPinned = isPinned,
+                            pinLimitReached = pinLimitReached,
                             onTogglePin = { onTogglePinFolder(category) },
                             onClick = {
                                 onSelectFilter(DocumentFilter.Category(category))
@@ -219,6 +221,7 @@ private fun AllFoldersItemRow(
     isSelected: Boolean,
     showPin: Boolean,
     isPinned: Boolean,
+    pinLimitReached: Boolean = false,
     onTogglePin: () -> Unit,
     onClick: () -> Unit,
     onRename: (() -> Unit)? = null,
@@ -270,12 +273,17 @@ private fun AllFoldersItemRow(
             if (showPin) {
                 IconButton(
                     onClick = onTogglePin,
+                    enabled = !pinLimitReached || isPinned,
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Filled.PushPin,
-                        contentDescription = if (isPinned) "Unpin from home grid" else "Pin to home grid",
-                        tint = if (isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        contentDescription = if (isPinned) "Unpin from home grid" else if (pinLimitReached) "Pin limit reached (max 5 folders)" else "Pin to home grid",
+                        tint = when {
+                            isPinned -> MaterialTheme.colorScheme.primary
+                            pinLimitReached -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f)
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        },
                         modifier = Modifier.size(20.dp)
                     )
                 }

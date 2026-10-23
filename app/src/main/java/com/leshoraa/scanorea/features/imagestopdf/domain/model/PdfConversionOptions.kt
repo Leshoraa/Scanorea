@@ -1,5 +1,7 @@
 package com.leshoraa.scanorea.features.imagestopdf.domain.model
 
+import com.leshoraa.scanorea.features.imagestopdf.domain.PdfFileNameResolver
+
 /**
  * User-configurable settings for generating the PDF document.
  */
@@ -14,12 +16,6 @@ data class PdfConversionOptions(
      * Returns a sanitized file name ending with .pdf, eliminating invalid filesystem characters.
      */
     fun sanitizedFileName(): String {
-        val trimmed = fileName.trim()
-        val baseName = if (trimmed.isBlank()) {
-            "Scanorea_${System.currentTimeMillis()}"
-        } else {
-            trimmed.replace(Regex("[\\\\/:*?\"<>|]"), "_")
-        }
-        return if (baseName.endsWith(".pdf", ignoreCase = true)) baseName else "$baseName.pdf"
+        return PdfFileNameResolver.sanitize(fileName, System.currentTimeMillis())
     }
 }

@@ -527,9 +527,10 @@ class RecentPdfsRepository(
             }
         }
         if (keysToRemove.isNotEmpty()) {
-            keysToRemove.forEach {
-                metadataMap.remove(it)
-                cachedPdfsByPath.remove(it)
+            keysToRemove.forEach { key ->
+                metadataMap.remove(key)
+                val matchingPaths = cachedPdfsByPath.keys.filter { File(it).name == key }
+                matchingPaths.forEach { cachedPdfsByPath.remove(it) }
             }
             saveMetadataMap(metadataMap)
         }

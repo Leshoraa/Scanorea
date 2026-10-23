@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.leshoraa.scanorea.di.appContainer
 import com.leshoraa.scanorea.features.recentpdfs.data.PdfThumbnailLoader
 import com.leshoraa.scanorea.features.recentpdfs.data.RecentPdfsRepository
 import com.leshoraa.scanorea.features.recentpdfs.domain.model.RecentPdf
@@ -63,14 +64,9 @@ class RecentPdfsViewModel(
     fun refresh() {
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
-            val startTime = System.currentTimeMillis()
             val recents = recentPdfsRepository.getRecentPdfs()
             val categories = recentPdfsRepository.getCategories()
             val pinnedFolders = recentPdfsRepository.getPinnedFolders()
-            val elapsed = System.currentTimeMillis() - startTime
-            if (elapsed < 500) {
-                delay(500 - elapsed)
-            }
             _uiState.update {
                 it.copy(
                     recentPdfs = recents,
@@ -163,7 +159,7 @@ class RecentPdfsViewModel(
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    val repo = RecentPdfsRepository(context.applicationContext)
+                    val repo = context.applicationContext.appContainer().recentPdfsRepository
                     return RecentPdfsViewModel(repo) as T
                 }
             }

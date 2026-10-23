@@ -113,6 +113,7 @@ fun PdfViewerScreen(
 
     // Page bitmaps cache
     val pageBitmaps = remember { mutableStateMapOf<Int, Bitmap>() }
+    val pageRatios = remember { mutableStateMapOf<Int, Float>() }
     val listState = rememberLazyListState()
 
     // Save/Export to custom location launcher
@@ -139,6 +140,7 @@ fun PdfViewerScreen(
             pdfRendererSource?.close()
             pageBitmaps.values.forEach { it.recycle() }
             pageBitmaps.clear()
+            pageRatios.clear()
         }
     }
 
@@ -152,6 +154,22 @@ fun PdfViewerScreen(
             listState.scrollToItem(pagerState.currentPage)
         } else if (viewMode == PdfViewMode.PAGED && totalPages > 0) {
             pagerState.scrollToPage(listState.firstVisibleItemIndex.coerceIn(0, totalPages - 1))
+        }
+    }
+
+    // Evict cached bitmaps outside active viewport radius to prevent OutOfMemoryError on large PDFs (P0-4)
+    LaunchedEffect(viewMode, pagerState.currentPage, listState.firstVisibleItemIndex) {
+        if (totalPages <= 0 || pageBitmaps.isEmpty()) return@LaunchedEffect
+        val (activeCenter, radius) = if (viewMode == PdfViewMode.PAGED) {
+            pagerState.currentPage to 3
+        } else {
+            listState.firstVisibleItemIndex to 6
+        }
+        val minKeep = (activeCenter - radius).coerceAtLeast(0)
+        val maxKeep = (activeCenter + radius).coerceAtMost(totalPages - 1)
+        val evictedKeys = pageBitmaps.keys.filter { it < minKeep || it > maxKeep }
+        for (key in evictedKeys) {
+            pageBitmaps.remove(key)
         }
     }
 
@@ -274,13 +292,17 @@ fun PdfViewerScreen(
                 ) { pageIndex ->
                     val pageNumber = pageIndex + 1
                     val bitmap = pageBitmaps[pageIndex]
-                    val pageRatio = pdfRendererSource?.getPageAspectRatio(pageIndex) ?: (1f / 1.4142f)
+                    val pageRatio = pageRatios[pageIndex] ?: (1f / 1.4142f)
 
                     LaunchedEffect(pageIndex) {
+                        if (!pageRatios.containsKey(pageIndex) && pdfRendererSource != null) {
+                            pageRatios[pageIndex] = pdfRendererSource!!.getPageAspectRatio(pageIndex)
+                        }
                         if (bitmap == null && pdfRendererSource != null) {
                             try {
                                 val rendered = pdfRendererSource!!.renderPage(pageIndex, targetWidth = 1080)
                                 pageBitmaps[pageIndex] = rendered
+                                pageRatios[pageIndex] = rendered.width.toFloat() / rendered.height.toFloat()
                             } catch (e: Exception) {
                                 android.util.Log.e("PdfViewerScreen", "Failed to render page $pageIndex", e)
                             }
@@ -468,13 +490,17 @@ fun PdfViewerScreen(
                     items(count = totalPages) { index ->
                         val pageNumber = index + 1
                         val bitmap = pageBitmaps[index]
-                        val pageRatio = pdfRendererSource?.getPageAspectRatio(index) ?: (1f / 1.4142f)
+                        val pageRatio = pageRatios[index] ?: (1f / 1.4142f)
 
                         LaunchedEffect(index) {
+                            if (!pageRatios.containsKey(index) && pdfRendererSource != null) {
+                                pageRatios[index] = pdfRendererSource!!.getPageAspectRatio(index)
+                            }
                             if (bitmap == null && pdfRendererSource != null) {
                                 try {
                                     val rendered = pdfRendererSource!!.renderPage(index, targetWidth = 1080)
                                     pageBitmaps[index] = rendered
+                                    pageRatios[index] = rendered.width.toFloat() / rendered.height.toFloat()
                                 } catch (e: Exception) {
                                     android.util.Log.e("PdfViewerScreen", "Failed to render vertical page $index", e)
                                 }

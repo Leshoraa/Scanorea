@@ -112,6 +112,23 @@ fun ConversionSuccessDialog(
                     textAlign = TextAlign.Center
                 )
 
+                if (result.exportFailureMessage != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Warning: SAF export to external folder failed (${result.exportFailureMessage}). Internal copy saved.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(8.dp),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+
                 if (assignedFolders.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(10.dp))
                     Surface(

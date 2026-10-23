@@ -2,7 +2,7 @@
 
 ## Android device testing
 
-- Do not run `adb`.
-- Do not inspect, control, or take screenshots of an Android virtual device or emulator.
-- All testing on the Android virtual device is performed by the user.
-- Gradle tasks that do not use a device (compile, unit tests, lint) are allowed.
+- `adb` and Android virtual devices (AVD / emulator) are allowed.
+- Inspecting, controlling, taking screenshots, installing APKs, and running instrumentation tests (`connectedDebugAndroidTest`) on the emulator are permitted.
+- Physical device testing is performed by the user.
+- Gradle tasks (compile, unit tests, lint, assemble) are allowed.

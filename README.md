@@ -29,9 +29,9 @@ Scanorea is a modern Android application for converting batches of photos into h
   - Smooth pinch-to-zoom and pan gestures using Android's native `android.graphics.pdf.PdfRenderer`.
 - **Custom Save Location (SAF)**: Choose a custom destination folder via Storage Access Framework (`OpenDocumentTree`) in the conversion options sheet or use "Save As" in the viewer.
 - **Recent Documents Dashboard with Pinned Folders Grid**:
-  - Google Photos-style 2x2 grid featuring up to 3 pinned categories plus an "Other" entry for complete folder management.
+  - Google Photos-style 3x2 grid featuring up to 5 pinned categories plus an "Other" entry for complete folder management.
   - Default pinned categories (`Favorites`, `Work`, `Study`) out of the box for immediate utility.
-  - Full-featured `AllFoldersBottomSheet` displaying document counts, pin/unpin toggles (max 3 pinned limit), folder creation, renaming, and deletion.
+  - Full-featured `AllFoldersBottomSheet` displaying document counts, pin/unpin toggles (max 5 pinned limit), folder creation, renaming, and deletion.
   - Access, preview, share, and manage previously converted PDFs directly from the dashboard with category filtering.
 - **Dynamic Material You Design**: Fully adapts to Android 12+ system wallpaper color accents (Monet engine) with support for Dark Theme and edge-to-edge system navigation.
 - **System-Colored App Icon and Launch Splash**: Android 12+ uses the wallpaper-derived neutral and accent palette for both the adaptive launcher icon and launch splash, including light/dark variants. Android 13+ themed icons tint the monochrome layer, while older versions use the app's brand fallback colors.
@@ -230,9 +230,14 @@ JAVA_HOME=/opt/android-studio/jbr ./gradlew compileDebugKotlin
 ```
 
 ## Testing
-Run the local unit test suite:
+Run the local unit test suite (160 tests):
 ```bash
 JAVA_HOME=/opt/android-studio/jbr ./gradlew testDebugUnitTest
+```
+
+Run instrumented tests (Room database in-memory DAO tests on emulator or connected device):
+```bash
+JAVA_HOME=/opt/android-studio/jbr ./gradlew connectedDebugAndroidTest
 ```
 
 ## Build
@@ -240,7 +245,12 @@ Generate a debug APK:
 ```bash
 JAVA_HOME=/opt/android-studio/jbr ./gradlew assembleDebug
 ```
-The APK artifact will be generated at `app/build/outputs/apk/debug/app-debug.apk`.
+
+Generate a signed release APK (with R8 code shrinking and resource optimization):
+```bash
+JAVA_HOME=/opt/android-studio/jbr ./gradlew assembleRelease
+```
+The signed release APK will be generated at `app/build/outputs/apk/release/app-release.apk`.
 
 ## Deployment
 Install directly onto a connected physical Android device or emulator via ADB:

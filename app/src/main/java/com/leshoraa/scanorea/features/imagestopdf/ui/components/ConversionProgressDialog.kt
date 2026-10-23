@@ -13,6 +13,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,6 +31,7 @@ import com.leshoraa.scanorea.features.imagestopdf.domain.model.ConversionProgres
 @Composable
 fun ConversionProgressDialog(
     progress: ConversionProgress?,
+    onCancel: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     BasicAlertDialog(
@@ -88,6 +90,16 @@ fun ConversionProgressDialog(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+
+                if (onCancel != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(onClick = onCancel) {
+                        Text(
+                            text = "Cancel conversion",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
         }

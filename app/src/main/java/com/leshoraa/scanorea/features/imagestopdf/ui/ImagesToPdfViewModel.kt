@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.leshoraa.scanorea.core.common.ResourceResult
+import com.leshoraa.scanorea.di.appContainer
 import com.leshoraa.scanorea.core.filter.ImageAnalyzer
 import com.leshoraa.scanorea.core.filter.ImageFilterType
 import com.leshoraa.scanorea.features.imagestopdf.data.ImageDecoderDataSource
@@ -37,7 +38,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import android.media.ExifInterface
+import androidx.exifinterface.media.ExifInterface
 import java.io.File
 import java.io.InputStream
 import java.util.UUID
@@ -55,6 +56,8 @@ class ImagesToPdfViewModel(
 
     private val _uiState = MutableStateFlow(ImagesToPdfUiState())
     val uiState: StateFlow<ImagesToPdfUiState> = _uiState.asStateFlow()
+
+    private var conversionJob: kotlinx.coroutines.Job? = null
 
     init {
         loadRecentPdfs()
@@ -746,7 +749,7 @@ class ImagesToPdfViewModel(
             return
         }
 
-        viewModelScope.launch {
+        conversionJob = viewModelScope.launch {
             _uiState.update {
                 it.copy(
                     isConverting = true,
@@ -772,7 +775,10 @@ class ImagesToPdfViewModel(
                         if (chosenFolders.isNotEmpty() && recentPdfsRepository != null) {
                             recentPdfsRepository.updatePdfFolders(result.data.file, chosenFolders)
                         }
-                        PdfThumbnailLoader.pregenerateThumbnail(result.data.file)
+                        PdfThumbnailLoader.pregenerateThumbnail(
+                            file = result.data.file,
+                            lastModifiedMillis = result.data.file.lastModified()
+                        )
                         _uiState.update {
                             it.copy(
                                 isConverting = false,
@@ -793,6 +799,17 @@ class ImagesToPdfViewModel(
                     }
                 }
             }
+        }
+    }
+
+    fun cancelConversion() {
+        conversionJob?.cancel()
+        conversionJob = null
+        _uiState.update {
+            it.copy(
+                isConverting = false,
+                conversionProgress = null
+            )
         }
     }
 
@@ -857,14 +874,13 @@ class ImagesToPdfViewModel(
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    val appContext = context.applicationContext
-                    val decoder = ImageDecoderDataSource(appContext)
-                    val generator = PdfGeneratorDataSource(decoder)
-                    val repository = PdfConversionRepositoryImpl(appContext, generator)
-                    val recentPdfsRepo = RecentPdfsRepository(appContext)
-                    val presetRepo = PresetRepository(appContext)
-                    val settingsRepo = SettingsRepository(appContext)
-                    return ImagesToPdfViewModel(repository, recentPdfsRepo, presetRepo, settingsRepo) as T
+                    val container = context.applicationContext.appContainer()
+                    return ImagesToPdfViewModel(
+                        container.pdfConversionRepository,
+                        container.recentPdfsRepository,
+                        container.presetRepository,
+                        container.settingsRepository
+                    ) as T
                 }
             }
     }

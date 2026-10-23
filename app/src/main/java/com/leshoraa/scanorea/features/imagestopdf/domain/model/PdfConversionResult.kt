@@ -10,5 +10,6 @@ data class PdfConversionResult(
     val file: File,
     val contentUri: Uri,
     val pageCount: Int,
-    val fileSizeBytes: Long
+    val fileSizeBytes: Long,
+    val exportFailureMessage: String? = null
 )
