@@ -23,7 +23,7 @@ class SettingsRepository(context: Context) {
         private const val KEY_DEFAULT_FILTER = "key_default_filter"
         private const val KEY_DEST_FOLDER_URI = "key_dest_folder_uri"
         private const val KEY_DEST_FOLDER_NAME = "key_dest_folder_name"
-        private const val DEFAULT_DEST_NAME = "Internal: Scanorea/pdfs"
+        private const val DEFAULT_DEST_NAME = "Documents/Scanorea"
     }
 
     private val prefs: SharedPreferences =

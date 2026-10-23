@@ -30,7 +30,7 @@ data class ImagesToPdfUiState(
     val pinnedFolders: List<String> = listOf("Favorites", "Work", "Study"),
     val presets: List<ConversionPreset> = emptyList(),
     val destinationFolderUri: Uri? = null,
-    val destinationFolderDisplayName: String = "Internal: Scanorea/pdfs",
+    val destinationFolderDisplayName: String = "Documents/Scanorea",
     val carouselPageIndex: Int = 0,
     val redoAnnotationsMap: Map<String, List<com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation>> = emptyMap(),
     val undoPageHistoryMap: Map<String, List<ImagePage>> = emptyMap(),

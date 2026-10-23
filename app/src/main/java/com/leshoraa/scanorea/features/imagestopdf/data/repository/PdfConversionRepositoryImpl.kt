@@ -1,6 +1,10 @@
 package com.leshoraa.scanorea.features.imagestopdf.data.repository
 
+import android.content.ContentValues
 import android.content.Context
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import androidx.core.content.FileProvider
 import com.leshoraa.scanorea.core.common.ResourceResult
 import com.leshoraa.scanorea.features.imagestopdf.data.PdfGeneratorDataSource
@@ -68,6 +72,14 @@ class PdfConversionRepositoryImpl(
                 } catch (e: Exception) {
                     exportFailureMessage = e.localizedMessage ?: "SAF write error"
                 }
+            } else {
+                try {
+                    exportToPublicScanoreaFolder(generatedFile)
+                } catch (ce: kotlinx.coroutines.CancellationException) {
+                    throw ce
+                } catch (e: Exception) {
+                    android.util.Log.w("PdfConversionRepo", "Could not export to public Documents/Scanorea", e)
+                }
             }
 
             val contentUri = FileProvider.getUriForFile(
@@ -110,4 +122,31 @@ class PdfConversionRepositoryImpl(
             )
         }
     }.flowOn(Dispatchers.IO)
+
+    private fun exportToPublicScanoreaFolder(generatedFile: File) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val contentValues = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, generatedFile.name)
+                put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOCUMENTS + "/Scanorea")
+            }
+            val collection = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            val uri = context.contentResolver.insert(collection, contentValues)
+            if (uri != null) {
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    java.io.FileInputStream(generatedFile).use { input ->
+                        input.copyTo(out)
+                    }
+                }
+            }
+        } else {
+            val docsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            val scanoreaDir = File(docsDir, "Scanorea")
+            if (!scanoreaDir.exists()) {
+                scanoreaDir.mkdirs()
+            }
+            val targetFile = File(scanoreaDir, generatedFile.name)
+            generatedFile.copyTo(targetFile, overwrite = true)
+        }
+    }
 }
