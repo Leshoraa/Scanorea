@@ -70,7 +70,9 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.CompressionProfile
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageOrientation
@@ -445,7 +447,7 @@ private fun PresetEditScreen(
             Surface(
                 tonalElevation = 3.dp,
                 shadowElevation = 8.dp,
-                color = MaterialTheme.colorScheme.surface
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             ) {
                 Box(
                     modifier = Modifier
@@ -490,7 +492,7 @@ private fun PresetEditScreen(
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                    .fillMaxSize()
                 .padding(innerPadding)
                 .padding(horizontal = 20.dp)
                 .verticalScroll(rememberScrollState()),
@@ -582,7 +584,7 @@ private fun PresetEditScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "No custom tags yet. Tap '+ Add Tag' to create tags like {PROJECT}, {CLIENT}, or {INVOICE}.",
+                            text = "No custom tags yet. Tap '+ Add Tag' to create tags.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(12.dp)
@@ -802,6 +804,12 @@ private fun TokenizedFileNameRuleField(
 
     val scrollState = rememberScrollState()
     val lastFocusRequester = remember { FocusRequester() }
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val textStyle = MaterialTheme.typography.bodyMedium.copy(
+        color = MaterialTheme.colorScheme.onSurface,
+        fontWeight = FontWeight.Medium
+    )
 
     LaunchedEffect(template) {
         scrollState.animateScrollTo(scrollState.maxValue)
@@ -859,20 +867,36 @@ private fun TokenizedFileNameRuleField(
                             val isLast = (index == lastLiteralIndex)
                             val isOnly = (segments.size == 1)
 
+                            if (seg.text.isEmpty() && !isLast && !isOnly) {
+                                return@forEachIndexed
+                            }
+
+                            val measuredWidthDp = remember(seg.text, textStyle, density) {
+                                if (seg.text.isEmpty()) {
+                                    0.dp
+                                } else {
+                                    val layout = textMeasurer.measure(seg.text, textStyle)
+                                    with(density) { layout.size.width.toDp() }
+                                }
+                            }
+
+                            val fieldWidth = when {
+                                isOnly -> 140.dp
+                                isLast -> if (seg.text.isEmpty()) 28.dp else (measuredWidthDp + 4.dp).coerceAtLeast(28.dp)
+                                else -> measuredWidthDp + 2.dp
+                            }
+
                             BasicTextField(
                                 value = seg.text,
                                 onValueChange = { newText ->
                                     val updated = TemplateTokenizer.updateLiteralAtIndex(segments, index, newText)
                                     onTemplateChange(TemplateTokenizer.reconstruct(updated))
                                 },
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = FontWeight.Medium
-                                ),
+                                textStyle = textStyle,
                                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                 singleLine = true,
                                 modifier = Modifier
-                                    .widthIn(min = if (isOnly) 140.dp else if (isLast) 28.dp else 12.dp)
+                                    .width(fieldWidth)
                                     .then(if (isLast) Modifier.focusRequester(lastFocusRequester) else Modifier)
                                     .onKeyEvent { keyEvent ->
                                         if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Backspace) {
@@ -919,7 +943,7 @@ private fun RuleTokenChip(
 ) {
     Surface(
         shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = MaterialTheme.colorScheme.primary,
         modifier = modifier
     ) {
         Row(
@@ -930,7 +954,7 @@ private fun RuleTokenChip(
                 tagKey,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = MaterialTheme.colorScheme.onPrimary
             )
             Spacer(modifier = Modifier.width(4.dp))
             IconButton(
@@ -940,7 +964,7 @@ private fun RuleTokenChip(
                 Icon(
                     imageVector = Icons.Filled.Close,
                     contentDescription = "Remove tag",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                    tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
                     modifier = Modifier.size(12.dp)
                 )
             }
@@ -963,7 +987,7 @@ private fun CustomTagChip(
 ) {
     Surface(
         shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = MaterialTheme.colorScheme.primary,
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
             .combinedClickable(
@@ -980,13 +1004,13 @@ private fun CustomTagChip(
                     key,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onPrimary
                 )
                 if (value.isNotBlank()) {
                     Text(
                         value,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
                         maxLines = 1
                     )
                 }
@@ -999,7 +1023,7 @@ private fun CustomTagChip(
                 Icon(
                     imageVector = Icons.Filled.Close,
                     contentDescription = "Delete Tag",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                    tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
                     modifier = Modifier.size(14.dp)
                 )
             }
