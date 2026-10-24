@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,6 +26,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
@@ -848,7 +850,7 @@ private fun TokenizedFileNameRuleField(
                     .fillMaxWidth()
                     .horizontalScroll(scrollState),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 val lastLiteralIndex = segments.indices.lastOrNull { segments[it] is RuleSegment.Literal } ?: 0
 
@@ -867,10 +869,6 @@ private fun TokenizedFileNameRuleField(
                             val isLast = (index == lastLiteralIndex)
                             val isOnly = (segments.size == 1)
 
-                            if (seg.text.isEmpty() && !isLast && !isOnly) {
-                                return@forEachIndexed
-                            }
-
                             val measuredWidthDp = remember(seg.text, textStyle, density) {
                                 if (seg.text.isEmpty()) {
                                     0.dp
@@ -883,7 +881,8 @@ private fun TokenizedFileNameRuleField(
                             val fieldWidth = when {
                                 isOnly -> 140.dp
                                 isLast -> if (seg.text.isEmpty()) 28.dp else (measuredWidthDp + 4.dp).coerceAtLeast(28.dp)
-                                else -> measuredWidthDp + 2.dp
+                                seg.text.isEmpty() -> 10.dp
+                                else -> measuredWidthDp + 4.dp
                             }
 
                             BasicTextField(
@@ -897,6 +896,7 @@ private fun TokenizedFileNameRuleField(
                                 singleLine = true,
                                 modifier = Modifier
                                     .width(fieldWidth)
+                                    .height(30.dp)
                                     .then(if (isLast) Modifier.focusRequester(lastFocusRequester) else Modifier)
                                     .onKeyEvent { keyEvent ->
                                         if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Backspace) {
@@ -912,7 +912,10 @@ private fun TokenizedFileNameRuleField(
                                         }
                                     },
                                 decorationBox = { innerTextField ->
-                                    Box(contentAlignment = Alignment.CenterStart) {
+                                    Box(
+                                        contentAlignment = Alignment.CenterStart,
+                                        modifier = Modifier.fillMaxHeight()
+                                    ) {
                                         if (seg.text.isEmpty() && isOnly) {
                                             Text(
                                                 text = "e.g. Doc_{DATE}",
@@ -957,9 +960,12 @@ private fun RuleTokenChip(
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.width(4.dp))
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.size(18.dp)
+            Box(
+                modifier = Modifier
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onDelete),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Filled.Close,
@@ -1016,9 +1022,12 @@ private fun CustomTagChip(
                 }
             }
             Spacer(modifier = Modifier.width(4.dp))
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.size(20.dp)
+            Box(
+                modifier = Modifier
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onDelete),
+                contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Filled.Close,
