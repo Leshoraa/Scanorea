@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -43,6 +44,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -104,8 +106,47 @@ fun EditorPagesGridDialog(
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     var dragStartOffset by remember { mutableStateOf(Offset.Zero) }
     var draggedItemSize by remember { mutableStateOf(Size.Zero) }
+    var pagePendingDelete by remember { mutableStateOf<Pair<String, Int>?>(null) }
 
     val spacingPx = with(density) { 10.dp.toPx() }
+
+    pagePendingDelete?.let { (pageId, pageNumber) ->
+        AlertDialog(
+            onDismissRequest = { pagePendingDelete = null },
+            title = {
+                Text(
+                    text = "Delete Page $pageNumber?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to remove page $pageNumber from the document? All edits and annotations on this page will be discarded.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pagePendingDelete = null
+                        onRemovePage(pageId)
+                    }
+                ) {
+                    Text(
+                        text = "Delete",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pagePendingDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -378,7 +419,7 @@ fun EditorPagesGridDialog(
                                 // Delete Page Button (Top-Right)
                                 if (localPages.size > 1 && draggedKey == null) {
                                     FilledTonalIconButton(
-                                        onClick = { onRemovePage(page.id) },
+                                        onClick = { pagePendingDelete = page.id to displayPageNumber },
                                         colors = IconButtonDefaults.filledTonalIconButtonColors(
                                             containerColor = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.80f),
                                             contentColor = MaterialTheme.colorScheme.inverseOnSurface

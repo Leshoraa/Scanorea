@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
@@ -35,7 +36,7 @@ fun rememberMainScreenLaunchers(
     viewModel: ImagesToPdfViewModel,
     context: Context = LocalContext.current
 ): MainScreenLaunchers {
-    var activeCameraCaptureUri by remember { mutableStateOf<Uri?>(null) }
+    var activeCameraCaptureUriString by rememberSaveable { mutableStateOf<String?>(null) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia()
@@ -48,7 +49,9 @@ fun rememberMainScreenLaunchers(
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
-        val uri = activeCameraCaptureUri
+        val uriString = activeCameraCaptureUriString
+        val uri = uriString?.let { Uri.parse(it) }
+        activeCameraCaptureUriString = null
         if (success && uri != null) {
             viewModel.addImages(listOf(uri), context.contentResolver)
         }
@@ -90,7 +93,7 @@ fun rememberMainScreenLaunchers(
                 "${context.packageName}.fileprovider",
                 cameraCaptureFile
             )
-            activeCameraCaptureUri = uri
+            activeCameraCaptureUriString = uri.toString()
             cameraLauncher.launch(uri)
         } catch (e: Exception) {
             android.util.Log.e("MainScreenLaunchers", "Cannot open camera", e)

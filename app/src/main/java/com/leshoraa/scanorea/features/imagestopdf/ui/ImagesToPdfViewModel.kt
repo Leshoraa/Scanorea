@@ -73,6 +73,10 @@ class ImagesToPdfViewModel(
         val defaultFilter = settingsRepository.getDefaultFilter()
         val destUri = settingsRepository.getDestinationFolderUri()
         val destName = settingsRepository.getDestinationFolderDisplayName()
+        val studentNim = settingsRepository.getStudentNim()
+        val studentName = settingsRepository.getStudentName()
+        val studentSubject = settingsRepository.getStudentSubject()
+        val customTags = settingsRepository.getCustomTags()
 
         _uiState.update { current ->
             current.copy(
@@ -80,6 +84,10 @@ class ImagesToPdfViewModel(
                 destinationFolderDisplayName = destName,
                 defaultFilter = defaultFilter,
                 activeFilter = defaultFilter,
+                studentNim = studentNim,
+                studentName = studentName,
+                studentSubject = studentSubject,
+                customTags = customTags,
                 options = current.options.copy(
                     pageSize = pageSize,
                     orientation = orientation,
@@ -175,6 +183,33 @@ class ImagesToPdfViewModel(
         }
     }
 
+    fun updateStudentProfile(nim: String, name: String, subject: String) {
+        settingsRepository?.saveStudentNim(nim)
+        settingsRepository?.saveStudentName(name)
+        settingsRepository?.saveStudentSubject(subject)
+        val tags = settingsRepository?.getCustomTags() ?: emptyMap()
+        _uiState.update {
+            it.copy(
+                studentNim = nim,
+                studentName = name,
+                studentSubject = subject,
+                customTags = tags
+            )
+        }
+    }
+
+    fun saveCustomTag(key: String, value: String) {
+        settingsRepository?.setCustomTag(key, value)
+        val tags = settingsRepository?.getCustomTags() ?: emptyMap()
+        _uiState.update { it.copy(customTags = tags) }
+    }
+
+    fun removeCustomTag(key: String) {
+        settingsRepository?.removeCustomTag(key)
+        val tags = settingsRepository?.getCustomTags() ?: emptyMap()
+        _uiState.update { it.copy(customTags = tags) }
+    }
+
     fun openPdfInViewer(file: File) {
         _uiState.update { it.copy(activePdfViewerFile = file) }
     }
@@ -182,7 +217,8 @@ class ImagesToPdfViewModel(
     fun openPdfFromExternalUri(uri: Uri, contentResolver: ContentResolver, cacheDir: File) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val cachedPdfFile = File.createTempFile("opened_", ".pdf", cacheDir)
+                val pdfCacheDir = File(cacheDir, "pdfs").apply { mkdirs() }
+                val cachedPdfFile = File.createTempFile("opened_", ".pdf", pdfCacheDir)
                 contentResolver.openInputStream(uri)?.use { inputStream ->
                     cachedPdfFile.outputStream().use { outputStream ->
                         inputStream.copyTo(outputStream)

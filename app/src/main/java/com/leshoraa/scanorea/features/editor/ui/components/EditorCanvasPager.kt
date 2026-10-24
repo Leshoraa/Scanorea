@@ -64,6 +64,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.graphics.painter.Painter
 import coil.compose.AsyncImagePainter
@@ -125,6 +129,7 @@ fun EditorCanvasPager(
     onRedoAnnotation: () -> Unit = {},
     onClearAnnotations: () -> Unit = {},
     onAddPagesClick: () -> Unit = {},
+    onDeletePage: ((pageId: String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -852,6 +857,28 @@ fun EditorCanvasPager(
                                                     rotationZ = relativeAngle
                                                 }
                                         )
+                                    } else if (state is AsyncImagePainter.State.Error) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(16.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Filled.BrokenImage,
+                                                contentDescription = "Failed to load image",
+                                                tint = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(48.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = "Failed to load image",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Medium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     } else {
                                         Box(
                                             modifier = Modifier.fillMaxSize(),
@@ -932,7 +959,8 @@ fun EditorCanvasPager(
                         isCropMode = isCropMode,
                         isBadgeVisible = isBadgeVisible,
                         zoomScale = zoomScale,
-                        onResetZoom = { animateZoom(1f, Offset.Zero) }
+                        onResetZoom = { animateZoom(1f, Offset.Zero) },
+                        onDeletePage = { onDeletePage?.invoke(page.id) }
                     )
 
                     // Floating "ORIGINAL" badge when holding to compare.

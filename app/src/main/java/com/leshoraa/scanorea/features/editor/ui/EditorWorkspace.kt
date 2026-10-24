@@ -17,7 +17,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.core.filter.ImageFilterType
 import com.leshoraa.scanorea.features.editor.domain.DocumentCornerDetector
@@ -135,6 +139,7 @@ fun EditorWorkspace(
     var originalCropBoundsOnEnter by remember { mutableStateOf(ImageCropBounds.DEFAULT) }
     var originalPerspectiveQuadOnEnter by remember { mutableStateOf(DocumentQuad.DEFAULT) }
     var isAutoDetectingPerspective by remember { mutableStateOf(false) }
+    var pagePendingDelete by remember { mutableStateOf<Pair<String, Int>?>(null) }
 
     var previousRotationDegrees by remember(currentPage?.id) {
         mutableIntStateOf(currentPage?.rotationDegrees ?: 0)
@@ -302,6 +307,9 @@ fun EditorWorkspace(
             onRedoAnnotation = { currentPage?.let { onRedoAnnotation(it.id) } },
             onClearAnnotations = { currentPage?.let { onClearAnnotations(it.id) } },
             onAddPagesClick = onAddPagesClick,
+            onDeletePage = { pageId ->
+                pagePendingDelete = pageId to (currentPageIndex + 1)
+            },
             modifier = Modifier.weight(1f)
         )
 
@@ -424,6 +432,52 @@ fun EditorWorkspace(
             isCropMode = activeCategory == EditorCategory.CROP,
             onCancelCrop = handleCancelCrop,
             onApplyCrop = handleApplyCrop
+        )
+    }
+
+    // Delete Page Confirmation Dialog
+    pagePendingDelete?.let { (pageId, pageNum) ->
+        AlertDialog(
+            onDismissRequest = { pagePendingDelete = null },
+            title = {
+                Text(
+                    text = "Delete Page $pageNum?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    if (pages.size > 1) {
+                        "Are you sure you want to delete this page? This action cannot be undone."
+                    } else {
+                        "Are you sure you want to delete this page? Since it is the only page, the editor will close."
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pagePendingDelete = null
+                        if (pages.size > 1) {
+                            onRemovePage(pageId)
+                        } else {
+                            onCancel()
+                        }
+                    }
+                ) {
+                    Text(
+                        text = "Delete",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pagePendingDelete = null }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }

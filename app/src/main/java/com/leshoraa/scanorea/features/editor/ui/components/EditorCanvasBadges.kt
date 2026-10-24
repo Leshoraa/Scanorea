@@ -17,20 +17,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.ImagePage
 import java.util.Locale
 
 /**
- * Overlay badges for the document canvas: filter indicator, zoom reset pill, and page counter.
+ * Overlay badges for the document canvas: top-left [X] page delete tool with filter name,
+ * floating zoom reset pill, and top-right page counter.
  */
 @Composable
 fun BoxScope.EditorCanvasBadges(
@@ -40,29 +41,40 @@ fun BoxScope.EditorCanvasBadges(
     isCropMode: Boolean,
     isBadgeVisible: Boolean,
     zoomScale: Float,
-    onResetZoom: () -> Unit
+    onResetZoom: () -> Unit,
+    onDeletePage: () -> Unit = {}
 ) {
-    // Top-left Transient Filter Badge (hidden during crop mode)
+    // Top-left Tool Pill: [X] Delete Page button on left, Filter label on right (hidden during crop mode)
     if (!isCropMode) {
-        AnimatedVisibility(
-            visible = isBadgeVisible,
-            enter = fadeIn(animationSpec = tween(250)),
-            exit = fadeOut(animationSpec = tween(350)),
+        Surface(
+            color = MaterialTheme.colorScheme.inverseSurface.copy(alpha = 0.85f),
+            shape = RoundedCornerShape(12.dp),
+            shadowElevation = 2.dp,
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(12.dp)
         ) {
-            Surface(
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
-                shape = RoundedCornerShape(8.dp),
-                shadowElevation = 0.dp
+            Row(
+                modifier = Modifier.padding(start = 4.dp, end = 10.dp, top = 2.dp, bottom = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                IconButton(
+                    onClick = onDeletePage,
+                    modifier = Modifier.size(26.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "Delete Page",
+                        tint = MaterialTheme.colorScheme.inverseOnSurface,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = page.filter.label,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    color = MaterialTheme.colorScheme.inverseOnSurface
                 )
             }
         }

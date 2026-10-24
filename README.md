@@ -29,7 +29,7 @@ Everything runs directly on your phone. No accounts. No tracking. Zero internet 
 Scanorea does not even declare the internet permission. Your personal documents and scans never leave your device.
 
 ### Automatic Folder Organization
-Whenever you convert a document, Scanorea automatically creates a Scanorea folder inside your device Documents directory (`Documents/Scanorea/`). You can also pick any custom folder using the system folder picker.
+Whenever you convert a document, Scanorea automatically creates a Scanorea folder inside your device Documents directory (`Documents/Scanorea/`) on Android 10+ using Scoped Storage (zero permissions required). On all Android versions, you can also select any custom destination folder using the system folder picker.
 
 ### Smart Document Filters
 Turn dark, shadowed paper photos into crisp black-and-white documents with one tap. Choose between B&W, Grayscale, Magic Color, or keep the original photo. Fine-tune brightness and contrast per page whenever you need extra clarity.
@@ -56,7 +56,7 @@ Get the latest signed APK directly from the GitHub Releases page:
 
 - [Download Latest APK](https://github.com/Leshoraa/Scanorea/releases/latest)
 
-Compatible with Android 8.0 (API 26) and newer, with full support for Android 12+ Material You dynamic theming.
+Compatible with Android 7.0 (API 24) and newer, with full support for Android 12+ Material You dynamic theming.
 
 ---
 

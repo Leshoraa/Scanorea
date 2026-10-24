@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -23,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -57,6 +61,7 @@ fun RenameDocumentDialog(
     var isPresetsDropdownExpanded by remember { mutableStateOf(false) }
     var isSavePresetDialogVisible by remember { mutableStateOf(false) }
     var newPresetName by remember { mutableStateOf("") }
+    var presetPendingDelete by remember { mutableStateOf<ConversionPreset?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -142,7 +147,7 @@ fun RenameDocumentDialog(
                                 trailingIcon = {
                                     if (preset.id != "preset_aljabar") {
                                         IconButton(
-                                            onClick = { onDeletePreset(preset.id) },
+                                            onClick = { presetPendingDelete = preset },
                                             modifier = Modifier.size(24.dp)
                                         ) {
                                             Icon(
@@ -185,6 +190,42 @@ fun RenameDocumentDialog(
                             }
                         )
                     }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Quick Student & Date Tokens:",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val quickTokens = listOf("{NIM}", "{NAMA}", "{MATKUL}", "{DD:MM:YYYY}")
+                    items(quickTokens) { token ->
+                        Surface(
+                            onClick = { tempFileName += token },
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ) {
+                            Text(
+                                text = "+ $token",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                            )
+                        }
+                    }
+                }
+                if (tempFileName.contains("{")) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Preview: ${TemplateDateEvaluator.evaluate(tempFileName)}.pdf",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         },
@@ -244,6 +285,39 @@ fun RenameDocumentDialog(
             },
             dismissButton = {
                 TextButton(onClick = { isSavePresetDialogVisible = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Delete Preset Confirmation Dialog
+    presetPendingDelete?.let { preset ->
+        AlertDialog(
+            onDismissRequest = { presetPendingDelete = null },
+            title = {
+                Text(
+                    text = "Delete Preset?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = { Text("Are you sure you want to remove preset '${preset.name}'? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeletePreset(preset.id)
+                        presetPendingDelete = null
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Delete", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { presetPendingDelete = null }) {
                     Text("Cancel")
                 }
             }

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -81,6 +83,45 @@ fun EditorTopBar(
     modifier: Modifier = Modifier
 ) {
     var isMenuVisible by remember { mutableStateOf(false) }
+    var isDeletePageDialogVisible by remember { mutableStateOf(false) }
+
+    if (isDeletePageDialogVisible) {
+        AlertDialog(
+            onDismissRequest = { isDeletePageDialogVisible = false },
+            title = {
+                Text(
+                    text = "Delete Page?",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to remove this page from the document? All edits and annotations on this page will be discarded.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        isDeletePageDialogVisible = false
+                        onDeleteCurrentPage()
+                    }
+                ) {
+                    Text(
+                        text = "Delete",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { isDeletePageDialogVisible = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     TopAppBar(
         modifier = modifier,
@@ -274,7 +315,7 @@ fun EditorTopBar(
                             },
                             onClick = {
                                 isMenuVisible = false
-                                onDeleteCurrentPage()
+                                isDeletePageDialogVisible = true
                             }
                         )
                     }

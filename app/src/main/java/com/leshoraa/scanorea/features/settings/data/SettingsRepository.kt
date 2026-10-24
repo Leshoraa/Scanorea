@@ -8,6 +8,7 @@ import com.leshoraa.scanorea.core.filter.ImageFilterType
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.CompressionProfile
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageOrientation
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageSize
+import com.leshoraa.scanorea.features.presets.domain.TemplateDateEvaluator
 
 /**
  * Persists user configuration and document defaults using [SharedPreferences].
@@ -24,10 +25,20 @@ class SettingsRepository(context: Context) {
         private const val KEY_DEST_FOLDER_URI = "key_dest_folder_uri"
         private const val KEY_DEST_FOLDER_NAME = "key_dest_folder_name"
         private const val DEFAULT_DEST_NAME = "Documents/Scanorea"
+        private const val KEY_STUDENT_NIM = "key_student_nim"
+        private const val KEY_STUDENT_NAME = "key_student_name"
+        private const val KEY_STUDENT_SUBJECT = "key_student_subject"
+        private const val KEY_CUSTOM_TAGS = "key_custom_tags_json"
     }
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    init {
+        // Initialize custom tags and evaluate student profile
+        val tags = getCustomTags()
+        TemplateDateEvaluator.setCustomTags(tags)
+    }
 
     fun getDefaultPageSize(): PdfPageSize {
         val raw = prefs.getString(KEY_DEFAULT_PAGE_SIZE, PdfPageSize.A4.name)
@@ -98,5 +109,78 @@ class SettingsRepository(context: Context) {
             putString(KEY_DEST_FOLDER_URI, uri)
             putString(KEY_DEST_FOLDER_NAME, displayName)
         }
+    }
+
+    fun getStudentNim(): String {
+        return prefs.getString(KEY_STUDENT_NIM, "") ?: ""
+    }
+
+    fun saveStudentNim(nim: String) {
+        prefs.edit { putString(KEY_STUDENT_NIM, nim) }
+        TemplateDateEvaluator.initStudentProfile(nim, getStudentName(), getStudentSubject())
+    }
+
+    fun getStudentName(): String {
+        return prefs.getString(KEY_STUDENT_NAME, "") ?: ""
+    }
+
+    fun saveStudentName(name: String) {
+        prefs.edit { putString(KEY_STUDENT_NAME, name) }
+        TemplateDateEvaluator.initStudentProfile(getStudentNim(), name, getStudentSubject())
+    }
+
+    fun getStudentSubject(): String {
+        return prefs.getString(KEY_STUDENT_SUBJECT, "") ?: ""
+    }
+
+    fun saveStudentSubject(subject: String) {
+        prefs.edit { putString(KEY_STUDENT_SUBJECT, subject) }
+        TemplateDateEvaluator.initStudentProfile(getStudentNim(), getStudentName(), subject)
+    }
+
+    fun getCustomTags(): Map<String, String> {
+        val jsonStr = prefs.getString(KEY_CUSTOM_TAGS, null)
+        if (jsonStr.isNullOrBlank()) {
+            val legacy = mutableMapOf<String, String>()
+            val nim = getStudentNim()
+            val name = getStudentName()
+            val subject = getStudentSubject()
+            if (nim.isNotBlank()) legacy["NIM"] = nim
+            if (name.isNotBlank()) legacy["NAMA"] = name
+            if (subject.isNotBlank()) legacy["MATKUL"] = subject
+            return legacy
+        }
+        return try {
+            val json = org.json.JSONObject(jsonStr)
+            val map = mutableMapOf<String, String>()
+            val keys = json.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                map[key] = json.optString(key, "")
+            }
+            map
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to parse custom tags JSON", e)
+            emptyMap()
+        }
+    }
+
+    fun saveCustomTags(tags: Map<String, String>) {
+        val json = org.json.JSONObject()
+        tags.forEach { (k, v) -> json.put(k.uppercase(), v) }
+        prefs.edit { putString(KEY_CUSTOM_TAGS, json.toString()) }
+        TemplateDateEvaluator.setCustomTags(tags)
+    }
+
+    fun setCustomTag(key: String, value: String) {
+        val tags = getCustomTags().toMutableMap()
+        tags[key.trim().uppercase()] = value.trim()
+        saveCustomTags(tags)
+    }
+
+    fun removeCustomTag(key: String) {
+        val tags = getCustomTags().toMutableMap()
+        tags.remove(key.trim().uppercase())
+        saveCustomTags(tags)
     }
 }

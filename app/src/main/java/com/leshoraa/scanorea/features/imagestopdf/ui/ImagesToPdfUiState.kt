@@ -35,7 +35,11 @@ data class ImagesToPdfUiState(
     val redoAnnotationsMap: Map<String, List<com.leshoraa.scanorea.features.editor.domain.model.PageAnnotation>> = emptyMap(),
     val undoPageHistoryMap: Map<String, List<ImagePage>> = emptyMap(),
     val redoPageHistoryMap: Map<String, List<ImagePage>> = emptyMap(),
-    val selectedFolders: List<String> = emptyList()
+    val selectedFolders: List<String> = emptyList(),
+    val studentNim: String = "",
+    val studentName: String = "",
+    val studentSubject: String = "",
+    val customTags: Map<String, String> = emptyMap()
 ) {
     val hasPages: Boolean
         get() = pages.isNotEmpty()

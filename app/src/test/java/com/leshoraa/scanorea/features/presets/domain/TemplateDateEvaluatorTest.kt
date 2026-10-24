@@ -47,4 +47,24 @@ class TemplateDateEvaluatorTest {
         val evaluated = TemplateDateEvaluator.evaluate(template, fixedDate)
         assertEquals("StaticDocumentName", evaluated)
     }
+
+    @Test
+    fun evaluate_whenTemplateHasStudentTokensWithConfiguredProfile_resolvesTokens() {
+        TemplateDateEvaluator.initStudentProfile(
+            nim = "23.11.5544",
+            name = "Rendra",
+            subject = "Aljabar"
+        )
+        val template = "{NIM}_{NAMA}_{MATKUL}_{DD:MM:YYYY}"
+        val evaluated = TemplateDateEvaluator.evaluate(template, fixedDate)
+        assertEquals("23.11.5544_Rendra_Aljabar_21-09-2026", evaluated)
+    }
+
+    @Test
+    fun evaluate_whenTemplateHasStudentTokensUnconfigured_fallsBackToPlaceholders() {
+        TemplateDateEvaluator.initStudentProfile("", "", "")
+        val template = "{NIM}_{NAMA}_{MATKUL}_{TUGAS}"
+        val evaluated = TemplateDateEvaluator.evaluate(template, fixedDate)
+        assertEquals("NIM_Nama_Tugas_Tugas", evaluated)
+    }
 }

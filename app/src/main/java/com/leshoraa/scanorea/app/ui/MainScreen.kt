@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -18,6 +21,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -49,6 +53,7 @@ import com.leshoraa.scanorea.features.recentpdfs.ui.ResultsScreen
 import com.leshoraa.scanorea.features.settings.ui.SettingsScreen
 import com.leshoraa.scanorea.features.tools.ui.ToolsScreen
 import kotlinx.coroutines.launch
+import java.io.File
 
 /**
  * Primary host screen managing navigation routing, workspace transitions, and system integrations.
@@ -85,6 +90,7 @@ fun MainScreen(
     var isDiscardDialogVisible by remember { mutableStateOf(false) }
     var captureSourceSheetTitle by remember { mutableStateOf<String?>(null) }
     var isComparingOriginal by remember { mutableStateOf(false) }
+    var pdfPendingDelete by remember { mutableStateOf<File?>(null) }
 
     LaunchedEffect(tabPagerState.settledPage) {
         val tab = tabs[tabPagerState.settledPage]
@@ -167,7 +173,16 @@ fun MainScreen(
             presets = uiState.presets,
             onBack = { isPresetManagerVisible = false },
             onSavePreset = { viewModel.savePreset(it) },
-            onDeletePreset = { viewModel.deletePreset(it) }
+            onDeletePreset = { viewModel.deletePreset(it) },
+            customTags = uiState.customTags,
+            onSaveCustomTag = { key, value -> viewModel.saveCustomTag(key, value) },
+            onDeleteCustomTag = { key -> viewModel.removeCustomTag(key) },
+            studentNim = uiState.studentNim,
+            studentName = uiState.studentName,
+            studentSubject = uiState.studentSubject,
+            onUpdateStudentProfile = { nim, name, subject ->
+                viewModel.updateStudentProfile(nim, name, subject)
+            }
         )
         return
     }
@@ -304,7 +319,7 @@ fun MainScreen(
                                 },
                                 onPdfClick = { viewModel.openPdfInViewer(it) },
                                 onShareClick = { PdfDocumentSharer.share(context, it) },
-                                onDeleteClick = { recentPdfsViewModel.deletePdf(it) },
+                                onDeleteClick = { pdfPendingDelete = it },
                                 onToggleFavorite = { recentPdfsViewModel.toggleFavorite(it) },
                                 isRefreshing = recentPdfsUiState.isRefreshing,
                                 onRefresh = { recentPdfsViewModel.refresh() }
@@ -327,7 +342,7 @@ fun MainScreen(
                                 onPdfClick = { viewModel.openPdfInViewer(it) },
                                 onShareClick = { PdfDocumentSharer.share(context, it) },
                                 onShareMultiple = { files -> PdfDocumentSharer.shareMultiple(context, files) },
-                                onDeleteClick = { recentPdfsViewModel.deletePdf(it) },
+                                onDeleteClick = { pdfPendingDelete = it },
                                 onToggleFavorite = { recentPdfsViewModel.toggleFavorite(it) },
                                 onAssignFolders = { file, folders -> recentPdfsViewModel.updatePdfFolders(file, folders) },
                                 onAddCategory = { recentPdfsViewModel.addCategory(it) },
@@ -353,7 +368,13 @@ fun MainScreen(
                                 defaultFilter = uiState.defaultFilter,
                                 onDefaultFilterChange = { viewModel.updateDefaultFilter(it) },
                                 presetsCount = uiState.presets.size,
-                                onNavigateToPresets = { isPresetManagerVisible = true }
+                                onNavigateToPresets = { isPresetManagerVisible = true },
+                                studentNim = uiState.studentNim,
+                                studentName = uiState.studentName,
+                                studentSubject = uiState.studentSubject,
+                                onUpdateStudentProfile = { nim, name, subject ->
+                                    viewModel.updateStudentProfile(nim, name, subject)
+                                }
                             )
                         }
                     }
@@ -459,4 +480,39 @@ fun MainScreen(
         },
         context = context
     )
+
+    // Universal document delete confirmation dialog
+    pdfPendingDelete?.let { file ->
+        AlertDialog(
+            onDismissRequest = { pdfPendingDelete = null },
+            title = {
+                Text(
+                    text = "Delete Document?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text("Are you sure you want to delete '${file.name}'? This action cannot be undone.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        recentPdfsViewModel.deletePdf(file)
+                        pdfPendingDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Delete", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pdfPendingDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }

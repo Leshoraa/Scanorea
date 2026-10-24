@@ -38,7 +38,8 @@ class ImageDecoderDataSource(private val context: Context) {
         rotationDegrees: Int = 0,
         cropBounds: ImageCropBounds = ImageCropBounds.DEFAULT,
         perspectiveQuad: DocumentQuad = DocumentQuad.DEFAULT,
-        sharpness: Float = 0.0f
+        sharpness: Float = 0.0f,
+        jpegQuality: Int = 100
     ): Bitmap {
         val options = BitmapFactory.Options().apply {
             inJustDecodeBounds = true
@@ -106,7 +107,7 @@ class ImageDecoderDataSource(private val context: Context) {
             val dstRect = Rect(0, 0, srcW, srcH)
             val paint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
             canvas.drawBitmap(warpedBitmap, srcRect, dstRect, paint)
-            if (warpedBitmap != orientedBitmap && !warpedBitmap.isRecycled) {
+            if (warpedBitmap != cropped && !warpedBitmap.isRecycled) {
                 warpedBitmap.recycle()
             }
             cropped
@@ -115,7 +116,7 @@ class ImageDecoderDataSource(private val context: Context) {
         }
 
         val filteredBitmap = applyFilter(croppedBitmap, filter, contrast, brightness)
-        return if (sharpness > 0.01f) {
+        val baseProcessedBitmap = if (sharpness > 0.01f) {
             val sharpened = DocumentSharpnessFilter.apply(filteredBitmap, sharpness)
             if (sharpened != filteredBitmap) {
                 filteredBitmap.recycle()
@@ -123,6 +124,21 @@ class ImageDecoderDataSource(private val context: Context) {
             sharpened
         } else {
             filteredBitmap
+        }
+
+        return if (jpegQuality in 1..95) {
+            val stream = java.io.ByteArrayOutputStream()
+            baseProcessedBitmap.compress(Bitmap.CompressFormat.JPEG, jpegQuality, stream)
+            val compressedBytes = stream.toByteArray()
+            val reDecoded = BitmapFactory.decodeByteArray(compressedBytes, 0, compressedBytes.size)
+            if (reDecoded != null) {
+                baseProcessedBitmap.recycle()
+                reDecoded
+            } else {
+                baseProcessedBitmap
+            }
+        } else {
+            baseProcessedBitmap
         }
     }
 

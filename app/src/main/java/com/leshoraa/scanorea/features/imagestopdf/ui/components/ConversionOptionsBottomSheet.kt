@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -157,6 +158,7 @@ fun ConversionOptionsContent(
     var isSavePresetDialogVisible by remember { mutableStateOf(false) }
     var isCreateFolderDialogVisible by remember { mutableStateOf(false) }
     var newPresetName by remember { mutableStateOf("") }
+    var presetPendingDelete by remember { mutableStateOf<ConversionPreset?>(null) }
 
     Column(
         modifier = modifier
@@ -235,7 +237,7 @@ fun ConversionOptionsContent(
                             trailingIcon = {
                                 if (preset.id != "preset_aljabar") {
                                     IconButton(
-                                        onClick = { onDeletePreset(preset.id) },
+                                        onClick = { presetPendingDelete = preset },
                                         modifier = Modifier.size(24.dp)
                                     ) {
                                         Icon(
@@ -620,6 +622,38 @@ fun ConversionOptionsContent(
             },
             onDismiss = { isCreateFolderDialogVisible = false },
             existingCategories = categories
+        )
+    }
+
+    presetPendingDelete?.let { preset ->
+        AlertDialog(
+            onDismissRequest = { presetPendingDelete = null },
+            title = {
+                Text(
+                    text = "Delete Preset?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = { Text("Are you sure you want to remove preset '${preset.name}'? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeletePreset(preset.id)
+                        presetPendingDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Text("Delete", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { presetPendingDelete = null }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }

@@ -42,7 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontFamily
+
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -156,7 +156,7 @@ fun EditorColorPickerDialog(
                             text = currentHsvColor.toHexString(),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
+
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
@@ -228,7 +228,7 @@ fun EditorColorPickerDialog(
                     Text(
                         text = "${selectedHue.roundToInt()}°",
                         style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace,
+
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -257,7 +257,7 @@ fun EditorColorPickerDialog(
                     Text(
                         text = "${(selectedAlpha * 100).roundToInt()}%",
                         style = MaterialTheme.typography.labelSmall,
-                        fontFamily = FontFamily.Monospace,
+
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }

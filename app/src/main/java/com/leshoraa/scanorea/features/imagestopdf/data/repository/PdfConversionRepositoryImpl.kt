@@ -140,13 +140,28 @@ class PdfConversionRepositoryImpl(
                 }
             }
         } else {
-            val docsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-            val scanoreaDir = File(docsDir, "Scanorea")
-            if (!scanoreaDir.exists()) {
-                scanoreaDir.mkdirs()
+            // Pre-Android 10 (API 24-28): Direct public directory writing requires WRITE_EXTERNAL_STORAGE.
+            // If permission is not granted, skip gracefully without throwing since the PDF is already safely
+            // stored in app-internal filesDir and accessible via SAF or FileProvider sharing.
+            val hasWritePermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+            if (hasWritePermission) {
+                val docsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+                val scanoreaDir = File(docsDir, "Scanorea")
+                if (!scanoreaDir.exists()) {
+                    scanoreaDir.mkdirs()
+                }
+                val targetFile = File(scanoreaDir, generatedFile.name)
+                generatedFile.copyTo(targetFile, overwrite = true)
+            } else {
+                android.util.Log.d(
+                    "PdfConversionRepo",
+                    "Pre-Android 10: PDF retained in app-internal storage (Documents/Scanorea requires permission or SAF folder selection)."
+                )
             }
-            val targetFile = File(scanoreaDir, generatedFile.name)
-            generatedFile.copyTo(targetFile, overwrite = true)
         }
     }
 }
