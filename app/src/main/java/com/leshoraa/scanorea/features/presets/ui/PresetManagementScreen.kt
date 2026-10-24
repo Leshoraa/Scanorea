@@ -95,24 +95,11 @@ fun PresetManagementScreen(
     customTags: Map<String, String> = emptyMap(),
     onSaveCustomTag: (key: String, value: String) -> Unit = { _, _ -> },
     onDeleteCustomTag: (key: String) -> Unit = {},
-    studentNim: String = "",
-    studentName: String = "",
-    studentSubject: String = "",
-    onUpdateStudentProfile: (nim: String, name: String, subject: String) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     var isCreatingNew by remember { mutableStateOf(false) }
     var editingPreset by remember { mutableStateOf<ConversionPreset?>(null) }
     var presetPendingDelete by remember { mutableStateOf<ConversionPreset?>(null) }
-
-    // Merge custom tags with any legacy student profile fields
-    val activeCustomTags = remember(customTags, studentNim, studentName, studentSubject) {
-        val merged = customTags.toMutableMap()
-        if (studentNim.isNotBlank() && !merged.containsKey("NIM")) merged["NIM"] = studentNim
-        if (studentName.isNotBlank() && !merged.containsKey("NAMA")) merged["NAMA"] = studentName
-        if (studentSubject.isNotBlank() && !merged.containsKey("MATKUL")) merged["MATKUL"] = studentSubject
-        merged
-    }
 
     // Full screen navigation: if editing or creating, show dedicated PresetEditScreen
     if (isCreatingNew || editingPreset != null) {
@@ -122,7 +109,7 @@ fun PresetManagementScreen(
         }
         PresetEditScreen(
             preset = editingPreset,
-            customTags = activeCustomTags,
+            customTags = customTags,
             onBack = {
                 isCreatingNew = false
                 editingPreset = null
@@ -221,7 +208,7 @@ fun PresetManagementScreen(
             items(presets, key = { it.id }) { preset ->
                 PresetItemCard(
                     preset = preset,
-                    customTags = activeCustomTags,
+                    customTags = customTags,
                     onEditClick = { editingPreset = preset },
                     onDeleteClick = { presetPendingDelete = preset }
                 )
@@ -419,8 +406,7 @@ private fun PresetEditScreen(
     val validTagKeys = remember(customTags) {
         val dateKeys = setOf("DATE", "DD-MM-YYYY", "YYYY-MM-DD", "DD:MM:YYYY", "DD.MM.YYYY", "YYYY", "MM", "DD")
         val customKeys = customTags.keys.map { it.uppercase() }.toSet()
-        val studentKeys = setOf("NIM", "NAMA", "MATKUL", "TUGAS", "TASK", "SUBJECT", "NAME")
-        dateKeys + customKeys + studentKeys
+        dateKeys + customKeys
     }
 
     val isSaveEnabled = name.isNotBlank() && template.isNotBlank()
@@ -541,7 +527,7 @@ private fun PresetEditScreen(
                 value = name,
                 onValueChange = { name = it },
                 label = { Text("Preset Name") },
-                placeholder = { Text("e.g. Homework, Project Report") },
+                placeholder = { Text("e.g. Invoice, Project Report") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
@@ -596,7 +582,7 @@ private fun PresetEditScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "No custom tags yet. Tap '+ Add Tag' to create tags like {PROJECT}, {CLIENT}, or {NAME}.",
+                            text = "No custom tags yet. Tap '+ Add Tag' to create tags like {PROJECT}, {CLIENT}, or {INVOICE}.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(12.dp)
@@ -1059,7 +1045,7 @@ private fun AddEditTagDialog(
                         value = key,
                         onValueChange = { key = it.filter { ch -> ch.isLetterOrDigit() || ch == '_' }.uppercase() },
                         label = { Text("Tag Name") },
-                        placeholder = { Text("e.g. PROJECT, CLIENT, NIM") },
+                        placeholder = { Text("e.g. PROJECT, CLIENT, INVOICE") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp)
@@ -1069,7 +1055,7 @@ private fun AddEditTagDialog(
                     value = value,
                     onValueChange = { value = it },
                     label = { Text("Tag Value") },
-                    placeholder = { Text("e.g. Scanorea, Math_101") },
+                    placeholder = { Text("e.g. Scanorea, Corp_01") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp)

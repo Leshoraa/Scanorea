@@ -92,17 +92,12 @@ fun SettingsScreen(
     onDefaultFilterChange: (ImageFilterType) -> Unit,
     presetsCount: Int,
     onNavigateToPresets: () -> Unit,
-    studentNim: String = "",
-    studentName: String = "",
-    studentSubject: String = "",
-    onUpdateStudentProfile: (nim: String, name: String, subject: String) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     var isPaperSizeDialogOpen by remember { mutableStateOf(false) }
     var isOrientationDialogOpen by remember { mutableStateOf(false) }
     var isCompressionDialogOpen by remember { mutableStateOf(false) }
     var isFilterDialogOpen by remember { mutableStateOf(false) }
-    var isStudentProfileDialogOpen by remember { mutableStateOf(false) }
     var activeLegalDocument by remember { mutableStateOf<LegalDocumentType?>(null) }
 
     Column(
@@ -154,21 +149,6 @@ fun SettingsScreen(
                         summary = "$presetsCount saved template(s) • Dynamic date & paper rules",
                         leadingIcon = Icons.Filled.Bookmark,
                         onClick = onNavigateToPresets
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 72.dp, end = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                    )
-                    val studentSummary = if (studentName.isNotBlank() || studentNim.isNotBlank()) {
-                        "${studentName.ifBlank { "Student" }} (${studentNim.ifBlank { "-" }}) • ${studentSubject.ifBlank { "General" }}"
-                    } else {
-                        "Tap to configure {NIM}, {NAMA}, & {MATKUL} tags"
-                    }
-                    StockPreferenceItem(
-                        title = "Student Profile (Preset Tags)",
-                        summary = studentSummary,
-                        leadingIcon = Icons.Filled.Edit,
-                        onClick = { isStudentProfileDialogOpen = true }
                     )
                 }
             }
@@ -302,20 +282,6 @@ fun SettingsScreen(
         )
     }
 
-    // Dialog for Student Profile Configuration
-    if (isStudentProfileDialogOpen) {
-        StudentProfileEditDialog(
-            initialNim = studentNim,
-            initialName = studentName,
-            initialSubject = studentSubject,
-            onSave = { nim, name, subject ->
-                onUpdateStudentProfile(nim, name, subject)
-                isStudentProfileDialogOpen = false
-            },
-            onDismiss = { isStudentProfileDialogOpen = false }
-        )
-    }
-
     // Dialog for Privacy Policy / Terms of Service
     activeLegalDocument?.let { documentType ->
         LegalDocumentDialog(
@@ -323,80 +289,6 @@ fun SettingsScreen(
             onDismissRequest = { activeLegalDocument = null }
         )
     }
-}
-
-@Composable
-private fun StudentProfileEditDialog(
-    initialNim: String,
-    initialName: String,
-    initialSubject: String,
-    onSave: (nim: String, name: String, subject: String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var nim by remember { mutableStateOf(initialNim) }
-    var name by remember { mutableStateOf(initialName) }
-    var subject by remember { mutableStateOf(initialSubject) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Student Profile & Tags",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = "Values entered here automatically replace {NIM}, {NAMA}, and {MATKUL} tokens in naming presets.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedTextField(
-                    value = nim,
-                    onValueChange = { nim = it },
-                    label = { Text("Student ID (NIM)") },
-                    placeholder = { Text("e.g. 23.01.4567") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Full Name ({NAMA})") },
-                    placeholder = { Text("e.g. Rendra") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = subject,
-                    onValueChange = { subject = it },
-                    label = { Text("Default Subject ({MATKUL})") },
-                    placeholder = { Text("e.g. Aljabar Linier") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onSave(nim.trim(), name.trim(), subject.trim())
-                }
-            ) {
-                Text("Save", fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
 }
 
 @Composable

@@ -73,9 +73,6 @@ class ImagesToPdfViewModel(
         val defaultFilter = settingsRepository.getDefaultFilter()
         val destUri = settingsRepository.getDestinationFolderUri()
         val destName = settingsRepository.getDestinationFolderDisplayName()
-        val studentNim = settingsRepository.getStudentNim()
-        val studentName = settingsRepository.getStudentName()
-        val studentSubject = settingsRepository.getStudentSubject()
         val customTags = settingsRepository.getCustomTags()
 
         _uiState.update { current ->
@@ -84,9 +81,6 @@ class ImagesToPdfViewModel(
                 destinationFolderDisplayName = destName,
                 defaultFilter = defaultFilter,
                 activeFilter = defaultFilter,
-                studentNim = studentNim,
-                studentName = studentName,
-                studentSubject = studentSubject,
                 customTags = customTags,
                 options = current.options.copy(
                     pageSize = pageSize,
@@ -179,21 +173,6 @@ class ImagesToPdfViewModel(
             it.copy(
                 destinationFolderUri = uri,
                 destinationFolderDisplayName = displayName
-            )
-        }
-    }
-
-    fun updateStudentProfile(nim: String, name: String, subject: String) {
-        settingsRepository?.saveStudentNim(nim)
-        settingsRepository?.saveStudentName(name)
-        settingsRepository?.saveStudentSubject(subject)
-        val tags = settingsRepository?.getCustomTags() ?: emptyMap()
-        _uiState.update {
-            it.copy(
-                studentNim = nim,
-                studentName = name,
-                studentSubject = subject,
-                customTags = tags
             )
         }
     }

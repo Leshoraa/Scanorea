@@ -20,6 +20,7 @@ class PresetRepository(context: Context) {
         private const val TAG = "PresetRepository"
         private const val PREFS_NAME = "scanorea_presets"
         private const val KEY_PRESETS = "saved_conversion_presets"
+        private val DUMMY_PRESET_IDS = setOf("preset_tugas", "preset_catatan", "preset_aljabar")
     }
 
     private val prefs: SharedPreferences =
@@ -28,9 +29,7 @@ class PresetRepository(context: Context) {
     fun getPresets(): List<ConversionPreset> {
         val rawJson = prefs.getString(KEY_PRESETS, null)
         if (rawJson.isNullOrBlank()) {
-            val defaults = defaultStudentPresets()
-            savePresetsList(defaults)
-            return defaults
+            return emptyList()
         }
 
         return try {
@@ -38,9 +37,13 @@ class PresetRepository(context: Context) {
             val list = mutableListOf<ConversionPreset>()
             for (i in 0 until jsonArray.length()) {
                 val obj = jsonArray.getJSONObject(i)
+                val id = obj.getString("id")
+                // Exclude legacy dummy presets
+                if (id in DUMMY_PRESET_IDS) continue
+
                 list.add(
                     ConversionPreset(
-                        id = obj.getString("id"),
+                        id = id,
                         name = obj.getString("name"),
                         fileNameTemplate = obj.getString("fileNameTemplate"),
                         pageSize = try {
@@ -64,16 +67,10 @@ class PresetRepository(context: Context) {
                     )
                 )
             }
-            if (list.isEmpty()) {
-                val defaults = defaultStudentPresets()
-                savePresetsList(defaults)
-                defaults
-            } else {
-                list
-            }
+            list
         } catch (e: Exception) {
             Log.w(TAG, "Failed to parse presets JSON", e)
-            defaultStudentPresets()
+            emptyList()
         }
     }
 
@@ -107,34 +104,5 @@ class PresetRepository(context: Context) {
             jsonArray.put(obj)
         }
         prefs.edit { putString(KEY_PRESETS, jsonArray.toString()) }
-    }
-
-    private fun defaultStudentPresets(): List<ConversionPreset> {
-        return listOf(
-            ConversionPreset(
-                id = "preset_tugas",
-                name = "Tugas Kuliah",
-                fileNameTemplate = "{NIM}_{NAMA}_{MATKUL}_{DD:MM:YYYY}",
-                pageSize = PdfPageSize.A4,
-                orientation = PdfPageOrientation.PORTRAIT,
-                compressionProfile = CompressionProfile.AUTO_BALANCED
-            ),
-            ConversionPreset(
-                id = "preset_catatan",
-                name = "Catatan Kuliah",
-                fileNameTemplate = "Catatan_{MATKUL}_{DD:MM:YYYY}",
-                pageSize = PdfPageSize.A4,
-                orientation = PdfPageOrientation.PORTRAIT,
-                compressionProfile = CompressionProfile.SMALL_FILE
-            ),
-            ConversionPreset(
-                id = "preset_aljabar",
-                name = "Aljabar",
-                fileNameTemplate = "Rendra_23.XX.XXXX_Aljabar_{DD:MM:YYYY}",
-                pageSize = PdfPageSize.A4,
-                orientation = PdfPageOrientation.PORTRAIT,
-                compressionProfile = CompressionProfile.AUTO_BALANCED
-            )
-        )
     }
 }

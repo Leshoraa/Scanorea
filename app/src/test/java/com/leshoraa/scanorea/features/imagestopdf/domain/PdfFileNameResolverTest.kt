@@ -59,63 +59,63 @@ class PdfFileNameResolverTest {
     @Test
     fun resolveUnique_whenNoCollision_returnsSanitizedName() {
         val result = PdfFileNameResolver.resolveUnique(
-            desiredName = "Aljabar",
-            existingNames = listOf("Fisika.pdf", "Kimia.pdf"),
+            desiredName = "Invoice",
+            existingNames = listOf("Receipt.pdf", "Summary.pdf"),
             fallbackTimestampMillis = timestamp
         )
 
-        assertEquals("Aljabar.pdf", result)
+        assertEquals("Invoice.pdf", result)
     }
 
     @Test
     fun resolveUnique_whenNameAlreadyExists_appendsCounterSuffix() {
         val result = PdfFileNameResolver.resolveUnique(
-            desiredName = "Aljabar",
-            existingNames = listOf("Aljabar.pdf"),
+            desiredName = "Invoice",
+            existingNames = listOf("Invoice.pdf"),
             fallbackTimestampMillis = timestamp
         )
 
-        assertEquals("Aljabar (1).pdf", result)
+        assertEquals("Invoice (1).pdf", result)
     }
 
     @Test
     fun resolveUnique_whenSuffixedNamesAlsoExist_incrementsUntilFree() {
         val result = PdfFileNameResolver.resolveUnique(
-            desiredName = "Aljabar.pdf",
-            existingNames = listOf("Aljabar.pdf", "Aljabar (1).pdf", "Aljabar (2).pdf"),
+            desiredName = "Invoice.pdf",
+            existingNames = listOf("Invoice.pdf", "Invoice (1).pdf", "Invoice (2).pdf"),
             fallbackTimestampMillis = timestamp
         )
 
-        assertEquals("Aljabar (3).pdf", result)
+        assertEquals("Invoice (3).pdf", result)
     }
 
     @Test
     fun resolveUnique_comparisonIsCaseInsensitive() {
         val result = PdfFileNameResolver.resolveUnique(
-            desiredName = "aljabar",
-            existingNames = listOf("ALJABAR.PDF"),
+            desiredName = "invoice",
+            existingNames = listOf("INVOICE.PDF"),
             fallbackTimestampMillis = timestamp
         )
 
-        assertEquals("aljabar (1).pdf", result)
+        assertEquals("invoice (1).pdf", result)
     }
 
     @Test
     fun resolveUnique_twoConsecutiveConversions_produceDifferentNames() {
         val first = PdfFileNameResolver.resolveUnique(
-            desiredName = "Tugas Aljabar",
+            desiredName = "Business Plan",
             existingNames = emptyList(),
             fallbackTimestampMillis = timestamp
         )
         val second = PdfFileNameResolver.resolveUnique(
-            desiredName = "Tugas Aljabar",
+            desiredName = "Business Plan",
             existingNames = listOf(first),
             fallbackTimestampMillis = timestamp
         )
 
         assertNotEquals(first, second)
-        assertEquals("Tugas Aljabar.pdf", first)
-        assertEquals("Tugas Aljabar (1).pdf", second)
+        assertEquals("Business Plan.pdf", first)
+        assertEquals("Business Plan (1).pdf", second)
     }
 
     @Test

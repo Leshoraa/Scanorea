@@ -25,9 +25,6 @@ class SettingsRepository(context: Context) {
         private const val KEY_DEST_FOLDER_URI = "key_dest_folder_uri"
         private const val KEY_DEST_FOLDER_NAME = "key_dest_folder_name"
         private const val DEFAULT_DEST_NAME = "Documents/Scanorea"
-        private const val KEY_STUDENT_NIM = "key_student_nim"
-        private const val KEY_STUDENT_NAME = "key_student_name"
-        private const val KEY_STUDENT_SUBJECT = "key_student_subject"
         private const val KEY_CUSTOM_TAGS = "key_custom_tags_json"
     }
 
@@ -35,7 +32,7 @@ class SettingsRepository(context: Context) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     init {
-        // Initialize custom tags and evaluate student profile
+        // Initialize custom tags
         val tags = getCustomTags()
         TemplateDateEvaluator.setCustomTags(tags)
     }
@@ -111,44 +108,10 @@ class SettingsRepository(context: Context) {
         }
     }
 
-    fun getStudentNim(): String {
-        return prefs.getString(KEY_STUDENT_NIM, "") ?: ""
-    }
-
-    fun saveStudentNim(nim: String) {
-        prefs.edit { putString(KEY_STUDENT_NIM, nim) }
-        TemplateDateEvaluator.initStudentProfile(nim, getStudentName(), getStudentSubject())
-    }
-
-    fun getStudentName(): String {
-        return prefs.getString(KEY_STUDENT_NAME, "") ?: ""
-    }
-
-    fun saveStudentName(name: String) {
-        prefs.edit { putString(KEY_STUDENT_NAME, name) }
-        TemplateDateEvaluator.initStudentProfile(getStudentNim(), name, getStudentSubject())
-    }
-
-    fun getStudentSubject(): String {
-        return prefs.getString(KEY_STUDENT_SUBJECT, "") ?: ""
-    }
-
-    fun saveStudentSubject(subject: String) {
-        prefs.edit { putString(KEY_STUDENT_SUBJECT, subject) }
-        TemplateDateEvaluator.initStudentProfile(getStudentNim(), getStudentName(), subject)
-    }
-
     fun getCustomTags(): Map<String, String> {
         val jsonStr = prefs.getString(KEY_CUSTOM_TAGS, null)
         if (jsonStr.isNullOrBlank()) {
-            val legacy = mutableMapOf<String, String>()
-            val nim = getStudentNim()
-            val name = getStudentName()
-            val subject = getStudentSubject()
-            if (nim.isNotBlank()) legacy["NIM"] = nim
-            if (name.isNotBlank()) legacy["NAMA"] = name
-            if (subject.isNotBlank()) legacy["MATKUL"] = subject
-            return legacy
+            return emptyMap()
         }
         return try {
             val json = org.json.JSONObject(jsonStr)

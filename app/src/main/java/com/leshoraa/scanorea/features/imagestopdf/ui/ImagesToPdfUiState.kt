@@ -27,7 +27,7 @@ data class ImagesToPdfUiState(
     val activePdfViewerFile: File? = null,
     val recentPdfs: List<RecentPdf> = emptyList(),
     val categories: List<String> = emptyList(),
-    val pinnedFolders: List<String> = listOf("Favorites", "Work", "Study"),
+    val pinnedFolders: List<String> = listOf("Favorites", "Work", "Personal"),
     val presets: List<ConversionPreset> = emptyList(),
     val destinationFolderUri: Uri? = null,
     val destinationFolderDisplayName: String = "Documents/Scanorea",
@@ -36,9 +36,6 @@ data class ImagesToPdfUiState(
     val undoPageHistoryMap: Map<String, List<ImagePage>> = emptyMap(),
     val redoPageHistoryMap: Map<String, List<ImagePage>> = emptyMap(),
     val selectedFolders: List<String> = emptyList(),
-    val studentNim: String = "",
-    val studentName: String = "",
-    val studentSubject: String = "",
     val customTags: Map<String, String> = emptyMap()
 ) {
     val hasPages: Boolean

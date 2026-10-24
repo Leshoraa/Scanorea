@@ -8,7 +8,7 @@ import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageSize
  * Encapsulates a reusable configuration preset for document generation.
  *
  * @param id Unique identifier.
- * @param name User-visible preset name (e.g., "Aljabar").
+ * @param name User-visible preset name (e.g., "Invoice", "Meeting Notes").
  * @param fileNameTemplate Filename template supporting date tokens like `{DD:MM:YYYY}`.
  * @param pageSize Target paper dimension.
  * @param orientation Page orientation.

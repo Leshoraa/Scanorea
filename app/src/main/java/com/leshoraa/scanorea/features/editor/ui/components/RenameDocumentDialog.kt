@@ -145,18 +145,16 @@ fun RenameDocumentDialog(
                                     }
                                 },
                                 trailingIcon = {
-                                    if (preset.id != "preset_aljabar") {
-                                        IconButton(
-                                            onClick = { presetPendingDelete = preset },
-                                            modifier = Modifier.size(24.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Filled.Delete,
-                                                contentDescription = "Delete preset",
-                                                modifier = Modifier.size(16.dp),
-                                                tint = MaterialTheme.colorScheme.error
-                                            )
-                                        }
+                                    IconButton(
+                                        onClick = { presetPendingDelete = preset },
+                                        modifier = Modifier.size(24.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Delete,
+                                            contentDescription = "Delete preset",
+                                            modifier = Modifier.size(16.dp),
+                                            tint = MaterialTheme.colorScheme.error
+                                        )
                                     }
                                 },
                                 onClick = {
@@ -194,7 +192,7 @@ fun RenameDocumentDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Quick Student & Date Tokens:",
+                    text = "Quick Date Tokens:",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -202,7 +200,7 @@ fun RenameDocumentDialog(
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    val quickTokens = listOf("{NIM}", "{NAMA}", "{MATKUL}", "{DD:MM:YYYY}")
+                    val quickTokens = listOf("{DATE}", "{DD-MM-YYYY}", "{YYYY}", "{MM}", "{DD}")
                     items(quickTokens) { token ->
                         Surface(
                             onClick = { tempFileName += token },
@@ -263,7 +261,7 @@ fun RenameDocumentDialog(
                         value = newPresetName,
                         onValueChange = { newPresetName = it },
                         label = { Text("Preset Name") },
-                        placeholder = { Text("e.g. Aljabar, Homework") },
+                        placeholder = { Text("e.g. Invoice, Report") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )

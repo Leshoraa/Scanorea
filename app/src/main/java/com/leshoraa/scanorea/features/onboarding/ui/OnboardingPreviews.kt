@@ -288,16 +288,16 @@ internal fun PerspectivePreview(modifier: Modifier = Modifier) {
 @Composable
 internal fun FoldersPreview(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val lectureNotes = rememberDemoPdf(context, "Lecture_notes.pdf", "Lecture Notes")
+    val projectProposal = rememberDemoPdf(context, "Project_proposal.pdf", "Project Proposal")
     val receipts = rememberDemoPdf(context, "Receipts.pdf", "Receipts")
-    val recentPdfs = remember(lectureNotes, receipts) {
+    val recentPdfs = remember(projectProposal, receipts) {
         listOf(
             RecentPdf(
-                file = lectureNotes,
-                name = "Lecture notes.pdf",
-                sizeBytes = lectureNotes.length(),
+                file = projectProposal,
+                name = "Project_proposal.pdf",
+                sizeBytes = projectProposal.length(),
                 lastModifiedMillis = System.currentTimeMillis() - 18 * 60 * 1000L,
-                folders = listOf("Study"),
+                folders = listOf("Personal"),
                 isFavorite = true
             ),
             RecentPdf(
@@ -352,7 +352,7 @@ internal fun ExportPreview(modifier: Modifier = Modifier) {
     }
     val options = remember {
         PdfConversionOptions(
-            fileName = "Lecture notes",
+            fileName = "Document_scan",
             pageSize = PdfPageSize.A4,
             orientation = PdfPageOrientation.PORTRAIT,
             compressionProfile = CompressionProfile.AUTO_BALANCED

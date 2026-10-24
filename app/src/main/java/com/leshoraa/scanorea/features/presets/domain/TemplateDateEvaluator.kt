@@ -25,24 +25,10 @@ object TemplateDateEvaluator {
 
     fun getCustomTags(): Map<String, String> = customTagsMap
 
-    /**
-     * Backward-compatible helper for student credentials.
-     */
-    fun initStudentProfile(nim: String, name: String, subject: String = "") {
-        val updated = customTagsMap.toMutableMap()
-        if (nim.isNotBlank()) updated["NIM"] = nim.trim() else updated.remove("NIM")
-        if (name.isNotBlank()) updated["NAMA"] = name.trim() else updated.remove("NAMA")
-        if (subject.isNotBlank()) updated["MATKUL"] = subject.trim() else updated.remove("MATKUL")
-        customTagsMap = updated
-    }
-
     fun evaluate(
         template: String,
         currentDate: Date = Date(),
-        overrideTags: Map<String, String>? = null,
-        overrideNim: String? = null,
-        overrideName: String? = null,
-        overrideSubject: String? = null
+        overrideTags: Map<String, String>? = null
     ): String {
         if (template.isBlank()) return template
 
@@ -64,31 +50,11 @@ object TemplateDateEvaluator {
 
         // Merge active tags
         val activeTags = (overrideTags ?: customTagsMap).toMutableMap()
-        overrideNim?.let { if (it.isNotBlank()) activeTags["NIM"] = it.trim() }
-        overrideName?.let { if (it.isNotBlank()) activeTags["NAMA"] = it.trim() }
-        overrideSubject?.let { if (it.isNotBlank()) activeTags["MATKUL"] = it.trim() }
 
         // Replace user-defined custom tags
         for ((key, value) in activeTags) {
             val resolvedVal = value.ifBlank { key }
             result = result.replace(Regex("(?i)\\{" + Regex.escape(key) + "\\}"), resolvedVal)
-        }
-
-        // Built-in generic fallbacks if specific tag not defined
-        if (!activeTags.containsKey("NIM")) {
-            result = result.replace(Regex("(?i)\\{NIM\\}"), "NIM")
-        }
-        if (!activeTags.containsKey("NAMA") && !activeTags.containsKey("NAME")) {
-            result = result.replace(Regex("(?i)\\{NAMA\\}"), "Nama")
-            result = result.replace(Regex("(?i)\\{NAME\\}"), "Nama")
-        }
-        if (!activeTags.containsKey("MATKUL") && !activeTags.containsKey("SUBJECT")) {
-            result = result.replace(Regex("(?i)\\{MATKUL\\}"), "Tugas")
-            result = result.replace(Regex("(?i)\\{SUBJECT\\}"), "Tugas")
-        }
-        if (!activeTags.containsKey("TUGAS") && !activeTags.containsKey("TASK")) {
-            result = result.replace(Regex("(?i)\\{TUGAS\\}"), "Tugas")
-            result = result.replace(Regex("(?i)\\{TASK\\}"), "Tugas")
         }
 
         // Note: Colons ':' are invalid in Android/Linux file paths, so {DD:MM:YYYY} resolves cleanly to hyphenated date

@@ -235,18 +235,16 @@ fun ConversionOptionsContent(
                                 }
                             },
                             trailingIcon = {
-                                if (preset.id != "preset_aljabar") {
-                                    IconButton(
-                                        onClick = { presetPendingDelete = preset },
-                                        modifier = Modifier.size(24.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Delete,
-                                            contentDescription = "Delete preset",
-                                            modifier = Modifier.size(16.dp),
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
-                                    }
+                                IconButton(
+                                    onClick = { presetPendingDelete = preset },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Delete,
+                                        contentDescription = "Delete preset",
+                                        modifier = Modifier.size(16.dp),
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
                                 }
                             },
                             onClick = {
@@ -586,7 +584,7 @@ fun ConversionOptionsContent(
                         value = newPresetName,
                         onValueChange = { newPresetName = it },
                         label = { Text("Preset Name") },
-                        placeholder = { Text("e.g., Aljabar, Homework") },
+                        placeholder = { Text("e.g., Invoice, Report") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )

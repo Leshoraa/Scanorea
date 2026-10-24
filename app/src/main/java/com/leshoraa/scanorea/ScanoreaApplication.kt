@@ -24,7 +24,7 @@ class ScanoreaApplication : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
-        container.settingsRepository // Eagerly loads settings and student profile tokens
+        container.settingsRepository // Eagerly loads settings and custom tags
         PdfThumbnailLoader.initCacheDir(cacheDir)
         cleanStaleCacheFiles()
     }

@@ -6,7 +6,7 @@ import org.junit.Test
 
 class TemplateTokenizerTest {
 
-    private val validKeys = setOf("DATE", "DD-MM-YYYY", "PROJECT", "CLIENT", "NIM")
+    private val validKeys = setOf("DATE", "DD-MM-YYYY", "PROJECT", "CLIENT", "INVOICE")
 
     @Test
     fun parse_whenEmpty_returnsSingleEmptyLiteral() {

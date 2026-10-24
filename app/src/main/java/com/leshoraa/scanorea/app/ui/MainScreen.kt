@@ -176,13 +176,7 @@ fun MainScreen(
             onDeletePreset = { viewModel.deletePreset(it) },
             customTags = uiState.customTags,
             onSaveCustomTag = { key, value -> viewModel.saveCustomTag(key, value) },
-            onDeleteCustomTag = { key -> viewModel.removeCustomTag(key) },
-            studentNim = uiState.studentNim,
-            studentName = uiState.studentName,
-            studentSubject = uiState.studentSubject,
-            onUpdateStudentProfile = { nim, name, subject ->
-                viewModel.updateStudentProfile(nim, name, subject)
-            }
+            onDeleteCustomTag = { key -> viewModel.removeCustomTag(key) }
         )
         return
     }
@@ -368,13 +362,7 @@ fun MainScreen(
                                 defaultFilter = uiState.defaultFilter,
                                 onDefaultFilterChange = { viewModel.updateDefaultFilter(it) },
                                 presetsCount = uiState.presets.size,
-                                onNavigateToPresets = { isPresetManagerVisible = true },
-                                studentNim = uiState.studentNim,
-                                studentName = uiState.studentName,
-                                studentSubject = uiState.studentSubject,
-                                onUpdateStudentProfile = { nim, name, subject ->
-                                    viewModel.updateStudentProfile(nim, name, subject)
-                                }
+                                onNavigateToPresets = { isPresetManagerVisible = true }
                             )
                         }
                     }

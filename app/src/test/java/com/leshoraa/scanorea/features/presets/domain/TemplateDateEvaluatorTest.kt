@@ -15,9 +15,9 @@ class TemplateDateEvaluatorTest {
 
     @Test
     fun evaluate_whenTemplateHasDayMonthYearHyphen_resolvesCorrectly() {
-        val template = "Rendra_23.XX.XXXX_Aljabar_{DD:MM:YYYY}"
+        val template = "Report_{DD:MM:YYYY}"
         val evaluated = TemplateDateEvaluator.evaluate(template, fixedDate)
-        assertEquals("Rendra_23.XX.XXXX_Aljabar_21-09-2026", evaluated)
+        assertEquals("Report_21-09-2026", evaluated)
     }
 
     @Test
@@ -49,22 +49,18 @@ class TemplateDateEvaluatorTest {
     }
 
     @Test
-    fun evaluate_whenTemplateHasStudentTokensWithConfiguredProfile_resolvesTokens() {
-        TemplateDateEvaluator.initStudentProfile(
-            nim = "23.11.5544",
-            name = "Rendra",
-            subject = "Aljabar"
-        )
-        val template = "{NIM}_{NAMA}_{MATKUL}_{DD:MM:YYYY}"
-        val evaluated = TemplateDateEvaluator.evaluate(template, fixedDate)
-        assertEquals("23.11.5544_Rendra_Aljabar_21-09-2026", evaluated)
+    fun evaluate_whenTemplateHasCustomTags_resolvesTags() {
+        val tags = mapOf("PROJECT" to "Alpha", "CLIENT" to "AcmeCorp")
+        val template = "{PROJECT}_{CLIENT}_{DD-MM-YYYY}"
+        val evaluated = TemplateDateEvaluator.evaluate(template, fixedDate, overrideTags = tags)
+        assertEquals("Alpha_AcmeCorp_21-09-2026", evaluated)
     }
 
     @Test
-    fun evaluate_whenTemplateHasStudentTokensUnconfigured_fallsBackToPlaceholders() {
-        TemplateDateEvaluator.initStudentProfile("", "", "")
-        val template = "{NIM}_{NAMA}_{MATKUL}_{TUGAS}"
+    fun evaluate_whenGlobalCustomTagsSet_resolvesCorrectly() {
+        TemplateDateEvaluator.setCustomTags(mapOf("AUTHOR" to "JohnDoe"))
+        val template = "{AUTHOR}_Doc_{DATE}"
         val evaluated = TemplateDateEvaluator.evaluate(template, fixedDate)
-        assertEquals("NIM_Nama_Tugas_Tugas", evaluated)
+        assertEquals("JohnDoe_Doc_2026-09-21", evaluated)
     }
 }
