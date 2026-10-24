@@ -3,8 +3,10 @@ package com.leshoraa.scanorea.features.presets.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,11 +20,13 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -50,6 +54,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,13 +62,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.CompressionProfile
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageOrientation
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageSize
+import com.leshoraa.scanorea.features.presets.domain.RuleSegment
 import com.leshoraa.scanorea.features.presets.domain.TemplateDateEvaluator
+import com.leshoraa.scanorea.features.presets.domain.TemplateTokenizer
 import com.leshoraa.scanorea.features.presets.domain.model.ConversionPreset
+import java.util.Date
 
 /**
  * Dedicated Preset Management Screen.
@@ -400,6 +416,13 @@ private fun PresetEditScreen(
         ) + ".pdf"
     }
 
+    val validTagKeys = remember(customTags) {
+        val dateKeys = setOf("DATE", "DD-MM-YYYY", "YYYY-MM-DD", "DD:MM:YYYY", "DD.MM.YYYY", "YYYY", "MM", "DD")
+        val customKeys = customTags.keys.map { it.uppercase() }.toSet()
+        val studentKeys = setOf("NIM", "NAMA", "MATKUL", "TUGAS", "TASK", "SUBJECT", "NAME")
+        dateKeys + customKeys + studentKeys
+    }
+
     val isSaveEnabled = name.isNotBlank() && template.isNotBlank()
 
     Scaffold(
@@ -493,7 +516,7 @@ private fun PresetEditScreen(
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainerHighest,
                 shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                //border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -525,14 +548,11 @@ private fun PresetEditScreen(
             )
 
             // Filename Template
-            OutlinedTextField(
-                value = template,
-                onValueChange = { template = it },
-                label = { Text("File Name Rule") },
-                placeholder = { Text("e.g. Doc_{DATE}") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
+            TokenizedFileNameRuleField(
+                template = template,
+                onTemplateChange = { template = it },
+                validTagKeys = validTagKeys,
+                modifier = Modifier.fillMaxWidth()
             )
 
             // Custom Tags Section
@@ -617,19 +637,28 @@ private fun PresetEditScreen(
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                val currentDate = remember { Date() }
+                val dateTags = remember(currentDate) {
+                    listOf(
+                        "{DD-MM-YYYY}" to TemplateDateEvaluator.evaluate("{DD-MM-YYYY}", currentDate),
+                        "{DATE}" to TemplateDateEvaluator.evaluate("{DATE}", currentDate),
+                        "{YYYY}" to TemplateDateEvaluator.evaluate("{YYYY}", currentDate),
+                        "{MM}" to TemplateDateEvaluator.evaluate("{MM}", currentDate),
+                        "{DD}" to TemplateDateEvaluator.evaluate("{DD}", currentDate)
+                    )
+                }
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(vertical = 2.dp)
                 ) {
-                    val dateTokens = listOf("{DATE}", "{DD-MM-YYYY}", "{YYYY}", "{MM}", "{DD}")
-                    items(dateTokens) { token ->
+                    items(dateTags) { (token, displayDate) ->
                         Surface(
                             onClick = { template += token },
                             shape = RoundedCornerShape(10.dp),
                             color = MaterialTheme.colorScheme.surfaceContainerHigh
                         ) {
                             Text(
-                                text = "+ $token",
+                                text = displayDate,
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.primary,
@@ -767,6 +796,169 @@ private fun PresetEditScreen(
                 }
             }
         )
+    }
+}
+
+/**
+ * Interactive filename rule editor that renders recognized tags as inline atomic cards/chips.
+ * Deleting a card removes the entire tag atomically (e.g. no half-deleted "{DAT").
+ */
+@Composable
+private fun TokenizedFileNameRuleField(
+    template: String,
+    onTemplateChange: (String) -> Unit,
+    validTagKeys: Set<String>,
+    modifier: Modifier = Modifier
+) {
+    val segments = remember(template, validTagKeys) {
+        TemplateTokenizer.parse(template, validTagKeys)
+    }
+
+    val scrollState = rememberScrollState()
+    val lastFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(template) {
+        scrollState.animateScrollTo(scrollState.maxValue)
+    }
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        color = MaterialTheme.colorScheme.surface,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    try {
+                        lastFocusRequester.requestFocus()
+                    } catch (_: Exception) {
+                    }
+                }
+                .padding(horizontal = 14.dp, vertical = 10.dp)
+        ) {
+            Text(
+                text = "File Name Rule",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(scrollState),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                val lastLiteralIndex = segments.indices.lastOrNull { segments[it] is RuleSegment.Literal } ?: 0
+
+                segments.forEachIndexed { index, seg ->
+                    when (seg) {
+                        is RuleSegment.Token -> {
+                            RuleTokenChip(
+                                tagKey = seg.tagKey,
+                                onDelete = {
+                                    val updated = TemplateTokenizer.deleteTokenAtIndex(segments, index)
+                                    onTemplateChange(TemplateTokenizer.reconstruct(updated))
+                                }
+                            )
+                        }
+                        is RuleSegment.Literal -> {
+                            val isLast = (index == lastLiteralIndex)
+                            val isOnly = (segments.size == 1)
+
+                            BasicTextField(
+                                value = seg.text,
+                                onValueChange = { newText ->
+                                    val updated = TemplateTokenizer.updateLiteralAtIndex(segments, index, newText)
+                                    onTemplateChange(TemplateTokenizer.reconstruct(updated))
+                                },
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Medium
+                                ),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                singleLine = true,
+                                modifier = Modifier
+                                    .widthIn(min = if (isOnly) 140.dp else if (isLast) 28.dp else 12.dp)
+                                    .then(if (isLast) Modifier.focusRequester(lastFocusRequester) else Modifier)
+                                    .onKeyEvent { keyEvent ->
+                                        if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Backspace) {
+                                            if (seg.text.isEmpty() && index > 0) {
+                                                val updated = TemplateTokenizer.deleteTokenAtIndex(segments, index - 1)
+                                                onTemplateChange(TemplateTokenizer.reconstruct(updated))
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        } else {
+                                            false
+                                        }
+                                    },
+                                decorationBox = { innerTextField ->
+                                    Box(contentAlignment = Alignment.CenterStart) {
+                                        if (seg.text.isEmpty() && isOnly) {
+                                            Text(
+                                                text = "e.g. Doc_{DATE}",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Compact chip representing an evaluated or stored token inside the filename rule editor.
+ */
+@Composable
+private fun RuleTokenChip(
+    tagKey: String,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 10.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = tagKey,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier.size(18.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Close,
+                    contentDescription = "Remove tag",
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                    modifier = Modifier.size(12.dp)
+                )
+            }
+        }
     }
 }
 
