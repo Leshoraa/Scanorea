@@ -2,7 +2,12 @@
 
 ## Android device testing
 
-- `adb` and Android virtual devices (AVD / emulator) are allowed.
-- Inspecting, controlling, taking screenshots, installing APKs, and running instrumentation tests (`connectedDebugAndroidTest`) on the emulator are permitted.
-- Physical device testing is performed by the user.
-- Gradle tasks (compile, unit tests, lint, assemble) are allowed.
+- Dilarang menggunakan `adb` dan emulator / Android virtual device (AVD).
+- Jangan menjalankan perintah `adb`, jangan mengontrol emulator, mengambil screenshot lewat adb, atau menginstall APK ke emulator.
+- Pengujian perangkat (device testing) dilakukan langsung oleh pengguna (user).
+- Gradle tasks (compile, unit tests, lint, assemble) tetap diperbolehkan.
+
+## User modifications
+
+- Dilarang mengubah, menimpa (overwrite), atau mengembalikan (revert) perubahan kode/file yang dilakukan/diedit sendiri oleh pengguna (user).
+- Selalu hormati dan pertahankan setiap perubahan manual dari pengguna.
