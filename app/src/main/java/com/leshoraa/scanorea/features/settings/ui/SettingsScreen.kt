@@ -285,7 +285,7 @@ fun SettingsScreen(
     // Dialog for Privacy Policy / Terms of Service
     activeLegalDocument?.let { documentType ->
         LegalDocumentDialog(
-            type = documentType,
+            documentType,
             onDismissRequest = { activeLegalDocument = null }
         )
     }

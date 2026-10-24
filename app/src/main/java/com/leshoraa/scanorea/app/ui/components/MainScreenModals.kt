@@ -52,8 +52,8 @@ fun MainScreenModals(
     // 1. Modal Bottom Sheet for Pages Grid Overview
     if (isPagesGridVisible) {
         EditorPagesGridDialog(
-            pages = uiState.pages,
-            currentPageIndex = pagerState.currentPage,
+            uiState.pages,
+            pagerState.currentPage,
             onPageSelected = { selectedIndex ->
                 coroutineScope.launch {
                     pagerState.scrollToPage(selectedIndex)
@@ -65,9 +65,9 @@ fun MainScreenModals(
                     pagerState.scrollToPage(tgt)
                 }
             },
-            onRemovePage = { pageId -> viewModel.removePage(pageId) },
-            onRotateAllPages = { viewModel.rotateAllPages() },
-            onAddPagesClick = { launchers.launchPhotoPicker() },
+            onRemovePage = viewModel::removePage,
+            onRotateAllPages = viewModel::rotateAllPages,
+            onAddPagesClick = launchers.launchPhotoPicker,
             onDismissRequest = onDismissPagesGrid
         )
     }
@@ -75,19 +75,15 @@ fun MainScreenModals(
     // 2. Document Rename Dialog
     if (isRenameDialogOpen) {
         RenameDocumentDialog(
-            currentFileName = uiState.options.fileName,
-            presets = uiState.presets,
+            uiState.options.fileName,
+            uiState.presets,
             onSave = { finalName, preset ->
                 preset?.let { viewModel.applyPreset(it) }
                 viewModel.updateFileName(finalName)
                 onDismissRenameDialog()
             },
-            onSaveNewPreset = { name, template ->
-                viewModel.saveNewPreset(name, template)
-            },
-            onDeletePreset = { presetId ->
-                viewModel.deletePreset(presetId)
-            },
+            onSaveNewPreset = viewModel::saveNewPreset,
+            onDeletePreset = viewModel::deletePreset,
             onDismiss = onDismissRenameDialog
         )
     }
@@ -97,26 +93,26 @@ fun MainScreenModals(
         ConversionOptionsBottomSheet(
             options = uiState.options,
             pageCount = uiState.pageCount,
-            pages = uiState.pages,
             presets = uiState.presets,
             destinationFolderDisplayName = uiState.destinationFolderDisplayName,
             sheetState = bottomSheetState,
             onDismissRequest = { viewModel.showOptionsBottomSheet(false) },
-            onFileNameChange = { viewModel.updateFileName(it) },
-            onPageSizeChange = { viewModel.updatePageSize(it) },
-            onOrientationChange = { viewModel.updateOrientation(it) },
-            onCompressionProfileChange = { viewModel.updateCompressionProfile(it) },
-            onPresetSelected = { viewModel.applyPreset(it) },
-            onSaveNewPreset = { name, template -> viewModel.saveNewPreset(name, template) },
-            onDeletePreset = { viewModel.deletePreset(it) },
-            onChangeFolderClick = { launchers.launchFolderPicker() },
+            onFileNameChange = viewModel::updateFileName,
+            onPageSizeChange = viewModel::updatePageSize,
+            onOrientationChange = viewModel::updateOrientation,
+            onCompressionProfileChange = viewModel::updateCompressionProfile,
+            onPresetSelected = viewModel::applyPreset,
+            onSaveNewPreset = viewModel::saveNewPreset,
+            onDeletePreset = viewModel::deletePreset,
+            onChangeFolderClick = launchers.launchFolderPicker,
             onConvertClick = {
                 viewModel.showOptionsBottomSheet(false)
                 viewModel.convertImagesToPdf()
             },
+            pages = uiState.pages,
             categories = recentPdfsUiState.categories,
             selectedFolders = uiState.selectedFolders,
-            onToggleFolder = { viewModel.toggleSelectedFolder(it) },
+            onToggleFolder = viewModel::toggleSelectedFolder,
             onCreateNewFolder = {
                 recentPdfsViewModel.addCategory(it)
                 viewModel.createNewFolder(it)
@@ -127,8 +123,8 @@ fun MainScreenModals(
     // 4. Progress Dialog during PDF generation
     if (uiState.isConverting) {
         ConversionProgressDialog(
-            progress = uiState.conversionProgress,
-            onCancel = { viewModel.cancelConversion() }
+            uiState.conversionProgress,
+            onCancel = viewModel::cancelConversion
         )
     }
 
@@ -137,7 +133,7 @@ fun MainScreenModals(
     if (successResult != null) {
         val assignedFolders = recentPdfsUiState.recentPdfs.find { it.name == successResult.file.name }?.folders ?: uiState.selectedFolders
         ConversionSuccessDialog(
-            result = successResult,
+            successResult,
             assignedFolders = assignedFolders,
             onOpenPdf = {
                 val file = successResult.file

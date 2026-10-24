@@ -668,7 +668,7 @@ fun ResultsScreen(
 
     folderToRename?.let { oldName ->
         RenameFolderDialog(
-            currentName = oldName,
+            oldName,
             existingCategories = categories,
             onConfirm = { newName ->
                 onRenameCategory(oldName, newName)
@@ -685,7 +685,7 @@ fun ResultsScreen(
 
     folderToDelete?.let { folderName ->
         DeleteFolderConfirmationDialog(
-            folderName = folderName,
+            folderName,
             onConfirm = {
                 onDeleteCategory(folderName)
                 folderToDelete = null

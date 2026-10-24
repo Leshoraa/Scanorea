@@ -170,13 +170,13 @@ fun MainScreen(
     if (isPresetManagerVisible) {
         BackHandler { isPresetManagerVisible = false }
         PresetManagementScreen(
-            presets = uiState.presets,
+            uiState.presets,
             onBack = { isPresetManagerVisible = false },
-            onSavePreset = { viewModel.savePreset(it) },
-            onDeletePreset = { viewModel.deletePreset(it) },
+            onSavePreset = viewModel::savePreset,
+            onDeletePreset = viewModel::deletePreset,
             customTags = uiState.customTags,
-            onSaveCustomTag = { key, value -> viewModel.saveCustomTag(key, value) },
-            onDeleteCustomTag = { key -> viewModel.removeCustomTag(key) }
+            onSaveCustomTag = viewModel::saveCustomTag,
+            onDeleteCustomTag = viewModel::removeCustomTag
         )
         return
     }

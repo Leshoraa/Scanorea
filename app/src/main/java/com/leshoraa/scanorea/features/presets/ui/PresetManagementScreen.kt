@@ -114,13 +114,13 @@ fun PresetManagementScreen(
                 isCreatingNew = false
                 editingPreset = null
             },
-            onSave = { preset ->
-                onSavePreset(preset)
+            onSave = {
+                onSavePreset(it)
                 isCreatingNew = false
                 editingPreset = null
             },
-            onSaveCustomTag = onSaveCustomTag,
-            onDeleteCustomTag = onDeleteCustomTag,
+            onSaveCustomTag,
+            onDeleteCustomTag,
             modifier = modifier
         )
         return
@@ -348,9 +348,9 @@ private fun PresetItemCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                PresetBadge(text = preset.pageSize.label)
-                PresetBadge(text = preset.orientation.label)
-                PresetBadge(text = preset.compressionProfile.label)
+                PresetBadge(preset.pageSize.label)
+                PresetBadge(preset.orientation.label)
+                PresetBadge(preset.compressionProfile.label)
             }
         }
     }
@@ -363,7 +363,7 @@ private fun PresetBadge(text: String) {
         shape = RoundedCornerShape(6.dp)
     ) {
         Text(
-            text = text,
+            text,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -535,9 +535,9 @@ private fun PresetEditScreen(
 
             // Filename Template
             TokenizedFileNameRuleField(
-                template = template,
-                onTemplateChange = { template = it },
-                validTagKeys = validTagKeys,
+                template,
+                { template = it },
+                validTagKeys,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -596,8 +596,8 @@ private fun PresetEditScreen(
                         items(customTags.keys.toList(), key = { it }) { key ->
                             val value = customTags[key].orEmpty()
                             CustomTagChip(
-                                tagKey = key,
-                                tagValue = value,
+                                key,
+                                value,
                                 onClick = { template += "{$key}" },
                                 onLongClick = {
                                     editingTagKey = key
@@ -736,9 +736,9 @@ private fun PresetEditScreen(
     // Add or Edit Custom Tag Dialog
     if (isAddTagDialogOpen) {
         AddEditTagDialog(
-            initialKey = editingTagKey ?: "",
-            initialValue = editingTagKey?.let { customTags[it] } ?: "",
-            isEditing = editingTagKey != null,
+            editingTagKey ?: "",
+            editingTagKey?.let { customTags[it] }.orEmpty(),
+            editingTagKey != null,
             onSave = { key, value ->
                 onSaveCustomTag(key, value)
                 isAddTagDialogOpen = false
@@ -848,7 +848,7 @@ private fun TokenizedFileNameRuleField(
                     when (seg) {
                         is RuleSegment.Token -> {
                             RuleTokenChip(
-                                tagKey = seg.tagKey,
+                                seg.tagKey,
                                 onDelete = {
                                     val updated = TemplateTokenizer.deleteTokenAtIndex(segments, index)
                                     onTemplateChange(TemplateTokenizer.reconstruct(updated))
@@ -927,7 +927,7 @@ private fun RuleTokenChip(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = tagKey,
+                tagKey,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -954,8 +954,8 @@ private fun RuleTokenChip(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CustomTagChip(
-    tagKey: String,
-    tagValue: String,
+    key: String,
+    value: String,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onDelete: () -> Unit,
@@ -977,14 +977,14 @@ private fun CustomTagChip(
         ) {
             Column {
                 Text(
-                    text = tagKey,
+                    key,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
-                if (tagValue.isNotBlank()) {
+                if (value.isNotBlank()) {
                     Text(
-                        text = tagValue,
+                        value,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
                         maxLines = 1
