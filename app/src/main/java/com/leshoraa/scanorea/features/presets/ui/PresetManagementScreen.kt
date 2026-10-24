@@ -445,9 +445,9 @@ private fun PresetEditScreen(
         },
         bottomBar = {
             Surface(
-                tonalElevation = 3.dp,
-                shadowElevation = 8.dp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 0.dp,
+                shadowElevation = 8.dp
             ) {
                 Box(
                     modifier = Modifier
@@ -943,7 +943,7 @@ private fun RuleTokenChip(
 ) {
     Surface(
         shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.primary,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier
     ) {
         Row(
@@ -954,7 +954,7 @@ private fun RuleTokenChip(
                 tagKey,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimary
+                color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.width(4.dp))
             IconButton(
@@ -964,7 +964,7 @@ private fun RuleTokenChip(
                 Icon(
                     imageVector = Icons.Filled.Close,
                     contentDescription = "Remove tag",
-                    tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                     modifier = Modifier.size(12.dp)
                 )
             }
@@ -987,7 +987,7 @@ private fun CustomTagChip(
 ) {
     Surface(
         shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.primary,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
             .combinedClickable(
@@ -1004,13 +1004,13 @@ private fun CustomTagChip(
                     key,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary
+                    color = MaterialTheme.colorScheme.primary
                 )
                 if (value.isNotBlank()) {
                     Text(
                         value,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1
                     )
                 }
@@ -1023,7 +1023,7 @@ private fun CustomTagChip(
                 Icon(
                     imageVector = Icons.Filled.Close,
                     contentDescription = "Delete Tag",
-                    tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                     modifier = Modifier.size(14.dp)
                 )
             }
