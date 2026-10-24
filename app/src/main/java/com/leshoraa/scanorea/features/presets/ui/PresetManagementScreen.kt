@@ -108,8 +108,8 @@ fun PresetManagementScreen(
             editingPreset = null
         }
         PresetEditScreen(
-            preset = editingPreset,
-            customTags = customTags,
+            editingPreset,
+            customTags,
             onBack = {
                 isCreatingNew = false
                 editingPreset = null
@@ -207,8 +207,8 @@ fun PresetManagementScreen(
 
             items(presets, key = { it.id }) { preset ->
                 PresetItemCard(
-                    preset = preset,
-                    customTags = customTags,
+                    preset,
+                    customTags,
                     onEditClick = { editingPreset = preset },
                     onDeleteClick = { presetPendingDelete = preset }
                 )
