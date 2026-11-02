@@ -220,18 +220,11 @@ fun MainScreen(
             } else if (currentTab == MainNavTab.HOME) {
                 TopAppBar(
                     title = {
-                        Column {
-                            Text(
-                                text = "Scanorea",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Scan  •  Convert  •  Enhance",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        Text(
+                            text = "Scanorea",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = mainBgColor
