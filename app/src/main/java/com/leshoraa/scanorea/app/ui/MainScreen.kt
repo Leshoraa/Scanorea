@@ -28,6 +28,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,7 +83,7 @@ fun MainScreen(
         pageCount = { tabs.size }
     )
     val coroutineScope = rememberCoroutineScope()
-    val currentTab = tabs[tabPagerState.currentPage]
+    val currentTab by remember { derivedStateOf { tabs[tabPagerState.currentPage] } }
 
     var isRenameDialogOpen by remember { mutableStateOf(false) }
     var isPagesGridVisible by remember { mutableStateOf(false) }
@@ -291,7 +292,7 @@ fun MainScreen(
             if (!uiState.hasPages) {
                 HorizontalPager(
                     state = tabPagerState,
-                    beyondViewportPageCount = 0,
+                    beyondViewportPageCount = 1,
                     modifier = Modifier.fillMaxSize()
                 ) { pageIndex ->
                     when (tabs[pageIndex]) {

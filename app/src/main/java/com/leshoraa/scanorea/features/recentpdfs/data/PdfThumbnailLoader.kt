@@ -99,11 +99,11 @@ object PdfThumbnailLoader {
         val effectiveCacheDir = diskCacheDir ?: appCacheDir ?: file.parentFile?.parentFile?.let { File(it, "cache") }
         val diskCacheFile = getDiskCacheFile(file, modifiedMillis, targetWidth, effectiveCacheDir)
 
-        // Disk cache lookup
+        // 2. Check L2 Disk Cache
         if (diskCacheFile != null && diskCacheFile.exists() && diskCacheFile.length() > 0L) {
             try {
                 val decodeOptions = BitmapFactory.Options().apply {
-                    inPreferredConfig = Bitmap.Config.ARGB_8888
+                    inPreferredConfig = Bitmap.Config.RGB_565
                 }
                 val diskBitmap = BitmapFactory.decodeFile(diskCacheFile.absolutePath, decodeOptions)
                 if (diskBitmap != null) {
@@ -137,20 +137,27 @@ object PdfThumbnailLoader {
                 val aspectRatio = page.height.toFloat() / page.width.toFloat().coerceAtLeast(1f)
                 val targetHeight = (targetWidth * aspectRatio).toInt().coerceAtLeast(1)
 
-                val bitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
-                bitmap.eraseColor(Color.WHITE)
+                // Native PdfRenderer requires ARGB_8888 destination bitmap
+                val renderBitmap = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
+                renderBitmap.eraseColor(Color.WHITE)
 
-                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                page.render(renderBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
 
-                // Cache in memory
-                memoryCache.put(cacheKey, bitmap)
+                // Convert to lightweight RGB_565 for 50% RAM savings in memory cache and fast scrolling
+                val finalBitmap = renderBitmap.copy(Bitmap.Config.RGB_565, false) ?: renderBitmap
+                if (finalBitmap !== renderBitmap) {
+                    renderBitmap.recycle()
+                }
+
+                // Cache lightweight RGB_565 bitmap in memory
+                memoryCache.put(cacheKey, finalBitmap)
 
                 // Persist to L2 Disk Cache asynchronously
                 if (diskCacheFile != null) {
-                    saveToDiskCache(bitmap, diskCacheFile)
+                    saveToDiskCache(finalBitmap, diskCacheFile)
                 }
 
-                bitmap
+                finalBitmap
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to render thumbnail for ${file.name}", e)
                 null

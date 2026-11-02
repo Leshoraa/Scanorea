@@ -63,7 +63,7 @@ class PdfThumbnailLoaderInstrumentedTest {
     }
 
     @Test
-    fun loadFirstPageThumbnail_rendersValidArgb8888Bitmap() = runBlocking {
+    fun loadFirstPageThumbnail_rendersValidRgb565Bitmap() = runBlocking {
         val bitmap = PdfThumbnailLoader.loadFirstPageThumbnail(
             file = testPdfFile,
             targetWidth = 140,
@@ -71,7 +71,7 @@ class PdfThumbnailLoaderInstrumentedTest {
         )
 
         assertNotNull("Thumbnail bitmap should not be null", bitmap)
-        assertEquals(Bitmap.Config.ARGB_8888, bitmap!!.config)
+        assertEquals(Bitmap.Config.RGB_565, bitmap!!.config)
         assertEquals(140, bitmap.width)
         assertTrue("Height should be positive", bitmap.height > 0)
     }

@@ -8,6 +8,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -748,12 +749,16 @@ private fun FolderGridCard(
         label = "cardElevation_$title"
     )
 
+    // Only run a smooth color tween when the card is actually participating in a drag or
+    // selection transition. For idle cards (the vast majority of the time), snap() lets the
+    // animation engine settle instantly and stop scheduling interpolation frames.
+    val needsColorAnimation = isAnyItemDragging || isSelected
     val containerColor by animateColorAsState(
         targetValue = when {
             isLifted || isSelected -> MaterialTheme.colorScheme.primary
             else -> MaterialTheme.colorScheme.surfaceContainerLowest
         },
-        animationSpec = tween(durationMillis = COLOR_TRANSITION_DURATION_MS),
+        animationSpec = if (needsColorAnimation) tween(durationMillis = COLOR_TRANSITION_DURATION_MS) else snap(),
         label = "cardContainerColor_$title"
     )
 
@@ -762,7 +767,7 @@ private fun FolderGridCard(
             isLifted || isSelected -> MaterialTheme.colorScheme.onPrimary
             else -> MaterialTheme.colorScheme.onSurface
         },
-        animationSpec = tween(durationMillis = COLOR_TRANSITION_DURATION_MS),
+        animationSpec = if (needsColorAnimation) tween(durationMillis = COLOR_TRANSITION_DURATION_MS) else snap(),
         label = "cardContentColor_$title"
     )
 
