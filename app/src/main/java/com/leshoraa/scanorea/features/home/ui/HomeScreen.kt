@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.core.designsystem.ContainedLoadingIndicator
 import com.leshoraa.scanorea.features.home.ui.components.HomeHeroBanner
@@ -56,11 +57,20 @@ fun HomeScreen(
     Column(modifier = modifier.fillMaxSize()) {
         TopAppBar(
             title = {
-                Text(
-                    text = "Scanorea",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                Column {
+                    Text(
+                        text = "Scanorea",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Document Scanner & Converter",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = if (isSystemInDarkTheme()) {
