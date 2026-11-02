@@ -11,6 +11,7 @@ import com.leshoraa.scanorea.features.recentpdfs.data.db.ScanoreaDatabase
 import com.leshoraa.scanorea.features.recentpdfs.domain.model.RecentPdf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -37,6 +38,7 @@ class RecentPdfsRepository(
         private const val KEY_CATEGORIES = "document_categories"
         private const val KEY_PINNED_FOLDERS = "document_pinned_folders"
         private const val KEY_METADATA_MAP = "document_metadata_map"
+        private const val KEY_LEGACY_MIGRATION_DONE = "key_legacy_migration_done_v1"
 
         const val MAX_PINNED_FOLDERS = 5
         val DEFAULT_CATEGORIES = listOf("Work", "Study", "Personal", "Projects")
@@ -46,21 +48,24 @@ class RecentPdfsRepository(
     private val dao = database?.recentPdfsDao()
 
     // In-memory caches for instant UI responsiveness and zero allocation spikes
+    private var cachedPdfList: List<RecentPdf>? = null
     private var cachedCategories: MutableList<String>? = null
     private var cachedPinnedFolders: MutableList<String>? = null
     private var cachedMetadataMap: JSONObject? = null
     private val cachedPdfsByPath = ConcurrentHashMap<String, RecentPdf>()
 
     init {
-        // Asynchronously check and migrate any legacy SharedPreferences data to Room
-        if (dao != null) {
+        // Asynchronously check and migrate any legacy SharedPreferences data to Room once
+        if (dao != null && !prefs.getBoolean(KEY_LEGACY_MIGRATION_DONE, false)) {
             CoroutineScope(Dispatchers.IO).launch {
+                delay(2000L)
                 migrateLegacyPrefsToRoomIfNecessary()
             }
         }
     }
 
     private suspend fun migrateLegacyPrefsToRoomIfNecessary() {
+        if (prefs.getBoolean(KEY_LEGACY_MIGRATION_DONE, false)) return
         val currentDao = dao ?: return
         try {
             val existingCategories = currentDao.getCategories()
@@ -76,6 +81,7 @@ class RecentPdfsRepository(
                 val pinnedToSave = legacyPinned.ifEmpty { DEFAULT_PINNED_FOLDERS }
                 currentDao.upsertPinnedFolders(pinnedToSave.mapIndexed { idx, name -> PinnedFolderEntity(name, idx) })
             }
+            prefs.edit().putBoolean(KEY_LEGACY_MIGRATION_DONE, true).apply()
         } catch (e: Throwable) {
             Log.w(TAG, "Legacy migration check caught exception", e)
         }
@@ -396,10 +402,15 @@ class RecentPdfsRepository(
         }
     }
 
-    suspend fun getRecentPdfs(): List<RecentPdf> = withContext(Dispatchers.IO) {
+    suspend fun getRecentPdfs(forceRefresh: Boolean = false): List<RecentPdf> = withContext(Dispatchers.IO) {
+        if (!forceRefresh) {
+            cachedPdfList?.let { return@withContext it }
+        }
+
         val pdfDir = File(context.filesDir, "pdfs")
         if (!pdfDir.exists() || !pdfDir.isDirectory) {
             cachedPdfsByPath.clear()
+            cachedPdfList = emptyList()
             return@withContext emptyList()
         }
 
@@ -535,6 +546,7 @@ class RecentPdfsRepository(
             saveMetadataMap(metadataMap)
         }
 
+        cachedPdfList = pdfList
         pdfList
     }
 
@@ -561,6 +573,7 @@ class RecentPdfsRepository(
         saveMetadataMap(metadataMap)
 
         cachedPdfsByPath.remove(file.absolutePath)
+        cachedPdfList = null
         true
     }
 
@@ -583,6 +596,7 @@ class RecentPdfsRepository(
         }
 
         cachedPdfsByPath.remove(file.absolutePath)
+        cachedPdfList = null
         newFav
     }
 
@@ -604,6 +618,7 @@ class RecentPdfsRepository(
         }
 
         cachedPdfsByPath.remove(file.absolutePath)
+        cachedPdfList = null
         true
     }
 
@@ -619,6 +634,7 @@ class RecentPdfsRepository(
             saveMetadataMap(metadataMap)
         }
         cachedPdfsByPath.remove(file.absolutePath)
+        cachedPdfList = null
 
         if (file.exists()) {
             file.delete()

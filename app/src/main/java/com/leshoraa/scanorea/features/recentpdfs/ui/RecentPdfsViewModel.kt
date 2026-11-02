@@ -8,6 +8,8 @@ import com.leshoraa.scanorea.di.appContainer
 import com.leshoraa.scanorea.features.recentpdfs.data.PdfThumbnailLoader
 import com.leshoraa.scanorea.features.recentpdfs.data.RecentPdfsRepository
 import com.leshoraa.scanorea.features.recentpdfs.domain.model.RecentPdf
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,18 +40,26 @@ class RecentPdfsViewModel(
     private val _uiState = MutableStateFlow(RecentPdfsUiState())
     val uiState: StateFlow<RecentPdfsUiState> = _uiState.asStateFlow()
 
+    private var loadJob: Job? = null
+
     init {
         loadRecentPdfs()
     }
 
     fun loadRecentPdfs() {
-        viewModelScope.launch {
+        if (loadJob?.isActive == true) return
+        loadJob = viewModelScope.launch {
             if (_uiState.value.recentPdfs.isEmpty()) {
                 _uiState.update { it.copy(isLoading = true) }
             }
-            val recents = recentPdfsRepository.getRecentPdfs()
-            val categories = recentPdfsRepository.getCategories()
-            val pinnedFolders = recentPdfsRepository.getPinnedFolders()
+            val recentsDeferred = async { recentPdfsRepository.getRecentPdfs() }
+            val categoriesDeferred = async { recentPdfsRepository.getCategories() }
+            val pinnedFoldersDeferred = async { recentPdfsRepository.getPinnedFolders() }
+
+            val recents = recentsDeferred.await()
+            val categories = categoriesDeferred.await()
+            val pinnedFolders = pinnedFoldersDeferred.await()
+
             _uiState.update {
                 it.copy(
                     recentPdfs = recents,
@@ -62,11 +72,17 @@ class RecentPdfsViewModel(
     }
 
     fun refresh() {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
-            val recents = recentPdfsRepository.getRecentPdfs()
-            val categories = recentPdfsRepository.getCategories()
-            val pinnedFolders = recentPdfsRepository.getPinnedFolders()
+            val recentsDeferred = async { recentPdfsRepository.getRecentPdfs(forceRefresh = true) }
+            val categoriesDeferred = async { recentPdfsRepository.getCategories() }
+            val pinnedFoldersDeferred = async { recentPdfsRepository.getPinnedFolders() }
+
+            val recents = recentsDeferred.await()
+            val categories = categoriesDeferred.await()
+            val pinnedFolders = pinnedFoldersDeferred.await()
+
             _uiState.update {
                 it.copy(
                     recentPdfs = recents,

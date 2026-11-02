@@ -11,3 +11,4 @@
 
 - Dilarang mengubah, menimpa (overwrite), atau mengembalikan (revert) perubahan kode/file yang dilakukan/diedit sendiri oleh pengguna (user).
 - Selalu hormati dan pertahankan setiap perubahan manual dari pengguna.
+

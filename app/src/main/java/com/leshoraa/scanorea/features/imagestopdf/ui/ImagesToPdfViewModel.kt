@@ -60,7 +60,6 @@ class ImagesToPdfViewModel(
     private var conversionJob: kotlinx.coroutines.Job? = null
 
     init {
-        loadRecentPdfs()
         loadPresets()
         loadSettings()
     }

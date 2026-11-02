@@ -9,6 +9,7 @@ import com.leshoraa.scanorea.di.AppContainer
 import com.leshoraa.scanorea.features.recentpdfs.data.PdfThumbnailLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -32,6 +33,9 @@ class ScanoreaApplication : Application(), ImageLoaderFactory {
     private fun cleanStaleCacheFiles() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
+                // Defer background cleanup until the UI and initial data loading have fully settled
+                delay(5000L)
+
                 val maxAgeMillis = 24 * 60 * 60 * 1000L // 24 hours
                 val cutoffTime = System.currentTimeMillis() - maxAgeMillis
 
