@@ -1,5 +1,6 @@
 package com.leshoraa.scanorea.features.home.ui
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -9,12 +10,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.leshoraa.scanorea.core.designsystem.ContainedLoadingIndicator
 import com.leshoraa.scanorea.features.home.ui.components.HomeHeroBanner
@@ -47,32 +53,50 @@ fun HomeScreen(
 ) {
     val pullToRefreshState = rememberPullToRefreshState()
 
-    PullToRefreshBox(
-        isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
-        state = pullToRefreshState,
-        modifier = modifier.fillMaxSize(),
-        indicator = {
-            if (pullToRefreshState.distanceFraction > 0f || isRefreshing) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .graphicsLayer {
-                            val pullDistance = (pullToRefreshState.distanceFraction.coerceIn(0f, 1f) * 80.dp.toPx()) - 56.dp.toPx()
-                            translationY = if (isRefreshing) 16.dp.toPx() else pullDistance
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    ContainedLoadingIndicator()
+    Column(modifier = modifier.fillMaxSize()) {
+        TopAppBar(
+            title = {
+                Text(
+                    text = "Scanorea",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = if (isSystemInDarkTheme()) {
+                    MaterialTheme.colorScheme.surfaceContainer
+                } else {
+                    MaterialTheme.colorScheme.surface
+                }
+            )
+        )
+
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            state = pullToRefreshState,
+            modifier = Modifier.fillMaxSize(),
+            indicator = {
+                if (pullToRefreshState.distanceFraction > 0f || isRefreshing) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .graphicsLayer {
+                                val pullDistance = (pullToRefreshState.distanceFraction.coerceIn(0f, 1f) * 80.dp.toPx()) - 56.dp.toPx()
+                                translationY = if (isRefreshing) 16.dp.toPx() else pullDistance
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        ContainedLoadingIndicator()
+                    }
                 }
             }
-        }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 24.dp)
         ) {
             HomeHeroBanner(onScanConvertClick = onScanConvertClick)
 
@@ -98,4 +122,5 @@ fun HomeScreen(
             )
         }
     }
+}
 }

@@ -217,19 +217,6 @@ fun MainScreen(
                     canRedo = currentPage?.let { uiState.canRedo(it.id) } ?: false,
                     onRedoClick = { currentPage?.let { viewModel.redoPageEdit(it.id) } }
                 )
-            } else if (currentTab == MainNavTab.HOME) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = "Scanorea",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = mainBgColor
-                    )
-                )
             }
         },
         bottomBar = {
