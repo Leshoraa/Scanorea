@@ -60,7 +60,7 @@ fun HomeScreen(
                 Column {
                     Text(
                         text = "Scanorea",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
