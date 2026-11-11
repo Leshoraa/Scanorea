@@ -25,5 +25,6 @@ class ConversionPresetTest {
         assertEquals(PdfPageSize.A4, preset.pageSize)
         assertEquals(PdfPageOrientation.PORTRAIT, preset.orientation)
         assertEquals(CompressionProfile.AUTO_BALANCED, preset.compressionProfile)
+        assertEquals(false, preset.isPinned)
     }
 }

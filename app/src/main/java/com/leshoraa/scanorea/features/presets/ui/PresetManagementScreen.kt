@@ -1,8 +1,11 @@
 package com.leshoraa.scanorea.features.presets.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -25,6 +28,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,35 +42,56 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -75,7 +100,10 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.CompressionProfile
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageOrientation
 import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageSize
@@ -103,7 +131,8 @@ fun PresetManagementScreen(
 ) {
     var isCreatingNew by remember { mutableStateOf(false) }
     var editingPreset by remember { mutableStateOf<ConversionPreset?>(null) }
-    var presetPendingDelete by remember { mutableStateOf<ConversionPreset?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     // Full screen navigation: if editing or creating, show dedicated PresetEditScreen
     if (isCreatingNew || editingPreset != null) {
@@ -130,130 +159,217 @@ fun PresetManagementScreen(
         return
     }
 
+    val listState = rememberLazyListState()
+    val isAtTop by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+        }
+    }
+
+    val sortedPresets = remember(presets) {
+        presets.sortedWith(
+            compareByDescending<ConversionPreset> { it.isPinned }
+                .thenBy { it.name.lowercase() }
+        )
+    }
+
+    fun triggerDelete(preset: ConversionPreset) {
+        onDeletePreset(preset.id)
+        coroutineScope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val result = snackbarHostState.showSnackbar(
+                message = "Preset '${preset.name}' deleted",
+                actionLabel = "Undo",
+                duration = SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                onSavePreset(preset)
+            }
+        }
+    }
+
     // Main Preset List Screen
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-    ) {
-        TopAppBar(
-            title = {
-                Column {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
                     Text(
                         text = "Preset Templates",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
-                        text = "Auto name & page settings",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            },
-            navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back"
-                    )
-                }
-            },
-            actions = {
-                Button(
-                    onClick = { isCreatingNew = true },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            )
+        },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { isCreatingNew = true },
+                expanded = isAtTop,
+                icon = {
                     Icon(
                         imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        contentDescription = "New Preset"
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("New Preset", fontWeight = FontWeight.Bold)
-                }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface
+                },
+                text = {
+                    Text(
+                        text = "New Preset",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.padding(bottom = 20.dp)
             )
-        )
-
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
+        },
+        modifier = modifier.fillMaxSize()
+    ) { innerPadding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            state = listState,
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                bottom = innerPadding.calculateBottomPadding() + 88.dp,
+                start = 16.dp,
+                end = 16.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.fillMaxSize()
         ) {
             item {
-                Spacer(modifier = Modifier.height(2.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Saved Presets (${presets.size})",
-                        style = MaterialTheme.typography.titleMedium,
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Saved Presets (${presets.size})",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Tap to edit",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            items(presets, key = { it.id }) { preset ->
-                PresetItemCard(
-                    preset,
-                    customTags,
-                    onEditClick = { editingPreset = preset },
-                    onDeleteClick = { presetPendingDelete = preset }
+                        letterSpacing = 0.15.sp,
+                        fontFeatureSettings = "tnum"
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 2.dp)
                 )
             }
 
-            item {
-                Spacer(modifier = Modifier.height(32.dp))
+            items(sortedPresets, key = { it.id }) { preset ->
+                PresetSwipeableItem(
+                    preset = preset,
+                    customTags = customTags,
+                    onEditClick = { editingPreset = preset },
+                    onDeleteClick = { triggerDelete(preset) },
+                    onTogglePin = {
+                        onSavePreset(preset.copy(isPinned = !preset.isPinned))
+                    },
+                    modifier = Modifier.animateItem()
+                )
             }
         }
     }
+}
 
-    // Delete Confirmation Dialog
-    presetPendingDelete?.let { preset ->
-        AlertDialog(
-            onDismissRequest = { presetPendingDelete = null },
-            title = {
-                Text(
-                    text = "Delete Preset?",
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = { Text("Are you sure you want to remove preset '${preset.name}'? This action cannot be undone.") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onDeletePreset(preset.id)
-                        presetPendingDelete = null
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
-                ) {
-                    Text("Delete", fontWeight = FontWeight.Bold)
+/**
+ * Swipeable wrapper for PresetItemCard.
+ * Swipe right (StartToEnd) to delete with animated background and icon scaling/fading.
+ * Swipe left (EndToStart) to update/edit preset.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PresetSwipeableItem(
+    preset: ConversionPreset,
+    customTags: Map<String, String>,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onTogglePin: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { dismissValue ->
+            when (dismissValue) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onDeleteClick()
+                    false
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { presetPendingDelete = null }) {
-                    Text("Cancel")
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onEditClick()
+                    false
+                }
+                SwipeToDismissBoxValue.Settled -> false
+            }
+        },
+        positionalThreshold = { totalDistance -> totalDistance * 0.35f }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = true,
+        enableDismissFromEndToStart = true,
+        modifier = modifier.clip(RoundedCornerShape(16.dp)),
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val progress = dismissState.progress.coerceIn(0f, 1f)
+
+            val backgroundColor = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.errorContainer.copy(alpha = progress)
+                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = progress)
+                else -> Color.Transparent
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(backgroundColor)
+                    .padding(horizontal = 24.dp),
+                contentAlignment = when (direction) {
+                    SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                    SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                    else -> Alignment.Center
+                }
+            ) {
+                if (direction == SwipeToDismissBoxValue.StartToEnd) {
+                    val scale = (0.7f + 0.35f * progress).coerceIn(0.7f, 1.15f)
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = progress),
+                        modifier = Modifier
+                            .scale(scale)
+                            .alpha(progress)
+                            .size(26.dp)
+                    )
+                } else if (direction == SwipeToDismissBoxValue.EndToStart) {
+                    val scale = (0.7f + 0.35f * progress).coerceIn(0.7f, 1.15f)
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Update",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = progress),
+                        modifier = Modifier
+                            .scale(scale)
+                            .alpha(progress)
+                            .size(26.dp)
+                    )
                 }
             }
+        }
+    ) {
+        PresetItemCard(
+            preset = preset,
+            customTags = customTags,
+            onEditClick = onEditClick,
+            onDeleteClick = onDeleteClick,
+            onTogglePin = onTogglePin
         )
     }
 }
@@ -261,16 +377,21 @@ fun PresetManagementScreen(
 /**
  * Saved Preset Item Card.
  * Card background matches Home screen (surfaceContainerLowest).
- * Subtitle directly displays the evaluated result without raw tokens or "Result today:".
+ * Subtitle directly displays the evaluated result with single line, ellipsis, and gradient fade.
+ * Long-press triggers dropdown menu with Pin/Unpin, Update, and Delete options.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PresetItemCard(
     preset: ConversionPreset,
     customTags: Map<String, String>,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
+    onTogglePin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var isMenuExpanded by remember { mutableStateOf(false) }
+
     val evaluatedPreview = remember(preset.fileNameTemplate, customTags) {
         TemplateDateEvaluator.evaluate(
             template = preset.fileNameTemplate,
@@ -278,84 +399,192 @@ private fun PresetItemCard(
         ) + ".pdf"
     }
 
-    Card(
-        onClick = onEditClick,
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(
+    Box(modifier = modifier.fillMaxWidth()) {
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .combinedClickable(
+                    onClick = onEditClick,
+                    onLongClick = { isMenuExpanded = true }
+                ),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
             ) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.size(42.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Filled.Bookmark,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
+                    Surface(
+                        color = if (preset.isPinned) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerHigh
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.size(42.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (preset.isPinned) Icons.Filled.PushPin else Icons.Filled.Bookmark,
+                                contentDescription = if (preset.isPinned) "Pinned" else null,
+                                tint = if (preset.isPinned) {
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.primary
+                                },
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = preset.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            if (preset.isPinned) {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = "Pinned",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        Text(
+                            text = evaluatedPreview,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontFeatureSettings = "tnum"
+                            ),
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                                .drawWithContent {
+                                    drawContent()
+                                    val fadeWidth = 28.dp.toPx()
+                                    if (size.width > fadeWidth) {
+                                        drawRect(
+                                            brush = Brush.horizontalGradient(
+                                                colors = listOf(Color.Black, Color.Transparent),
+                                                startX = size.width - fadeWidth,
+                                                endX = size.width
+                                            ),
+                                            blendMode = BlendMode.DstIn
+                                        )
+                                    }
+                                }
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = preset.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = evaluatedPreview,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-
-                IconButton(onClick = onEditClick) {
-                    Icon(
-                        imageVector = Icons.Filled.Edit,
-                        contentDescription = "Edit",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                IconButton(onClick = onDeleteClick) {
-                    Icon(
-                        imageVector = Icons.Filled.Delete,
-                        contentDescription = "Delete",
-                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
-                    )
+                // Badges row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PresetBadge(preset.pageSize.label)
+                    PresetBadge(preset.orientation.label)
+                    PresetBadge(preset.compressionProfile.label)
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Badges row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                PresetBadge(preset.pageSize.label)
-                PresetBadge(preset.orientation.label)
-                PresetBadge(preset.compressionProfile.label)
-            }
+        // Long-press Context Dropdown Menu
+        DropdownMenu(
+            expanded = isMenuExpanded,
+            onDismissRequest = { isMenuExpanded = false },
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.widthIn(min = 160.dp)
+        ) {
+            DropdownMenuItem(
+                text = { Text(if (preset.isPinned) "Unpin" else "Pin") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.PushPin,
+                        contentDescription = null,
+                        tint = if (preset.isPinned) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                onClick = {
+                    isMenuExpanded = false
+                    onTogglePin()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("Update") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                onClick = {
+                    isMenuExpanded = false
+                    onEditClick()
+                }
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = "Delete",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                onClick = {
+                    isMenuExpanded = false
+                    onDeleteClick()
+                }
+            )
         }
     }
 }
@@ -465,7 +694,8 @@ private fun PresetEditScreen(
                                 fileNameTemplate = template.trim(),
                                 pageSize = pageSize,
                                 orientation = orientation,
-                                compressionProfile = compression
+                                compressionProfile = compression,
+                                isPinned = preset?.isPinned ?: false
                             )
                             onSave(resultPreset)
                         },

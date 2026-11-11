@@ -63,7 +63,8 @@ class PresetRepository(context: Context) {
                         } catch (e: Exception) {
                             Log.w(TAG, "Failed to parse compressionProfile for preset, falling back to AUTO_BALANCED", e)
                             CompressionProfile.AUTO_BALANCED
-                        }
+                        },
+                        isPinned = obj.optBoolean("isPinned", false)
                     )
                 )
             }
@@ -100,6 +101,7 @@ class PresetRepository(context: Context) {
                 put("pageSize", item.pageSize.name)
                 put("orientation", item.orientation.name)
                 put("compressionProfile", item.compressionProfile.name)
+                put("isPinned", item.isPinned)
             }
             jsonArray.put(obj)
         }

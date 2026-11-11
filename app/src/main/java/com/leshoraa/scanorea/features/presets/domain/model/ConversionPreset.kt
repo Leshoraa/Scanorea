@@ -13,6 +13,7 @@ import com.leshoraa.scanorea.features.imagestopdf.domain.model.PdfPageSize
  * @param pageSize Target paper dimension.
  * @param orientation Page orientation.
  * @param compressionProfile Compression and downsampling profile.
+ * @param isPinned Whether the preset is pinned to the top of the list.
  */
 data class ConversionPreset(
     val id: String,
@@ -20,5 +21,6 @@ data class ConversionPreset(
     val fileNameTemplate: String,
     val pageSize: PdfPageSize = PdfPageSize.A4,
     val orientation: PdfPageOrientation = PdfPageOrientation.PORTRAIT,
-    val compressionProfile: CompressionProfile = CompressionProfile.AUTO_BALANCED
+    val compressionProfile: CompressionProfile = CompressionProfile.AUTO_BALANCED,
+    val isPinned: Boolean = false
 )
